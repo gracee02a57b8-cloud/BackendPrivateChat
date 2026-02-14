@@ -1,0 +1,29 @@
+server:
+  port: 8080
+
+spring:
+  websocket:
+    enabled: true
+    sockjs:
+      enabled: true
+
+chat:
+  maxParticipants: 30
+  messageHistoryLimit: 100
+
+logging:
+  level:
+    org.springframework: INFO
+    com.example.webrtcchat: DEBUG
+
+security:
+  enabled: true
+  tokenExpiration: 3600  # in seconds
+
+database:
+  url: jdbc:mysql://localhost:3306/webrtc_chat
+  username: your_username
+  password: your_password
+  driver-class-name: com.mysql.cj.jdbc.Driver
+
+# Additional configurations can be added as needed.
