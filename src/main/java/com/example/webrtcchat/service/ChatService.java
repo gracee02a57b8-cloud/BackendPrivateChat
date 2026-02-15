@@ -1,24 +1,28 @@
+package com.example.webrtcchat.service;
+
+import com.example.webrtcchat.dto.MessageDto;
+import org.springframework.stereotype.Service;
+import java.util.ArrayList;
+import java.util.List;
+
+@Service
 public class ChatService {
-    // This class will contain the business logic for managing chat messages and user sessions.
+  private final List<MessageDto> history = new ArrayList<>();
+  private final List<String> users = new ArrayList<>();
 
-    // Method to send a message
-    public void sendMessage(String message, String userId) {
-        // Logic to handle sending a message
-    }
+  public void send(MessageDto message) {
+    history.add(message);
+  }
 
-    // Method to retrieve chat history
-    public List<String> getChatHistory(String chatRoomId) {
-        // Logic to retrieve chat history
-        return new ArrayList<>();
-    }
+  public List<MessageDto> getHistory() {
+    return history;
+  }
 
-    // Method to add a user to a chat session
-    public void addUserToChat(String userId, String chatRoomId) {
-        // Logic to add a user to a chat session
-    }
+  public void addUser(String user) {
+    users.add(user);
+  }
 
-    // Method to remove a user from a chat session
-    public void removeUserFromChat(String userId, String chatRoomId) {
-        // Logic to remove a user from a chat session
-    }
+  public void removeUser(String user) {
+    users.remove(user);
+  }
 }

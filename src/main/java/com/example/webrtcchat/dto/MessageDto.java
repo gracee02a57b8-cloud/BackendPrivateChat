@@ -1,38 +1,24 @@
+package com.example.webrtcchat.dto;
+
 public class MessageDto {
-    private String sender;
-    private String content;
-    private long timestamp;
+  private String sender;
+  private String content;
+  private String timestamp;
 
-    public MessageDto() {
-    }
+  public MessageDto() {}
 
-    public MessageDto(String sender, String content, long timestamp) {
-        this.sender = sender;
-        this.content = content;
-        this.timestamp = timestamp;
-    }
+  public MessageDto(String sender, String content, String timestamp) {
+    this.sender = sender;
+    this.content = content;
+    this.timestamp = timestamp;
+  }
 
-    public String getSender() {
-        return sender;
-    }
+  public String getSender() { return sender; }
+  public void setSender(String sender) { this.sender = sender; }
 
-    public void setSender(String sender) {
-        this.sender = sender;
-    }
+  public String getContent() { return content; }
+  public void setContent(String content) { this.content = content; }
 
-    public String getContent() {
-        return content;
-    }
-
-    public void setContent(String content) {
-        this.content = content;
-    }
-
-    public long getTimestamp() {
-        return timestamp;
-    }
-
-    public void setTimestamp(long timestamp) {
-        this.timestamp = timestamp;
-    }
+  public String getTimestamp() { return timestamp; }
+  public void setTimestamp(String timestamp) { this.timestamp = timestamp; }
 }
