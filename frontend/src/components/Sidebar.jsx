@@ -14,6 +14,8 @@ export default function Sidebar({
   onStartPrivateChat,
   onCreateRoom,
   onJoinRoom,
+  onDeleteRoom,
+  onShowNews,
   token,
 }) {
   const [showSearch, setShowSearch] = useState(false);
@@ -47,6 +49,7 @@ export default function Sidebar({
         <button className="action-btn" onClick={() => setShowSearch(!showSearch)} title="Найти пользователя">🔍</button>
         <button className="action-btn" onClick={() => setShowCreate(true)} title="Создать комнату">➕</button>
         <button className="action-btn" onClick={() => setShowJoin(true)} title="Войти по ссылке">🔗</button>
+        <button className="action-btn" onClick={onShowNews} title="Новости">📰</button>
       </div>
 
       {showSearch && (
@@ -79,6 +82,9 @@ export default function Sidebar({
           >
             <span className="room-icon">👤</span>
             <span className="room-name">{getPrivateDisplayName(room)}</span>
+            {room.createdBy === username && (
+              <span className="room-delete" onClick={(e) => { e.stopPropagation(); if (confirm('Удалить этот чат?')) onDeleteRoom(room.id); }}>🗑</span>
+            )}
           </div>
         ))}
 
@@ -91,6 +97,9 @@ export default function Sidebar({
           >
             <span className="room-icon">🏠</span>
             <span className="room-name">{room.name}</span>
+            {room.createdBy === username && (
+              <span className="room-delete" onClick={(e) => { e.stopPropagation(); if (confirm('Удалить комнату "' + room.name + '"?')) onDeleteRoom(room.id); }}>🗑</span>
+            )}
           </div>
         ))}
       </div>

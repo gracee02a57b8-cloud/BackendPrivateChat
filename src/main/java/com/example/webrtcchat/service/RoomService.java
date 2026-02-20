@@ -58,6 +58,15 @@ public class RoomService {
                 .toList();
     }
 
+    public boolean deleteRoom(String roomId, String username) {
+        RoomDto room = rooms.get(roomId);
+        if (room == null) return false;
+        if (room.getType() == RoomType.GENERAL) return false;
+        if (!room.getCreatedBy().equals(username)) return false;
+        rooms.remove(roomId);
+        return true;
+    }
+
     private String privateRoomId(String u1, String u2) {
         return u1.compareTo(u2) < 0 ? "pm_" + u1 + "_" + u2 : "pm_" + u2 + "_" + u1;
     }

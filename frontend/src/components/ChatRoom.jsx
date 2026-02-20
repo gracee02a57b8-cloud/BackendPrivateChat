@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-
-const API_URL = 'http://localhost:9001';
+import EmojiPicker from './EmojiPicker';
 
 export default function ChatRoom({ messages, onSendMessage, roomName, username, connected }) {
   const [input, setInput] = useState('');
+  const [showEmoji, setShowEmoji] = useState(false);
   const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -19,6 +20,24 @@ export default function ChatRoom({ messages, onSendMessage, roomName, username, 
     if (!input.trim()) return;
     onSendMessage(input.trim());
     setInput('');
+    setShowEmoji(false);
+  };
+
+  const insertEmoji = (emoji) => {
+    const el = inputRef.current;
+    if (el) {
+      const start = el.selectionStart || input.length;
+      const end = el.selectionEnd || input.length;
+      const newVal = input.slice(0, start) + emoji + input.slice(end);
+      setInput(newVal);
+      setTimeout(() => {
+        el.focus();
+        const pos = start + emoji.length;
+        el.setSelectionRange(pos, pos);
+      }, 0);
+    } else {
+      setInput(input + emoji);
+    }
   };
 
   const getMessageClass = (msg) => {
@@ -56,14 +75,21 @@ export default function ChatRoom({ messages, onSendMessage, roomName, username, 
         <div ref={messagesEndRef} />
       </div>
       <form className="message-form" onSubmit={handleSubmit}>
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Введите сообщение..."
-          disabled={!connected}
-          autoFocus
-        />
+        <div className="input-wrapper">
+          <input
+            ref={inputRef}
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Введите сообщение..."
+            disabled={!connected}
+            autoFocus
+          />
+          <button type="button" className="emoji-btn" onClick={() => setShowEmoji(!showEmoji)} title="Эмодзи">
+            😊
+          </button>
+          {showEmoji && <EmojiPicker onSelect={insertEmoji} onClose={() => setShowEmoji(false)} />}
+        </div>
         <button type="submit" disabled={!connected || !input.trim()}>
           Отправить
         </button>

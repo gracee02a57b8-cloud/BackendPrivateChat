@@ -69,4 +69,14 @@ public class RoomController {
     public ResponseEntity<List<MessageDto>> getRoomHistory(@PathVariable String roomId) {
         return ResponseEntity.ok(chatService.getHistory(roomId));
     }
+
+    @DeleteMapping("/{roomId}")
+    public ResponseEntity<Void> deleteRoom(@PathVariable String roomId, Principal principal) {
+        boolean deleted = roomService.deleteRoom(roomId, principal.getName());
+        if (!deleted) {
+            return ResponseEntity.status(403).build();
+        }
+        chatService.clearHistory(roomId);
+        return ResponseEntity.ok().build();
+    }
 }

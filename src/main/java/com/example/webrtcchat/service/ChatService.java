@@ -27,6 +27,10 @@ public class ChatService {
         return getHistory("general");
     }
 
+    public void clearHistory(String roomId) {
+        historyByRoom.remove(roomId);
+    }
+
     public void addUser(String user) {
         if (!users.contains(user)) {
             users.add(user);

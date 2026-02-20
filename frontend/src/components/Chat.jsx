@@ -2,10 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import Sidebar from './Sidebar';
 import ChatRoom from './ChatRoom';
 
-const WS_URL = 'ws://localhost:9001';
-const API_URL = 'http://localhost:9001';
+const WS_URL = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
 
-export default function Chat({ token, username, onLogout, joinRoomId }) {
+export default function Chat({ token, username, onLogout, joinRoomId, onShowNews }) {
   const [rooms, setRooms] = useState([]);
   const [activeRoomId, setActiveRoomId] = useState('general');
   const [messagesByRoom, setMessagesByRoom] = useState({});
@@ -46,7 +45,7 @@ export default function Chat({ token, username, onLogout, joinRoomId }) {
   }, [token]);
 
   const fetchRooms = () => {
-    fetch(`${API_URL}/api/rooms`, {
+    fetch('/api/rooms', {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
@@ -57,7 +56,7 @@ export default function Chat({ token, username, onLogout, joinRoomId }) {
   const loadRoomHistory = (roomId) => {
     if (loadedRooms.current.has(roomId)) return;
     loadedRooms.current.add(roomId);
-    fetch(`${API_URL}/api/rooms/${roomId}/history`, {
+    fetch(`/api/rooms/${roomId}/history`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
@@ -70,7 +69,7 @@ export default function Chat({ token, username, onLogout, joinRoomId }) {
   };
 
   const fetchUsers = () => {
-    fetch(`${API_URL}/api/chat/users`, {
+    fetch('/api/chat/users', {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
@@ -90,7 +89,7 @@ export default function Chat({ token, username, onLogout, joinRoomId }) {
 
   const startPrivateChat = async (targetUser) => {
     try {
-      const res = await fetch(`${API_URL}/api/rooms/private/${targetUser}`, {
+      const res = await fetch(`/api/rooms/private/${targetUser}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -104,7 +103,7 @@ export default function Chat({ token, username, onLogout, joinRoomId }) {
 
   const createRoom = async (name) => {
     try {
-      const res = await fetch(`${API_URL}/api/rooms/create`, {
+      const res = await fetch('/api/rooms/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ name }),
@@ -121,7 +120,7 @@ export default function Chat({ token, username, onLogout, joinRoomId }) {
 
   const joinRoom = async (roomId) => {
     try {
-      const res = await fetch(`${API_URL}/api/rooms/join/${roomId}`, {
+      const res = await fetch(`/api/rooms/join/${roomId}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -138,6 +137,27 @@ export default function Chat({ token, username, onLogout, joinRoomId }) {
 
   const handleAutoJoin = async (roomId) => {
     await joinRoom(roomId);
+  };
+
+  const deleteRoom = async (roomId) => {
+    try {
+      const res = await fetch(`/api/rooms/${roomId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setMessagesByRoom((prev) => {
+          const copy = { ...prev };
+          delete copy[roomId];
+          return copy;
+        });
+        loadedRooms.current.delete(roomId);
+        if (activeRoomId === roomId) setActiveRoomId('general');
+        fetchRooms();
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const activeRoom = rooms.find((r) => r.id === activeRoomId);
@@ -157,6 +177,8 @@ export default function Chat({ token, username, onLogout, joinRoomId }) {
         onStartPrivateChat={startPrivateChat}
         onCreateRoom={createRoom}
         onJoinRoom={joinRoom}
+        onDeleteRoom={deleteRoom}
+        onShowNews={onShowNews}
         token={token}
       />
       <ChatRoom

@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 
-const API_URL = 'http://localhost:9001';
-
 export default function UserSearch({ token, username, onStartChat, onClose }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
@@ -12,7 +10,7 @@ export default function UserSearch({ token, username, onStartChat, onClose }) {
       return;
     }
     const timer = setTimeout(() => {
-      fetch(`${API_URL}/api/chat/users?search=${encodeURIComponent(query)}`, {
+      fetch(`/api/chat/users?search=${encodeURIComponent(query)}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
         .then((res) => res.json())
