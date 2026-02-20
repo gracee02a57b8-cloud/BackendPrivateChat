@@ -1,23 +1,22 @@
 import { useState, useEffect, useRef } from 'react';
+import Sidebar from './Sidebar';
+import ChatRoom from './ChatRoom';
 
 const WS_URL = 'ws://localhost:9001';
 const API_URL = 'http://localhost:9001';
 
-export default function Chat({ token, username, onLogout }) {
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
+export default function Chat({ token, username, onLogout, joinRoomId }) {
+  const [rooms, setRooms] = useState([]);
+  const [activeRoomId, setActiveRoomId] = useState('general');
+  const [messagesByRoom, setMessagesByRoom] = useState({});
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [connected, setConnected] = useState(false);
   const wsRef = useRef(null);
-  const messagesEndRef = useRef(null);
+  const loadedRooms = useRef(new Set());
 
   useEffect(() => {
-    fetch(`${API_URL}/api/chat/history`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then((data) => setMessages(data))
-      .catch(console.error);
+    fetchRooms();
+    loadRoomHistory('general');
 
     const ws = new WebSocket(`${WS_URL}/ws/chat?token=${token}`);
     wsRef.current = ws;
@@ -25,11 +24,16 @@ export default function Chat({ token, username, onLogout }) {
     ws.onopen = () => {
       setConnected(true);
       fetchUsers();
+      if (joinRoomId) handleAutoJoin(joinRoomId);
     };
 
     ws.onmessage = (event) => {
       const msg = JSON.parse(event.data);
-      setMessages((prev) => [...prev, msg]);
+      const roomId = msg.roomId || 'general';
+      setMessagesByRoom((prev) => ({
+        ...prev,
+        [roomId]: [...(prev[roomId] || []), msg],
+      }));
       if (msg.type === 'JOIN' || msg.type === 'LEAVE') {
         fetchUsers();
       }
@@ -41,9 +45,29 @@ export default function Chat({ token, username, onLogout }) {
     return () => ws.close();
   }, [token]);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  const fetchRooms = () => {
+    fetch(`${API_URL}/api/rooms`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => setRooms(data))
+      .catch(console.error);
+  };
+
+  const loadRoomHistory = (roomId) => {
+    if (loadedRooms.current.has(roomId)) return;
+    loadedRooms.current.add(roomId);
+    fetch(`${API_URL}/api/rooms/${roomId}/history`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.length > 0) {
+          setMessagesByRoom((prev) => ({ ...prev, [roomId]: data }));
+        }
+      })
+      .catch(console.error);
+  };
 
   const fetchUsers = () => {
     fetch(`${API_URL}/api/chat/users`, {
@@ -54,87 +78,94 @@ export default function Chat({ token, username, onLogout }) {
       .catch(console.error);
   };
 
-  const sendMessage = (e) => {
-    e.preventDefault();
-    if (!input.trim() || !wsRef.current) return;
-
-    wsRef.current.send(JSON.stringify({ content: input.trim() }));
-    setInput('');
+  const selectRoom = (roomId) => {
+    setActiveRoomId(roomId);
+    loadRoomHistory(roomId);
   };
 
-  const getMessageClass = (msg) => {
-    if (msg.type === 'JOIN' || msg.type === 'LEAVE') return 'message system';
-    if (msg.sender === username) return 'message own';
-    return 'message other';
+  const sendMessage = (content) => {
+    if (!content.trim() || !wsRef.current) return;
+    wsRef.current.send(JSON.stringify({ content: content.trim(), roomId: activeRoomId }));
   };
+
+  const startPrivateChat = async (targetUser) => {
+    try {
+      const res = await fetch(`${API_URL}/api/rooms/private/${targetUser}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const room = await res.json();
+      fetchRooms();
+      selectRoom(room.id);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const createRoom = async (name) => {
+    try {
+      const res = await fetch(`${API_URL}/api/rooms/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name }),
+      });
+      const room = await res.json();
+      fetchRooms();
+      selectRoom(room.id);
+      return room;
+    } catch (err) {
+      console.error(err);
+      return null;
+    }
+  };
+
+  const joinRoom = async (roomId) => {
+    try {
+      const res = await fetch(`${API_URL}/api/rooms/join/${roomId}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return null;
+      const room = await res.json();
+      fetchRooms();
+      selectRoom(room.id);
+      return room;
+    } catch (err) {
+      console.error(err);
+      return null;
+    }
+  };
+
+  const handleAutoJoin = async (roomId) => {
+    await joinRoom(roomId);
+  };
+
+  const activeRoom = rooms.find((r) => r.id === activeRoomId);
+  const activeMessages = messagesByRoom[activeRoomId] || [];
+  const roomName = activeRoom ? activeRoom.name : 'Общий чат';
 
   return (
     <div className="chat-container">
-      <div className="chat-sidebar">
-        <div className="sidebar-header">
-          <h2>💬 BarsikChat</h2>
-          <span className={`status ${connected ? 'online' : 'offline'}`}>
-            {connected ? '● В сети' : '● Офлайн'}
-          </span>
-        </div>
-        <div className="user-info">
-          <span>
-            Вы: <strong>{username}</strong>
-          </span>
-          <button onClick={onLogout} className="logout-btn">
-            Выйти
-          </button>
-        </div>
-        <div className="online-users">
-          <h3>В сети ({onlineUsers.length})</h3>
-          <ul>
-            {onlineUsers.map((user, i) => (
-              <li key={i}>
-                <span className="user-dot">●</span> {user}
-                {user === username && ' (вы)'}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-      <div className="chat-main">
-        <div className="messages">
-          {messages.length === 0 && (
-            <div className="empty-chat">
-              <p>Нет сообщений. Начните общение!</p>
-            </div>
-          )}
-          {messages.map((msg, i) => (
-            <div key={i} className={getMessageClass(msg)}>
-              {msg.type === 'JOIN' || msg.type === 'LEAVE' ? (
-                <span className="system-text">{msg.content}</span>
-              ) : (
-                <>
-                  <div className="message-header">
-                    <strong>{msg.sender}</strong>
-                    <span className="time">{msg.timestamp}</span>
-                  </div>
-                  <div className="message-body">{msg.content}</div>
-                </>
-              )}
-            </div>
-          ))}
-          <div ref={messagesEndRef} />
-        </div>
-        <form className="message-form" onSubmit={sendMessage}>
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Введите сообщение..."
-            disabled={!connected}
-            autoFocus
-          />
-          <button type="submit" disabled={!connected || !input.trim()}>
-            Отправить
-          </button>
-        </form>
-      </div>
+      <Sidebar
+        rooms={rooms}
+        activeRoomId={activeRoomId}
+        onSelectRoom={selectRoom}
+        onlineUsers={onlineUsers}
+        username={username}
+        connected={connected}
+        onLogout={onLogout}
+        onStartPrivateChat={startPrivateChat}
+        onCreateRoom={createRoom}
+        onJoinRoom={joinRoom}
+        token={token}
+      />
+      <ChatRoom
+        messages={activeMessages}
+        onSendMessage={sendMessage}
+        roomName={roomName}
+        username={username}
+        connected={connected}
+      />
     </div>
   );
 }

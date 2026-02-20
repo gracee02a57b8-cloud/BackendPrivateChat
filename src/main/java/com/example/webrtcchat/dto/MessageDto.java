@@ -8,6 +8,7 @@ public class MessageDto {
     private String content;
     private String timestamp;
     private MessageType type;
+    private String roomId;
 
     public MessageDto() {}
 
@@ -29,4 +30,7 @@ public class MessageDto {
 
     public MessageType getType() { return type; }
     public void setType(MessageType type) { this.type = type; }
+
+    public String getRoomId() { return roomId; }
+    public void setRoomId(String roomId) { this.roomId = roomId; }
 }

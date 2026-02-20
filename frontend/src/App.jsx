@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Login from './components/Login';
 import Chat from './components/Chat';
 import './App.css';
@@ -6,6 +6,16 @@ import './App.css';
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [username, setUsername] = useState(localStorage.getItem('username'));
+  const [joinRoomId, setJoinRoomId] = useState(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const joinId = params.get('join');
+    if (joinId) {
+      setJoinRoomId(joinId);
+      window.history.replaceState({}, '', '/');
+    }
+  }, []);
 
   const handleLogin = (newToken, newUsername) => {
     localStorage.setItem('token', newToken);
@@ -25,7 +35,14 @@ function App() {
     return <Login onLogin={handleLogin} />;
   }
 
-  return <Chat token={token} username={username} onLogout={handleLogout} />;
+  return (
+    <Chat
+      token={token}
+      username={username}
+      onLogout={handleLogout}
+      joinRoomId={joinRoomId}
+    />
+  );
 }
 
 export default App;

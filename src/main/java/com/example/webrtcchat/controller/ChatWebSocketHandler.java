@@ -1,9 +1,12 @@
 package com.example.webrtcchat.controller;
 
 import com.example.webrtcchat.dto.MessageDto;
+import com.example.webrtcchat.dto.RoomDto;
 import com.example.webrtcchat.service.ChatService;
 import com.example.webrtcchat.service.JwtService;
+import com.example.webrtcchat.service.RoomService;
 import com.example.webrtcchat.types.MessageType;
+import com.example.webrtcchat.types.RoomType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,13 +28,16 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
+    private final Map<String, WebSocketSession> userSessions = new ConcurrentHashMap<>();
     private final ChatService chatService;
     private final JwtService jwtService;
+    private final RoomService roomService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public ChatWebSocketHandler(ChatService chatService, JwtService jwtService) {
+    public ChatWebSocketHandler(ChatService chatService, JwtService jwtService, RoomService roomService) {
         this.chatService = chatService;
         this.jwtService = jwtService;
+        this.roomService = roomService;
     }
 
     @Override
@@ -45,15 +51,18 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         String username = jwtService.extractUsername(token);
         session.getAttributes().put("username", username);
         sessions.put(session.getId(), session);
+        userSessions.put(username, session);
         chatService.addUser(username);
+        roomService.joinRoom("general", username);
 
         MessageDto joinMsg = new MessageDto();
         joinMsg.setSender(username);
         joinMsg.setContent(username + " присоединился к чату");
         joinMsg.setTimestamp(now());
         joinMsg.setType(MessageType.JOIN);
-        chatService.send(joinMsg);
-        broadcast(joinMsg);
+        joinMsg.setRoomId("general");
+        chatService.send("general", joinMsg);
+        broadcastToRoom("general", joinMsg);
 
         log.info("User '{}' connected. Online: {}", username, chatService.getOnlineUsers().size());
     }
@@ -68,8 +77,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         incoming.setTimestamp(now());
         incoming.setType(MessageType.CHAT);
 
-        chatService.send(incoming);
-        broadcast(incoming);
+        String roomId = incoming.getRoomId();
+        if (roomId == null) roomId = "general";
+        incoming.setRoomId(roomId);
+
+        chatService.send(roomId, incoming);
+        broadcastToRoom(roomId, incoming);
     }
 
     @Override
@@ -78,6 +91,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         sessions.remove(session.getId());
 
         if (username != null) {
+            userSessions.remove(username);
             chatService.removeUser(username);
 
             MessageDto leaveMsg = new MessageDto();
@@ -85,8 +99,9 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             leaveMsg.setContent(username + " покинул чат");
             leaveMsg.setTimestamp(now());
             leaveMsg.setType(MessageType.LEAVE);
-            chatService.send(leaveMsg);
-            broadcast(leaveMsg);
+            leaveMsg.setRoomId("general");
+            chatService.send("general", leaveMsg);
+            broadcastToRoom("general", leaveMsg);
 
             log.info("User '{}' disconnected. Online: {}", username, chatService.getOnlineUsers().size());
         }
@@ -98,7 +113,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         session.close(CloseStatus.SERVER_ERROR);
     }
 
-    private void broadcast(MessageDto message) {
+    private void broadcastToRoom(String roomId, MessageDto message) {
         String json;
         try {
             json = objectMapper.writeValueAsString(message);
@@ -107,15 +122,27 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
-        sessions.values().forEach(s -> {
-            try {
-                if (s.isOpen()) {
-                    s.sendMessage(new TextMessage(json));
-                }
-            } catch (Exception e) {
-                log.error("Failed to send message to session {}", s.getId(), e);
+        RoomDto room = roomService.getRoomById(roomId);
+        if (room == null) return;
+
+        if (room.getType() == RoomType.GENERAL) {
+            userSessions.values().forEach(s -> sendSafe(s, json));
+        } else {
+            room.getMembers().forEach(member -> {
+                WebSocketSession s = userSessions.get(member);
+                if (s != null) sendSafe(s, json);
+            });
+        }
+    }
+
+    private void sendSafe(WebSocketSession session, String json) {
+        try {
+            if (session.isOpen()) {
+                session.sendMessage(new TextMessage(json));
             }
-        });
+        } catch (Exception e) {
+            log.error("Failed to send message to session {}", session.getId(), e);
+        }
     }
 
     private String extractToken(WebSocketSession session) {
