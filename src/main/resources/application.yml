@@ -2,7 +2,7 @@ server:
   port: 9001
 
 jwt:
-  secret: your-secret-key-change-this-in-production
+  secret: ${JWT_SECRET:sigur-chat-very-secure-jwt-secret-key-change-in-production-2026}
   expiration: 86400000
 
 logging:
