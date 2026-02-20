@@ -26,8 +26,8 @@ export default function NewsBoard({ token, username, onBack }) {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Файл слишком большой (макс. 5МБ)');
+    if (file.size > 20 * 1024 * 1024) {
+      alert('Файл слишком большой (макс. 20МБ)');
       return;
     }
     setImageFile(file);

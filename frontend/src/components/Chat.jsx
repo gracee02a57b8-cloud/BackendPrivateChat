@@ -82,9 +82,17 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
     loadRoomHistory(roomId);
   };
 
-  const sendMessage = (content) => {
-    if (!content.trim() || !wsRef.current) return;
-    wsRef.current.send(JSON.stringify({ content: content.trim(), roomId: activeRoomId }));
+  const sendMessage = (content, fileData) => {
+    if (!wsRef.current) return;
+    if (!content && !fileData) return;
+    const msg = { content: content || '', roomId: activeRoomId };
+    if (fileData) {
+      msg.fileUrl = fileData.fileUrl;
+      msg.fileName = fileData.fileName;
+      msg.fileSize = fileData.fileSize;
+      msg.fileType = fileData.fileType;
+    }
+    wsRef.current.send(JSON.stringify(msg));
   };
 
   const startPrivateChat = async (targetUser) => {
@@ -187,6 +195,7 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
         roomName={roomName}
         username={username}
         connected={connected}
+        token={token}
       />
     </div>
   );

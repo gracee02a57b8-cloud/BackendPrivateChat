@@ -4,8 +4,8 @@ server:
 spring:
   servlet:
     multipart:
-      max-file-size: 5MB
-      max-request-size: 5MB
+      max-file-size: 100MB
+      max-request-size: 100MB
 
 jwt:
   secret: ${JWT_SECRET:sigur-chat-very-secure-jwt-secret-key-change-in-production-2026}

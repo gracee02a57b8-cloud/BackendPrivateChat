@@ -9,6 +9,10 @@ public class MessageDto {
     private String timestamp;
     private MessageType type;
     private String roomId;
+    private String fileUrl;
+    private String fileName;
+    private long fileSize;
+    private String fileType;
 
     public MessageDto() {}
 
@@ -33,4 +37,16 @@ public class MessageDto {
 
     public String getRoomId() { return roomId; }
     public void setRoomId(String roomId) { this.roomId = roomId; }
+
+    public String getFileUrl() { return fileUrl; }
+    public void setFileUrl(String fileUrl) { this.fileUrl = fileUrl; }
+
+    public String getFileName() { return fileName; }
+    public void setFileName(String fileName) { this.fileName = fileName; }
+
+    public long getFileSize() { return fileSize; }
+    public void setFileSize(long fileSize) { this.fileSize = fileSize; }
+
+    public String getFileType() { return fileType; }
+    public void setFileType(String fileType) { this.fileType = fileType; }
 }
