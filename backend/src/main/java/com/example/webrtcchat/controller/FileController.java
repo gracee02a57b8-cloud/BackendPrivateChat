@@ -10,6 +10,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import org.springframework.beans.factory.annotation.Value;
+
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
@@ -28,8 +30,8 @@ public class FileController {
     private static final long MAX_FILE_SIZE = 100L * 1024 * 1024; // 100MB
     private final Path uploadDir;
 
-    public FileController() {
-        this.uploadDir = Paths.get("uploads").toAbsolutePath().normalize();
+    public FileController(@Value("${upload.dir:uploads}") String uploadDirPath) {
+        this.uploadDir = Paths.get(uploadDirPath).toAbsolutePath().normalize();
         try {
             Files.createDirectories(uploadDir);
         } catch (IOException e) {

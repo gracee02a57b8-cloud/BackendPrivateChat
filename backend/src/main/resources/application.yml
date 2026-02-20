@@ -1,0 +1,23 @@
+server:
+  port: ${SERVER_PORT:9001}
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: ${MAX_FILE_SIZE:100MB}
+      max-request-size: ${MAX_REQUEST_SIZE:100MB}
+
+jwt:
+  secret: ${JWT_SECRET:changeme-default-dev-secret-key-min-32-chars!!}
+  expiration: ${JWT_EXPIRATION:86400000}
+
+cors:
+  allowed-origins: ${CORS_ORIGINS:http://localhost:*,http://127.0.0.1:*}
+
+upload:
+  dir: ${UPLOAD_DIR:uploads}
+
+logging:
+  level:
+    root: ${LOG_LEVEL:INFO}
+    com.example.webrtcchat: ${APP_LOG_LEVEL:DEBUG}

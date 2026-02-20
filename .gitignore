@@ -1,7 +1,20 @@
-# Java
-target/
-*.class
-*.jar
+# Environment
+.env
+
+# Java / Backend
+backend/target/
+backend/*.class
+backend/*.jar
+backend/.idea/
+backend/*.iml
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Uploads
+backend/uploads/
+uploads/
 
 # IDE
 .idea/
@@ -12,9 +25,8 @@ target/
 .DS_Store
 Thumbs.db
 
-# Frontend
-frontend/node_modules/
-frontend/dist/
+# Docker
+docker-compose.override.yml
 
-# Uploads
-uploads/
+# Logs
+*.log

@@ -1,0 +1,50 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: barsik-backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - SERVER_PORT=${SERVER_PORT:-9001}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRATION=${JWT_EXPIRATION:-86400000}
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE:-100MB}
+      - MAX_REQUEST_SIZE=${MAX_REQUEST_SIZE:-100MB}
+      - UPLOAD_DIR=${UPLOAD_DIR:-/app/uploads}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:*,http://frontend:*}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - APP_LOG_LEVEL=${APP_LOG_LEVEL:-DEBUG}
+    volumes:
+      - uploads_data:/app/uploads
+    ports:
+      - "${SERVER_PORT:-9001}:${SERVER_PORT:-9001}"
+    networks:
+      - barsik-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${SERVER_PORT:-9001}/api/auth/login || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: barsik-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - barsik-net
+
+volumes:
+  uploads_data:
+
+networks:
+  barsik-net:
+    driver: bridge
