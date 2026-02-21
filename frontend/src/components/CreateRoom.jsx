@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { copyToClipboard } from '../utils/clipboard';
 
 export default function CreateRoom({ onCreateRoom, onClose }) {
   const [name, setName] = useState('');
@@ -16,7 +17,7 @@ export default function CreateRoom({ onCreateRoom, onClose }) {
     : '';
 
   const copyLink = () => {
-    navigator.clipboard.writeText(inviteLink);
+    copyToClipboard(inviteLink);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import EmojiPicker from './EmojiPicker';
+import { copyToClipboard } from '../utils/clipboard';
 
 function formatFileSize(bytes) {
   if (bytes < 1024) return bytes + ' Б';
@@ -270,13 +271,13 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
   };
 
   const copyMessage = (msg) => {
-    navigator.clipboard.writeText(msg.content || '');
+    copyToClipboard(msg.content || '');
     setContextMenu(null);
   };
 
   const handleCopyLink = () => {
     const url = `${window.location.origin}?join=${activeRoom?.id || ''}`;
-    navigator.clipboard.writeText(url).then(() => {
+    copyToClipboard(url).then(() => {
       setCopyToast(true);
       setTimeout(() => setCopyToast(false), 1500);
     });

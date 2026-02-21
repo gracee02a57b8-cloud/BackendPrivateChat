@@ -2,6 +2,7 @@ import { useState } from 'react';
 import UserSearch from './UserSearch';
 import CreateRoom from './CreateRoom';
 import JoinRoom from './JoinRoom';
+import { copyToClipboard } from '../utils/clipboard';
 
 const AVATAR_COLORS = [
   '#e94560', '#4ecca3', '#f0a500', '#a855f7',
@@ -41,7 +42,7 @@ export default function Sidebar({
   const copyShareLink = (e, roomId) => {
     e.stopPropagation();
     const url = `${window.location.origin}?join=${roomId}`;
-    navigator.clipboard.writeText(url).then(() => {
+    copyToClipboard(url).then(() => {
       setShareCopied(roomId);
       setTimeout(() => setShareCopied(null), 1500);
     });

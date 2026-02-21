@@ -81,6 +81,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         roomService.joinRoom("general", username);
 
         MessageDto joinMsg = new MessageDto();
+        joinMsg.setId(UUID.randomUUID().toString());
         joinMsg.setSender(username);
         joinMsg.setContent(username + " присоединился к чату");
         joinMsg.setTimestamp(now());
@@ -327,6 +328,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 chatService.removeUser(username);
 
                 MessageDto leaveMsg = new MessageDto();
+                leaveMsg.setId(UUID.randomUUID().toString());
                 leaveMsg.setSender(username);
                 leaveMsg.setContent(username + " покинул чат");
                 leaveMsg.setTimestamp(now());
