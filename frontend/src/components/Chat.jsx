@@ -14,6 +14,7 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
   const [activeRoomId, setActiveRoomId] = useState('general');
   const [messagesByRoom, setMessagesByRoom] = useState({});
   const [onlineUsers, setOnlineUsers] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
   const [connected, setConnected] = useState(false);
   const [unreadCounts, setUnreadCounts] = useState({});
   const [scheduledMessages, setScheduledMessages] = useState([]);
@@ -115,6 +116,7 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
   useEffect(() => {
     fetchRooms();
     loadRoomHistory('general');
+    fetchContacts();
     unmounted.current = false;
 
     // Initialize E2E encryption
@@ -389,6 +391,17 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
       .then((res) => { if (!res.ok) throw new Error(res.status); return res.json(); })
       .then((data) => setOnlineUsers(data))
       .catch(console.error);
+    // Also refresh all contacts with online status
+    fetchContacts();
+  };
+
+  const fetchContacts = () => {
+    fetch('/api/chat/contacts', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => { if (!res.ok) throw new Error(res.status); return res.json(); })
+      .then((data) => setAllUsers(data))
+      .catch(console.error);
   };
 
   const selectRoom = (roomId) => {
@@ -604,6 +617,7 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
         activeRoomId={activeRoomId}
         onSelectRoom={(id) => { selectRoom(id); setSidebarOpen(false); }}
         onlineUsers={onlineUsers}
+        allUsers={allUsers}
         username={username}
         connected={connected}
         onLogout={onLogout}

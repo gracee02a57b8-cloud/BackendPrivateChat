@@ -691,6 +691,49 @@
   font-size: 0.9rem;
 }
 
+/* ===== Contact Item ===== */
+.sb-contact-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.sb-contact-item:hover {
+  background: #1e2c3a;
+}
+
+.sb-contact-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sb-contact-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #eee;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sb-contact-status {
+  font-size: 0.75rem;
+}
+
+.sb-contact-status.online {
+  color: #4dcd5e;
+}
+
+.sb-contact-status.offline {
+  color: #6c7883;
+}
+
 /* ===== Online Bar (bottom) ===== */
 .sb-online-bar {
   padding: 10px 16px;

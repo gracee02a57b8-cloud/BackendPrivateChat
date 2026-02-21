@@ -43,6 +43,7 @@ export default function Sidebar({
   activeRoomId,
   onSelectRoom,
   onlineUsers,
+  allUsers = [],
   username,
   connected,
   onLogout,
@@ -188,6 +189,12 @@ export default function Sidebar({
           💬 Чаты
         </button>
         <button
+          className={`sb-tab${activeTab === 'contacts' ? ' active' : ''}`}
+          onClick={() => setActiveTab('contacts')}
+        >
+          👥 Контакты
+        </button>
+        <button
           className={`sb-tab${activeTab === 'news' ? ' active' : ''}`}
           onClick={() => { setActiveTab('news'); onShowNews(); }}
         >
@@ -222,7 +229,80 @@ export default function Sidebar({
         />
       )}
 
-      {/* ── Chat List ── */}
+      {/* ── Chat List / Contacts List ── */}
+      {activeTab === 'contacts' ? (
+        <div className="sb-chat-list">
+          <div className="sb-section-header">
+            <span className="sb-section-label">ВСЕ ПОЛЬЗОВАТЕЛИ ({allUsers.filter(u => u.username !== username).length})</span>
+          </div>
+          {(() => {
+            const contacts = allUsers
+              .filter(u => u.username !== username)
+              .filter(u => {
+                if (!searchFilter.trim()) return true;
+                return u.username.toLowerCase().includes(searchFilter.toLowerCase());
+              });
+            const online = contacts.filter(u => u.online);
+            const offline = contacts.filter(u => !u.online);
+            return (
+              <>
+                {online.length > 0 && (
+                  <div className="sb-section-header">
+                    <span className="sb-section-label">В СЕТИ — {online.length}</span>
+                  </div>
+                )}
+                {online.map(user => (
+                  <div
+                    key={user.username}
+                    className="sb-contact-item"
+                    onClick={() => onStartPrivateChat(user.username)}
+                  >
+                    <div className="sb-chat-avatar-wrap">
+                      <div className="sb-chat-avatar" style={{ background: getAvatarColor(user.username) }}>
+                        {getInitials(user.username)}
+                      </div>
+                      <span className="sb-online-dot online" />
+                    </div>
+                    <div className="sb-contact-info">
+                      <span className="sb-contact-name">{user.username}</span>
+                      <span className="sb-contact-status online">В сети</span>
+                    </div>
+                  </div>
+                ))}
+                {offline.length > 0 && (
+                  <div className="sb-section-header">
+                    <span className="sb-section-label">НЕ В СЕТИ — {offline.length}</span>
+                  </div>
+                )}
+                {offline.map(user => (
+                  <div
+                    key={user.username}
+                    className="sb-contact-item"
+                    onClick={() => onStartPrivateChat(user.username)}
+                  >
+                    <div className="sb-chat-avatar-wrap">
+                      <div className="sb-chat-avatar" style={{ background: getAvatarColor(user.username) }}>
+                        {getInitials(user.username)}
+                      </div>
+                      <span className="sb-online-dot offline" />
+                    </div>
+                    <div className="sb-contact-info">
+                      <span className="sb-contact-name">{user.username}</span>
+                      <span className="sb-contact-status offline">Не в сети</span>
+                    </div>
+                  </div>
+                ))}
+                {contacts.length === 0 && (
+                  <div className="sb-empty">
+                    <span>👥</span>
+                    <p>{searchFilter ? 'Не найдено' : 'Нет пользователей'}</p>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </div>
+      ) : (
       <div className="sb-chat-list">
         {/* General rooms */}
         {filterRooms(generalRooms).map((room) => renderChatItem(room, room.name))}
@@ -252,6 +332,7 @@ export default function Sidebar({
           </div>
         )}
       </div>
+      )}
 
       {showCreate && <CreateRoom onCreateRoom={onCreateRoom} onClose={() => setShowCreate(false)} />}
       {showJoin && <JoinRoom onJoinRoom={onJoinRoom} onClose={() => setShowJoin(false)} />}

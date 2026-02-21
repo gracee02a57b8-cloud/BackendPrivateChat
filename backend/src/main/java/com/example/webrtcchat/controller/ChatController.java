@@ -36,4 +36,12 @@ public class ChatController {
         }
         return ResponseEntity.ok(chatService.getOnlineUsers());
     }
+
+    @GetMapping("/contacts")
+    public ResponseEntity<List<UserDto>> getAllContacts() {
+        List<UserDto> contacts = chatService.getAllUsers().stream()
+                .map(u -> new UserDto(u, chatService.isUserOnline(u)))
+                .toList();
+        return ResponseEntity.ok(contacts);
+    }
 }
