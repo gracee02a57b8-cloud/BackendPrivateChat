@@ -571,7 +571,7 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
     const peer = getPeerUsername(activeRoom);
     if (!peer) return;
     try {
-      const code = await e2eManager.getSecurityCode(peer);
+      const code = await e2eManager.getSecurityCode(peer, token);
       if (code) {
         setSecurityCode(code);
         setSecurityCodePeer(peer);

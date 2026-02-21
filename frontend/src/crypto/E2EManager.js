@@ -153,10 +153,24 @@ class E2EManager {
         n: msg.messageNumber || 0,
       };
 
-      const { plaintext, state } = await ratchetDecrypt(
-        session, header, msg.encryptedContent, msg.iv
-      );
-      await saveSession(peerUsername, state);
+      let plaintext;
+      try {
+        const result = await ratchetDecrypt(session, header, msg.encryptedContent, msg.iv);
+        plaintext = result.plaintext;
+        await saveSession(peerUsername, result.state);
+      } catch (decryptErr) {
+        // If decrypt fails and this is an initial message, peer may have regenerated keys
+        if (msg.ephemeralKey && msg.senderIdentityKey) {
+          console.warn(`[E2E] Ratchet decrypt failed, re-establishing session with ${peerUsername}`);
+          await deleteSession(peerUsername);
+          session = await this._handleInitialMessage(peerUsername, msg);
+          const result = await ratchetDecrypt(session, header, msg.encryptedContent, msg.iv);
+          plaintext = result.plaintext;
+          await saveSession(peerUsername, result.state);
+        } else {
+          throw decryptErr;
+        }
+      }
 
       // Parse payload (may contain fileKey for file encryption)
       try {
@@ -236,11 +250,38 @@ class E2EManager {
   // ======================== Security Code ========================
 
   /** Generate safety number for identity verification between two users. */
-  async getSecurityCode(peerUsername) {
+  async getSecurityCode(peerUsername, token) {
     const myIK = await keyManager.getIdentityPublicKey();
-    const trusted = await cryptoStore.getTrustedKey(peerUsername);
-    if (!myIK || !trusted) return null;
-    return generateSecurityCode(myIK, trusted.identityKey);
+    if (!myIK) return null;
+
+    // Always fetch peer's CURRENT identity key from server for accurate code
+    let peerIK = null;
+    try {
+      const res = await fetch(`/api/keys/identity/${encodeURIComponent(peerUsername)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        peerIK = data.identityKey;
+        // Update trusted key store if changed
+        if (peerIK) {
+          const trusted = await cryptoStore.getTrustedKey(peerUsername);
+          if (!trusted || trusted.identityKey !== peerIK) {
+            await cryptoStore.saveTrustedKey(peerUsername, peerIK);
+          }
+        }
+      }
+    } catch {
+      // Fallback to stored trusted key
+    }
+
+    if (!peerIK) {
+      const trusted = await cryptoStore.getTrustedKey(peerUsername);
+      if (!trusted) return null;
+      peerIK = trusted.identityKey;
+    }
+
+    return generateSecurityCode(myIK, peerIK);
   }
 
   /** Check if peer's identity key has changed (possible MITM). */

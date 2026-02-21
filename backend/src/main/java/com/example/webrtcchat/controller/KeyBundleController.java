@@ -89,6 +89,18 @@ public class KeyBundleController {
     }
 
     /**
+     * Get a user's current identity key (without consuming OTK).
+     */
+    @GetMapping("/identity/{username}")
+    public ResponseEntity<?> getIdentityKey(@PathVariable String username) {
+        String identityKey = keyBundleService.getIdentityKey(username);
+        if (identityKey == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(Map.of("identityKey", identityKey));
+    }
+
+    /**
      * Check if a user has E2E keys set up.
      */
     @GetMapping("/has-bundle/{username}")

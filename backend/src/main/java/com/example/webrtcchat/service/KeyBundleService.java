@@ -102,6 +102,16 @@ public class KeyBundleService {
     }
 
     /**
+     * Get a user's identity key (without consuming OTK).
+     */
+    @Transactional(readOnly = true)
+    public String getIdentityKey(String username) {
+        return bundleRepo.findByUsername(username)
+                .map(KeyBundleEntity::getIdentityKey)
+                .orElse(null);
+    }
+
+    /**
      * Check if a user has a key bundle.
      */
     @Transactional(readOnly = true)
