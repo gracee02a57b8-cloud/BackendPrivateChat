@@ -34,6 +34,78 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
   const reconnectAttempts = useRef(0);
   const maxReconnectAttempts = 10;
   const unmounted = useRef(false);
+  const documentVisible = useRef(true);
+  const notifSound = useRef(null);
+
+  // Create notification sound
+  useEffect(() => {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      notifSound.current = () => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.setValueAtTime(880, ctx.currentTime);
+        osc.frequency.setValueAtTime(1050, ctx.currentTime + 0.08);
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.3);
+      };
+    } catch (e) {
+      notifSound.current = null;
+    }
+  }, []);
+
+  // Track tab visibility
+  useEffect(() => {
+    const handleVisibility = () => {
+      documentVisible.current = !document.hidden;
+      // Clear title badge when user returns to tab
+      if (!document.hidden) {
+        document.title = '🐱 BarsikChat';
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
+
+  // Request browser notification permission
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  const showBrowserNotification = (title, body, roomId) => {
+    // Update page title when tab is not visible
+    if (document.hidden) {
+      const totalUnread = Object.values(unreadCounts).reduce((a, b) => a + b, 0) + 1;
+      document.title = `(${totalUnread}) 🐱 BarsikChat`;
+    }
+
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+    if (documentVisible.current && roomId === activeRoomIdRef.current) return;
+    try {
+      const n = new Notification(title, {
+        body: body.length > 100 ? body.slice(0, 100) + '…' : body,
+        icon: '/barsik-icon.png',
+        tag: 'barsik-msg-' + roomId,
+        renotify: true,
+        silent: false,
+      });
+      n.onclick = () => {
+        window.focus();
+        setActiveRoomId(roomId);
+        n.close();
+      };
+      setTimeout(() => n.close(), 5000);
+    } catch (e) {
+      // Notification constructor may fail in some contexts
+    }
+  };
 
   useEffect(() => {
     activeRoomIdRef.current = activeRoomId;
@@ -203,6 +275,20 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
         ...prev,
         [roomId]: [...(prev[roomId] || []), msg],
       }));
+
+      // Browser push notification for new messages
+      if ((msg.type === 'CHAT' || msg.type === 'PRIVATE') && msg.sender !== username) {
+        const roomObj = rooms.find(r => r.id === roomId);
+        const roomName = roomObj ? (roomObj.type === 'PRIVATE'
+          ? roomObj.name.split(' & ').find(n => n !== username) || roomObj.name
+          : roomObj.name) : 'Чат';
+        const body = msg.content || (msg.fileUrl ? '📎 Файл' : 'Новое сообщение');
+        showBrowserNotification(`${msg.sender} — ${roomName}`, body, roomId);
+        // Play sound if not active tab or not current room
+        if (document.hidden || roomId !== activeRoomIdRef.current) {
+          try { notifSound.current?.(); } catch (e) {}
+        }
+      }
 
       // Track unread messages
       if (msg.type === 'CHAT' && msg.sender !== username) {
