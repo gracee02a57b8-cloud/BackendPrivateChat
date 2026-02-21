@@ -50,6 +50,12 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
     function connectWs() {
       if (unmounted.current) return;
 
+      // Close previous socket if still open (prevent duplicate connections)
+      if (wsRef.current && wsRef.current.readyState <= WebSocket.OPEN) {
+        wsRef.current.onclose = null; // prevent triggering reconnect
+        wsRef.current.close();
+      }
+
       const ws = new WebSocket(`${WS_URL}/ws/chat?token=${token}`);
       wsRef.current = ws;
 
@@ -210,8 +216,12 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
       }
     };
 
-    ws.onclose = () => {
+    ws.onclose = (e) => {
+      // Only reconnect if this is still the active socket
+      if (wsRef.current !== ws) return;
       setConnected(false);
+      // Code 4001 = replaced by new session on same device, don't reconnect
+      if (e.code === 4001) return;
       // Auto-reconnect with exponential backoff (R1)
       if (!unmounted.current && reconnectAttempts.current < maxReconnectAttempts) {
         const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
@@ -219,7 +229,10 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
         reconnectTimer.current = setTimeout(connectWs, delay);
       }
     };
-    ws.onerror = () => setConnected(false);
+    ws.onerror = () => {
+      if (wsRef.current !== ws) return;
+      setConnected(false);
+    };
     }
 
     connectWs();

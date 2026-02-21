@@ -68,7 +68,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         WebSocketSession oldSession = userSessions.get(username);
         if (oldSession != null && oldSession.isOpen() && !oldSession.getId().equals(session.getId())) {
             try {
-                oldSession.close(CloseStatus.POLICY_VIOLATION.withReason("New session opened"));
+                // Use custom code 4001 so client knows not to reconnect
+                oldSession.close(new CloseStatus(4001, "Replaced by new session"));
             } catch (Exception e) {
                 log.debug("Failed to close old session for user '{}'", username);
             }
