@@ -15,6 +15,29 @@ function getAvatarColor(name) {
 }
 function getInitials(name) { return name.charAt(0).toUpperCase(); }
 
+function formatTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts.includes?.('T') ? ts : ts.replace(' ', 'T'));
+  if (isNaN(d.getTime())) {
+    if (/^\d{2}:\d{2}/.test(ts)) return ts.slice(0, 5);
+    return '';
+  }
+  const now = new Date();
+  const diff = now - d;
+  const oneDay = 86400000;
+  if (diff < oneDay && d.getDate() === now.getDate()) {
+    return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  }
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (d.getDate() === yesterday.getDate() && d.getMonth() === yesterday.getMonth()) {
+    return 'Вчера';
+  }
+  const days = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+  if (diff < 7 * oneDay) return days[d.getDay()];
+  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+}
+
 export default function Sidebar({
   rooms,
   activeRoomId,
@@ -31,12 +54,16 @@ export default function Sidebar({
   onShowTasks,
   token,
   unreadCounts = {},
+  messagesByRoom = {},
   sidebarOpen,
   onCloseSidebar,
 }) {
+  const [activeTab, setActiveTab] = useState('chats');
   const [showSearch, setShowSearch] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
+  const [searchFilter, setSearchFilter] = useState('');
+  const [showMenu, setShowMenu] = useState(false);
   const [shareCopied, setShareCopied] = useState(null);
 
   const copyShareLink = (e, roomId) => {
@@ -57,40 +84,127 @@ export default function Sidebar({
     return parts.find((p) => p !== username) || room.name;
   };
 
+  const getLastMessage = (roomId) => {
+    const msgs = messagesByRoom[roomId];
+    if (!msgs || msgs.length === 0) return null;
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      if (msgs[i].type === 'CHAT' || msgs[i].type === 'PRIVATE') return msgs[i];
+    }
+    return msgs[msgs.length - 1];
+  };
+
+  const filterRooms = (list) => {
+    if (!searchFilter.trim()) return list;
+    const q = searchFilter.toLowerCase();
+    return list.filter(r => {
+      const name = r.type === 'PRIVATE' ? getPrivateDisplayName(r) : r.name;
+      return name.toLowerCase().includes(q);
+    });
+  };
+
+  const renderChatItem = (room, displayName) => {
+    const lastMsg = getLastMessage(room.id);
+    const isOnline = room.type === 'PRIVATE' && onlineUsers.includes(displayName);
+    const unread = unreadCounts[room.id] || 0;
+
+    let previewText = 'Нет сообщений';
+    if (lastMsg) {
+      const sender = lastMsg.sender === username ? 'Вы: ' : '';
+      const text = lastMsg.content || (lastMsg.fileUrl ? '📎 Файл' : '');
+      previewText = sender + (text.length > 35 ? text.slice(0, 35) + '…' : text);
+    }
+
+    return (
+      <div
+        key={room.id}
+        className={`sb-chat-item${activeRoomId === room.id ? ' active' : ''}`}
+        onClick={() => onSelectRoom(room.id)}
+      >
+        <div className="sb-chat-avatar-wrap">
+          <div className="sb-chat-avatar" style={{ background: getAvatarColor(displayName) }}>
+            {getInitials(displayName)}
+          </div>
+          {room.type === 'PRIVATE' && (
+            <span className={`sb-online-dot ${isOnline ? 'online' : 'offline'}`} />
+          )}
+        </div>
+        <div className="sb-chat-info">
+          <div className="sb-chat-top-row">
+            <span className="sb-chat-name">{displayName}</span>
+            <span className="sb-chat-time">{lastMsg ? formatTime(lastMsg.timestamp) : ''}</span>
+          </div>
+          <div className="sb-chat-bottom-row">
+            <span className="sb-chat-preview">{previewText}</span>
+            {unread > 0 && <span className="sb-unread">{unread}</span>}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className={`chat-sidebar${sidebarOpen ? ' open' : ''}`}>
-      {/* Mobile overlay close */}
       {sidebarOpen && <div className="sidebar-overlay" onClick={onCloseSidebar} />}
 
-      <div className="sidebar-header">
-        <h2>🐱 BarsikChat</h2>
-        <span className={`status ${connected ? 'online' : 'offline'}`}>
-          {connected ? '● В сети' : '● Офлайн'}
-        </span>
-      </div>
-
-      <div className="user-info">
-        <div className="user-info-left">
-          <div className="avatar-circle small" style={{ background: getAvatarColor(username) }}>
+      {/* ── Header: Avatar + Name + Status + Menu ── */}
+      <div className="sb-header">
+        <div className="sb-header-left">
+          <div className="sb-user-avatar" style={{ background: getAvatarColor(username) }}>
             {getInitials(username)}
           </div>
-          <strong>{username}</strong>
+          <div className="sb-user-meta">
+            <span className="sb-user-name">{username}</span>
+            <span className={`sb-user-status ${connected ? 'online' : ''}`}>
+              {connected ? '● В сети' : '● Офлайн'}
+            </span>
+          </div>
         </div>
-        <button onClick={onLogout} className="logout-btn">Выйти</button>
+        <div className="sb-header-right">
+          <button className="sb-menu-btn" onClick={() => setShowMenu(!showMenu)}>⋮</button>
+          {showMenu && (
+            <div className="sb-menu-dropdown">
+              <button onClick={() => { setShowMenu(false); setShowCreate(true); }}>➕ Создать чат</button>
+              <button onClick={() => { setShowMenu(false); setShowJoin(true); }}>🔗 Войти по ссылке</button>
+              <button onClick={() => { setShowMenu(false); onLogout(); }}>🚪 Выйти</button>
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="sidebar-actions">
-        <div className="sidebar-actions-row">
-          <button className="action-btn" onClick={() => setShowSearch(!showSearch)} title="Найти пользователя">🔍 Поиск</button>
-          <button className="action-btn" onClick={() => setShowCreate(true)} title="Создать комнату">➕ Создать</button>
-          <button className="action-btn" onClick={() => setShowJoin(true)} title="Войти по ссылке">🔗 Войти</button>
-        </div>
-        <div className="sidebar-actions-row">
-          <button className="action-btn" onClick={onShowNews} title="Новости">📰 Новости</button>
-          <button className="action-btn" onClick={onShowTasks} title="Задачи">📋 Задачи</button>
-        </div>
+      {/* ── Tab Bar ── */}
+      <div className="sb-tabs">
+        <button
+          className={`sb-tab${activeTab === 'chats' ? ' active' : ''}`}
+          onClick={() => setActiveTab('chats')}
+        >
+          💬 Чаты
+        </button>
+        <button
+          className={`sb-tab${activeTab === 'news' ? ' active' : ''}`}
+          onClick={() => { setActiveTab('news'); onShowNews(); }}
+        >
+          📰 Новости
+        </button>
+        <button
+          className={`sb-tab${activeTab === 'tasks' ? ' active' : ''}`}
+          onClick={() => { setActiveTab('tasks'); onShowTasks(); }}
+        >
+          📋 Задачи
+        </button>
       </div>
 
+      {/* ── Search ── */}
+      <div className="sb-search">
+        <span className="sb-search-icon">🔍</span>
+        <input
+          type="text"
+          placeholder="Поиск чатов..."
+          value={searchFilter}
+          onChange={(e) => setSearchFilter(e.target.value)}
+        />
+      </div>
+
+      {/* User Search Modal */}
       {showSearch && (
         <UserSearch
           token={token}
@@ -100,76 +214,54 @@ export default function Sidebar({
         />
       )}
 
-      <div className="room-list">
-        {generalRooms.map((room) => (
-          <div
-            key={room.id}
-            className={`room-item ${activeRoomId === room.id ? 'active' : ''}`}
-            onClick={() => onSelectRoom(room.id)}
-          >
-            <span className="room-icon">🌐</span>
-            <span className="room-name">{room.name}</span>
-            {unreadCounts[room.id] > 0 && <span className="unread-badge">{unreadCounts[room.id]}</span>}
-          </div>
-        ))}
+      {/* ── Chat List ── */}
+      <div className="sb-chat-list">
+        {/* General rooms */}
+        {filterRooms(generalRooms).map((room) => renderChatItem(room, room.name))}
 
-        {privateRooms.length > 0 && <div className="room-section">Личные чаты</div>}
-        {privateRooms.map((room) => {
-          const otherUser = getPrivateDisplayName(room);
-          const isOnline = onlineUsers.includes(otherUser);
-          return (
-            <div
-              key={room.id}
-              className={`room-item ${activeRoomId === room.id ? 'active' : ''}`}
-              onClick={() => onSelectRoom(room.id)}
-            >
-              <span className="room-icon">👤</span>
-              <span className={`pm-online-dot ${isOnline ? 'online' : 'offline'}`}>●</span>
-              <span className="room-name">{otherUser}</span>
-              {unreadCounts[room.id] > 0 && <span className="unread-badge">{unreadCounts[room.id]}</span>}
-              <span className="room-share" onClick={(e) => copyShareLink(e, room.id)} title="Поделиться чатом">
-                {shareCopied === room.id ? '✅' : '📤'}
-              </span>
-              {room.createdBy === username && (
-                <span className="room-delete" onClick={(e) => { e.stopPropagation(); if (confirm('Удалить этот чат?')) onDeleteRoom(room.id); }}>🗑</span>
-              )}
-            </div>
-          );
-        })}
-
-        {customRooms.length > 0 && <div className="room-section">Комнаты</div>}
-        {customRooms.map((room) => (
-          <div
-            key={room.id}
-            className={`room-item ${activeRoomId === room.id ? 'active' : ''}`}
-            onClick={() => onSelectRoom(room.id)}
-          >
-            <span className="room-icon">🏠</span>
-            <span className="room-name">{room.name}</span>
-            {unreadCounts[room.id] > 0 && <span className="unread-badge">{unreadCounts[room.id]}</span>}
-            <span className="room-share" onClick={(e) => copyShareLink(e, room.id)} title="Поделиться комнатой">
-              {shareCopied === room.id ? '✅' : '📤'}
-            </span>
-            {room.createdBy === username && (
-              <span className="room-delete" onClick={(e) => { e.stopPropagation(); if (confirm('Удалить комнату "' + room.name + '"?')) onDeleteRoom(room.id); }}>🗑</span>
-            )}
+        {/* Private chats section */}
+        {filterRooms(privateRooms).length > 0 && (
+          <div className="sb-section-header">
+            <span className="sb-section-label">ЛИЧНЫЕ ЧАТЫ</span>
+            <button className="sb-section-add" onClick={() => setShowSearch(!showSearch)} title="Начать чат">+</button>
           </div>
-        ))}
+        )}
+        {filterRooms(privateRooms).map((room) => renderChatItem(room, getPrivateDisplayName(room)))}
+
+        {/* Custom rooms section */}
+        {filterRooms(customRooms).length > 0 && (
+          <div className="sb-section-header">
+            <span className="sb-section-label">КОМНАТЫ</span>
+            <button className="sb-section-add" onClick={() => setShowCreate(true)} title="Создать комнату">+</button>
+          </div>
+        )}
+        {filterRooms(customRooms).map((room) => renderChatItem(room, room.name))}
+
+        {rooms.length === 0 && (
+          <div className="sb-empty">
+            <span>💬</span>
+            <p>Нет чатов</p>
+          </div>
+        )}
       </div>
 
-      <div className="online-users">
-        <h3>В сети ({onlineUsers.length})</h3>
-        <ul>
-          {onlineUsers.map((user, i) => (
-            <li key={i} onClick={() => { if (user !== username) onStartPrivateChat(user); }}>
-              <div className="avatar-circle tiny" style={{ background: getAvatarColor(user) }}>
-                {getInitials(user)}
-              </div>
-              <span className="online-user-name">{user}{user === username ? ' (вы)' : ''}</span>
-              <span className="user-dot">●</span>
-            </li>
+      {/* ── Online users compact bar ── */}
+      <div className="sb-online-bar">
+        <span className="sb-online-label">🟢 В сети: {onlineUsers.length}</span>
+        <div className="sb-online-avatars">
+          {onlineUsers.slice(0, 5).map((user, i) => (
+            <div
+              key={i}
+              className="sb-online-mini"
+              style={{ background: getAvatarColor(user) }}
+              title={user}
+              onClick={() => { if (user !== username) onStartPrivateChat(user); }}
+            >
+              {getInitials(user)}
+            </div>
           ))}
-        </ul>
+          {onlineUsers.length > 5 && <span className="sb-online-more">+{onlineUsers.length - 5}</span>}
+        </div>
       </div>
 
       {showCreate && <CreateRoom onCreateRoom={onCreateRoom} onClose={() => setShowCreate(false)} />}

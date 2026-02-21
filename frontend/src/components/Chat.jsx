@@ -498,6 +498,7 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
         onShowTasks={() => setShowTasks(true)}
         token={token}
         unreadCounts={unreadCounts}
+        messagesByRoom={messagesByRoom}
         sidebarOpen={sidebarOpen}
         onCloseSidebar={() => setSidebarOpen(false)}
       />
