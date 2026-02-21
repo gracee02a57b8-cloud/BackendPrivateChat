@@ -31,6 +31,9 @@ class KeyManager {
       this.signingKeyPair = await importKeyPair(stored.signingKeyPair, 'ECDSA');
       const spk = await cryptoStore.getSignedPreKey();
       if (spk) this.signedPreKeyPair = await importKeyPair(spk.keyPair);
+
+      // Verify server has our current identity key — re-upload if missing or stale
+      await this._ensureBundleOnServer(token);
     } else {
       await this._generateAndRegister(token);
     }
@@ -76,6 +79,39 @@ class KeyManager {
       signedPreKeySignature: spkSig,
       oneTimePreKeys: otks,
     });
+  }
+
+  /**
+   * Ensure the server has our current identity key bundle.
+   * After DB wipe, multi-device login, or server migration, the server's
+   * copy may be missing or stale — causing security code mismatch.
+   * The server endpoint is idempotent (upsert), so re-uploading is safe.
+   */
+  async _ensureBundleOnServer(token) {
+    try {
+      if (!this.identityKeyPair || !this.signingKeyPair || !this.signedPreKeyPair) return;
+
+      const ikPub = await exportPublicKey(this.identityKeyPair.publicKey);
+      const sigPub = await exportPublicKey(this.signingKeyPair.publicKey);
+      const spkPub = await exportPublicKey(this.signedPreKeyPair.publicKey);
+      const spk = await cryptoStore.getSignedPreKey();
+      const spkSig = spk?.signature || await ecdsaSign(this.signingKeyPair.privateKey, spkPub);
+
+      // Gather existing OTKs from IndexedDB
+      const existingOTKs = await cryptoStore.getAll('oneTimePreKeys');
+      const otks = existingOTKs.map(k => ({ id: k.id, publicKey: k.keyPair.publicKey }));
+
+      await this._uploadBundle(token, {
+        identityKey: ikPub,
+        signingKey: sigPub,
+        signedPreKey: spkPub,
+        signedPreKeySignature: spkSig,
+        oneTimePreKeys: otks,
+      });
+      console.log('[KeyManager] Bundle synced with server');
+    } catch (e) {
+      console.warn('[KeyManager] Bundle sync failed (will retry on next init):', e);
+    }
   }
 
   async _uploadBundle(token, bundle) {
