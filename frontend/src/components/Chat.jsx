@@ -25,6 +25,7 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
   const [e2eReady, setE2eReady] = useState(false);
   const [securityCode, setSecurityCode] = useState(null);
   const [securityCodePeer, setSecurityCodePeer] = useState(null);
+  const [e2eUnavailable, setE2eUnavailable] = useState(false);
   const wsRef = useRef(null);
   const loadedRooms = useRef(new Set());
   const activeRoomIdRef = useRef('general');
@@ -557,10 +558,21 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
   const showSecurityCode = async () => {
     const peer = getPeerUsername(activeRoom);
     if (!peer) return;
-    const code = await e2eManager.getSecurityCode(peer);
-    if (code) {
-      setSecurityCode(code);
+    try {
+      const code = await e2eManager.getSecurityCode(peer);
+      if (code) {
+        setSecurityCode(code);
+        setSecurityCodePeer(peer);
+        setE2eUnavailable(false);
+      } else {
+        setSecurityCode(null);
+        setSecurityCodePeer(peer);
+        setE2eUnavailable(true);
+      }
+    } catch {
+      setSecurityCode(null);
       setSecurityCodePeer(peer);
+      setE2eUnavailable(true);
     }
   };
 
@@ -617,11 +629,12 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
           onOpenTasks={() => { setTaskNotification(null); setShowTasks(true); }}
         />
       )}
-      {securityCode && (
+      {(securityCode || e2eUnavailable) && (
         <SecurityCodeModal
           securityCode={securityCode}
           peerUsername={securityCodePeer}
-          onClose={() => { setSecurityCode(null); setSecurityCodePeer(null); }}
+          unavailable={e2eUnavailable}
+          onClose={() => { setSecurityCode(null); setSecurityCodePeer(null); setE2eUnavailable(false); }}
         />
       )}
       {replyNotification && (
