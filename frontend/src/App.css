@@ -549,6 +549,34 @@
   background: #232e3c;
 }
 
+.sb-chat-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.sb-chat-item:hover .sb-chat-actions {
+  opacity: 1;
+}
+
+.sb-delete-btn,
+.sb-share-btn {
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background 0.15s;
+  line-height: 1;
+}
+
+.sb-delete-btn:hover,
+.sb-share-btn:hover {
+  background: rgba(255,255,255,0.1);
+}
+
 .sb-chat-avatar-wrap {
   position: relative;
   flex-shrink: 0;

@@ -138,6 +138,18 @@ export default function Sidebar({
             {unread > 0 && <span className="sb-unread">{unread}</span>}
           </div>
         </div>
+        <div className="sb-chat-actions">
+          {(room.type === 'ROOM' || room.type === 'PRIVATE') && (
+            <span className="sb-share-btn" onClick={(e) => copyShareLink(e, room.id)} title="Поделиться">
+              {shareCopied === room.id ? '✅' : '📤'}
+            </span>
+          )}
+          {room.createdBy === username && (
+            <span className="sb-delete-btn" onClick={(e) => { e.stopPropagation(); if (confirm('Удалить "' + displayName + '"?')) onDeleteRoom(room.id); }} title="Удалить">
+              🗑
+            </span>
+          )}
+        </div>
       </div>
     );
   };
