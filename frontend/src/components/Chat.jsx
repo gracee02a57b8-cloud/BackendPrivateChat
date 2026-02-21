@@ -205,8 +205,20 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
         return;
       }
 
-      // Handle task notifications — show rich popup
+      // Handle task notifications — show rich popup only to relevant user
       if (msg.type === 'TASK_CREATED' || msg.type === 'TASK_COMPLETED' || msg.type === 'TASK_OVERDUE') {
+        const assignee = msg.extra?.assignedTo;
+        const creator = msg.sender;
+        // TASK_CREATED: only show to assignee (not creator)
+        // TASK_COMPLETED: only show to creator (not assignee)
+        // TASK_OVERDUE: show to both
+        const showPopup =
+          (msg.type === 'TASK_CREATED' && assignee === username && creator !== username) ||
+          (msg.type === 'TASK_COMPLETED' && creator === username && assignee !== username) ||
+          (msg.type === 'TASK_OVERDUE');
+
+        if (!showPopup) return;
+
         const label = msg.type === 'TASK_CREATED' ? '📋 Новая задача' :
                       msg.type === 'TASK_COMPLETED' ? '✅ Задача выполнена' : '⚠️ Просрочена';
         setTaskNotification({
