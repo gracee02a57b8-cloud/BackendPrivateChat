@@ -3,10 +3,15 @@
 
 # Java / Backend
 backend/target/
+target/
 backend/*.class
 backend/*.jar
 backend/.idea/
 backend/*.iml
+
+# Dev scripts
+start-frontend.cmd
+test-proxy.ps1
 
 # Frontend
 frontend/node_modules/
