@@ -273,6 +273,14 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         notification.setRoomId(task.getRoomId());
         notification.setTimestamp(now());
 
+        // Pass task details in extra map for rich notification popup
+        java.util.Map<String, String> extra = new java.util.LinkedHashMap<>();
+        if (task.getDescription() != null) extra.put("description", task.getDescription());
+        if (task.getAssignedTo() != null) extra.put("assignedTo", task.getAssignedTo());
+        if (task.getDeadline() != null) extra.put("deadline", task.getDeadline());
+        if (task.getStatus() != null) extra.put("taskStatus", task.getStatus());
+        if (!extra.isEmpty()) notification.setExtra(extra);
+
         // Notify creator
         WebSocketSession creatorSession = userSessions.get(task.getCreatedBy());
         if (creatorSession != null) {

@@ -2,6 +2,8 @@ package com.example.webrtcchat.dto;
 
 import com.example.webrtcchat.types.MessageType;
 
+import java.util.Map;
+
 public class MessageDto {
 
     private String sender;
@@ -17,6 +19,7 @@ public class MessageDto {
     private String status;
     private boolean edited;
     private String scheduledAt;
+    private Map<String, String> extra;
 
     public MessageDto() {}
 
@@ -65,4 +68,7 @@ public class MessageDto {
 
     public String getScheduledAt() { return scheduledAt; }
     public void setScheduledAt(String scheduledAt) { this.scheduledAt = scheduledAt; }
+
+    public Map<String, String> getExtra() { return extra; }
+    public void setExtra(Map<String, String> extra) { this.extra = extra; }
 }

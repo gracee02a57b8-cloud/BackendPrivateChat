@@ -1886,43 +1886,219 @@
   border-top: 1px solid rgba(240, 165, 0, 0.3);
 }
 
-/* ===== Task Toast Notification ===== */
-.task-toast {
+/* ===== Task Notification Popup ===== */
+.task-popup-overlay {
   position: fixed;
-  top: 20px;
-  right: 20px;
-  background: #16213e;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 3000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 8vh;
+  animation: overlayFadeIn 0.25s ease;
+  backdrop-filter: blur(3px);
+}
+
+.task-popup-overlay.closing {
+  animation: overlayFadeOut 0.3s ease forwards;
+}
+
+.task-popup {
+  background: linear-gradient(135deg, #16213e 0%, #1a1a2e 100%);
   border: 1px solid #0f3460;
-  border-left: 4px solid #e94560;
-  border-radius: 8px;
-  padding: 1rem 1.5rem;
+  border-radius: 16px;
+  padding: 0;
+  width: 380px;
+  max-width: 90vw;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 30px rgba(233, 69, 96, 0.15);
+  animation: popupSlideIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
+  position: relative;
+}
+
+.task-popup.closing {
+  animation: popupSlideOut 0.3s ease forwards;
+}
+
+.task-popup.created {
+  border-top: 3px solid #4ecca3;
+}
+
+.task-popup.completed {
+  border-top: 3px solid #5cb85c;
+}
+
+.task-popup.overdue {
+  border-top: 3px solid #e94560;
+}
+
+.task-popup-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  z-index: 1;
+}
+
+.task-popup-close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.task-popup-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 20px 0;
+}
+
+.task-popup-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.task-popup-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.task-popup-label,
+.task-popup.created .task-popup-label {
+  color: #4ecca3;
+}
+
+.task-popup.completed .task-popup-label {
+  color: #5cb85c;
+}
+
+.task-popup.overdue .task-popup-label {
+  color: #e94560;
+}
+
+.task-popup-title {
+  margin: 10px 20px 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #f0f0f0;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.task-popup-description {
+  margin: 8px 20px 0;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.5;
+  word-break: break-word;
+  max-height: 80px;
+  overflow-y: auto;
+}
+
+.task-popup-details {
+  margin: 14px 20px 0;
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
-  z-index: 2000;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-  animation: slideIn 0.3s ease, fadeOut 0.5s ease 3.5s forwards;
-  max-width: 320px;
+  gap: 8px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
 }
 
-.task-toast strong {
-  color: #e94560;
+.task-popup-detail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+}
+
+.task-popup-detail .detail-icon {
   font-size: 0.9rem;
+  flex-shrink: 0;
 }
 
-.task-toast span {
-  color: #ccc;
+.task-popup-detail .detail-label {
+  color: rgba(255, 255, 255, 0.4);
+  flex-shrink: 0;
+}
+
+.task-popup-detail .detail-value {
+  color: #e0e0e0;
+  font-weight: 500;
+}
+
+.task-popup-actions {
+  display: flex;
+  gap: 10px;
+  padding: 16px 20px 18px;
+  margin-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.task-popup-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 10px;
   font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
+.task-popup-btn.primary {
+  background: linear-gradient(135deg, #4ecca3, #3aa88a);
+  color: #fff;
+}
+
+.task-popup-btn.primary:hover {
+  background: linear-gradient(135deg, #5dd8b0, #4ecca3);
+  box-shadow: 0 4px 15px rgba(78, 204, 163, 0.3);
+}
+
+.task-popup-btn.secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.task-popup-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes overlayFadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes popupSlideIn {
+  from { transform: translateY(-30px) scale(0.95); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes popupSlideOut {
+  from { transform: translateY(0) scale(1); opacity: 1; }
+  to { transform: translateY(-20px) scale(0.95); opacity: 0; }
+}
+
+/* Legacy toast — keep slideIn keyframes */
 @keyframes slideIn {
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
-}
-
-@keyframes fadeOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
 }
 
 /* ===== Task Panel ===== */

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import Sidebar from './Sidebar';
 import ChatRoom from './ChatRoom';
 import TaskPanel from './TaskPanel';
+import TaskNotificationPopup from './TaskNotificationPopup';
 
 const WS_URL = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
 
@@ -113,12 +114,21 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
         return;
       }
 
-      // Handle task notifications
+      // Handle task notifications — show rich popup
       if (msg.type === 'TASK_CREATED' || msg.type === 'TASK_COMPLETED' || msg.type === 'TASK_OVERDUE') {
         const label = msg.type === 'TASK_CREATED' ? '📋 Новая задача' :
                       msg.type === 'TASK_COMPLETED' ? '✅ Задача выполнена' : '⚠️ Просрочена';
-        setTaskNotification({ label, title: msg.content, id: msg.id });
-        setTimeout(() => setTaskNotification(null), 4000);
+        setTaskNotification({
+          label,
+          title: msg.content,
+          id: msg.id,
+          sender: msg.sender,
+          description: msg.extra?.description || '',
+          assignedTo: msg.extra?.assignedTo || '',
+          deadline: msg.extra?.deadline || '',
+          taskStatus: msg.extra?.taskStatus || '',
+          msgType: msg.type,
+        });
         return;
       }
 
@@ -416,10 +426,11 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
         />
       )}
       {taskNotification && (
-        <div className="task-toast">
-          <strong>{taskNotification.label}</strong>
-          <span>{taskNotification.title}</span>
-        </div>
+        <TaskNotificationPopup
+          notification={taskNotification}
+          onClose={() => setTaskNotification(null)}
+          onOpenTasks={() => { setTaskNotification(null); setShowTasks(true); }}
+        />
       )}
     </div>
   );
