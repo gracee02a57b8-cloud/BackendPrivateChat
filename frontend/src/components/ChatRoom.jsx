@@ -607,11 +607,6 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
             </div>
           );
         })()}
-        {isE2E && (
-          <div className="e2e-banner">
-            <span>🔒</span> Сообщения защищены сквозным шифрованием. Нажмите для проверки.
-          </div>
-        )}
         {messages.length === 0 && (
           <div className="empty-chat">
             <div className="empty-chat-content">

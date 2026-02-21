@@ -2992,22 +2992,6 @@
   transform: scale(1.05);
 }
 
-.e2e-banner {
-  text-align: center;
-  padding: 8px 16px;
-  margin: 8px 16px;
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.2);
-  border-radius: 12px;
-  color: #6ee7b7;
-  font-size: 0.78rem;
-  cursor: default;
-}
-
-.e2e-banner span {
-  font-size: 0.9rem;
-}
-
 .msg-lock {
   font-size: 0.6rem;
   margin-right: 2px;
