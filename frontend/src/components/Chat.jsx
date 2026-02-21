@@ -3,6 +3,8 @@ import Sidebar from './Sidebar';
 import ChatRoom from './ChatRoom';
 import TaskPanel from './TaskPanel';
 import TaskNotificationPopup from './TaskNotificationPopup';
+import SecurityCodeModal from './SecurityCodeModal';
+import e2eManager from '../crypto/E2EManager';
 
 const WS_URL = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
 
@@ -18,6 +20,9 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
   const [taskNotification, setTaskNotification] = useState(null);
   const [typingUsers, setTypingUsers] = useState({});
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [e2eReady, setE2eReady] = useState(false);
+  const [securityCode, setSecurityCode] = useState(null);
+  const [securityCodePeer, setSecurityCodePeer] = useState(null);
   const wsRef = useRef(null);
   const loadedRooms = useRef(new Set());
   const activeRoomIdRef = useRef('general');
@@ -36,6 +41,11 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
     fetchRooms();
     loadRoomHistory('general');
     unmounted.current = false;
+
+    // Initialize E2E encryption
+    e2eManager.initialize(token).then(() => {
+      setE2eReady(e2eManager.isReady());
+    }).catch(err => console.warn('[E2E] Init error:', err));
 
     function connectWs() {
       if (unmounted.current) return;
@@ -62,7 +72,7 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
         }
       };
 
-    ws.onmessage = (event) => {
+    ws.onmessage = async (event) => {
       const msg = JSON.parse(event.data);
 
       // Handle status updates (delivery/read receipts)
@@ -156,6 +166,25 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
       }
 
       const roomId = msg.roomId || 'general';
+
+      // Decrypt E2E message if encrypted
+      if (msg.encrypted && msg.sender !== username) {
+        try {
+          const result = await e2eManager.decrypt(msg.sender, msg);
+          if (result.error) {
+            msg.content = '🔒 Не удалось расшифровать';
+            msg._decryptError = true;
+          } else {
+            msg.content = result.text;
+            if (result.fileKey) msg._fileKey = result.fileKey;
+          }
+        } catch (err) {
+          console.error('[E2E] Decrypt error:', err);
+          msg.content = '🔒 Не удалось расшифровать';
+          msg._decryptError = true;
+        }
+      }
+
       setMessagesByRoom((prev) => ({
         ...prev,
         [roomId]: [...(prev[roomId] || []), msg],
@@ -249,7 +278,7 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
     }
   };
 
-  const sendMessage = (content, fileData) => {
+  const sendMessage = async (content, fileData) => {
     if (!wsRef.current) return;
     if (!content && !fileData) return;
     const msg = { content: content || '', roomId: activeRoomId };
@@ -259,6 +288,24 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
       msg.fileSize = fileData.fileSize;
       msg.fileType = fileData.fileType;
     }
+
+    // E2E encrypt for private rooms
+    const room = rooms.find(r => r.id === activeRoomId);
+    if (room?.type === 'PRIVATE' && e2eReady) {
+      const peerUser = getPeerUsername(room);
+      if (peerUser) {
+        try {
+          const peerHasE2E = await e2eManager.peerHasE2E(token, peerUser);
+          if (peerHasE2E) {
+            const encrypted = await e2eManager.encrypt(peerUser, content || '', token);
+            Object.assign(msg, encrypted);
+          }
+        } catch (err) {
+          console.warn('[E2E] Encrypt failed, sending plaintext:', err);
+        }
+      }
+    }
+
     wsRef.current.send(JSON.stringify(msg));
   };
 
@@ -382,6 +429,24 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
   const activeMessages = messagesByRoom[activeRoomId] || [];
   const roomName = activeRoom ? activeRoom.name : 'Общий чат';
 
+  const getPeerUsername = (room) => {
+    if (!room || room.type !== 'PRIVATE') return null;
+    const parts = room.name.split(' & ');
+    return parts.find((p) => p !== username) || null;
+  };
+
+  const isPrivateE2E = activeRoom?.type === 'PRIVATE' && e2eReady;
+
+  const showSecurityCode = async () => {
+    const peer = getPeerUsername(activeRoom);
+    if (!peer) return;
+    const code = await e2eManager.getSecurityCode(peer);
+    if (code) {
+      setSecurityCode(code);
+      setSecurityCodePeer(peer);
+    }
+  };
+
   return (
     <div className="chat-container">
       {/* Mobile hamburger */}
@@ -423,6 +488,8 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
           onlineUsers={onlineUsers}
           typingUsers={activeTypingUsers}
           onTyping={sendTyping}
+          isE2E={isPrivateE2E}
+          onShowSecurityCode={showSecurityCode}
         />
       )}
       {taskNotification && (
@@ -430,6 +497,13 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
           notification={taskNotification}
           onClose={() => setTaskNotification(null)}
           onOpenTasks={() => { setTaskNotification(null); setShowTasks(true); }}
+        />
+      )}
+      {securityCode && (
+        <SecurityCodeModal
+          securityCode={securityCode}
+          peerUsername={securityCodePeer}
+          onClose={() => { setSecurityCode(null); setSecurityCodePeer(null); }}
         />
       )}
     </div>

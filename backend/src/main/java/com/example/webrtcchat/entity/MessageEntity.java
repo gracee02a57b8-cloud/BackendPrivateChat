@@ -45,6 +45,33 @@ public class MessageEntity {
 
     private String scheduledAt;
 
+    @Column(nullable = false)
+    private boolean encrypted;
+
+    @Column(name = "encrypted_content", columnDefinition = "TEXT")
+    private String encryptedContent;
+
+    @Column(length = 24)
+    private String iv;
+
+    @Column(name = "ratchet_key", columnDefinition = "TEXT")
+    private String ratchetKey;
+
+    @Column(name = "message_number")
+    private Integer messageNumber;
+
+    @Column(name = "previous_chain_length")
+    private Integer previousChainLength;
+
+    @Column(name = "ephemeral_key", columnDefinition = "TEXT")
+    private String ephemeralKey;
+
+    @Column(name = "sender_identity_key", columnDefinition = "TEXT")
+    private String senderIdentityKey;
+
+    @Column(name = "one_time_key_id")
+    private Integer oneTimeKeyId;
+
     @Column(name = "seq_id", insertable = false, updatable = false)
     private Long seqId;
 
@@ -89,6 +116,33 @@ public class MessageEntity {
 
     public String getScheduledAt() { return scheduledAt; }
     public void setScheduledAt(String scheduledAt) { this.scheduledAt = scheduledAt; }
+
+    public boolean isEncrypted() { return encrypted; }
+    public void setEncrypted(boolean encrypted) { this.encrypted = encrypted; }
+
+    public String getEncryptedContent() { return encryptedContent; }
+    public void setEncryptedContent(String encryptedContent) { this.encryptedContent = encryptedContent; }
+
+    public String getIv() { return iv; }
+    public void setIv(String iv) { this.iv = iv; }
+
+    public String getRatchetKey() { return ratchetKey; }
+    public void setRatchetKey(String ratchetKey) { this.ratchetKey = ratchetKey; }
+
+    public Integer getMessageNumber() { return messageNumber; }
+    public void setMessageNumber(Integer messageNumber) { this.messageNumber = messageNumber; }
+
+    public Integer getPreviousChainLength() { return previousChainLength; }
+    public void setPreviousChainLength(Integer previousChainLength) { this.previousChainLength = previousChainLength; }
+
+    public String getEphemeralKey() { return ephemeralKey; }
+    public void setEphemeralKey(String ephemeralKey) { this.ephemeralKey = ephemeralKey; }
+
+    public String getSenderIdentityKey() { return senderIdentityKey; }
+    public void setSenderIdentityKey(String senderIdentityKey) { this.senderIdentityKey = senderIdentityKey; }
+
+    public Integer getOneTimeKeyId() { return oneTimeKeyId; }
+    public void setOneTimeKeyId(Integer oneTimeKeyId) { this.oneTimeKeyId = oneTimeKeyId; }
 
     public Long getSeqId() { return seqId; }
 }

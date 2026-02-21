@@ -48,7 +48,7 @@ function parseTimestamp(ts) {
   return isNaN(d.getTime()) ? null : d.toDateString();
 }
 
-export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDeleteMessage, onScheduleMessage, scheduledMessages, roomName, username, connected, token, activeRoom, onlineUsers, typingUsers = [], onTyping }) {
+export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDeleteMessage, onScheduleMessage, scheduledMessages, roomName, username, connected, token, activeRoom, onlineUsers, typingUsers = [], onTyping, isE2E, onShowSecurityCode }) {
   const [input, setInput] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
@@ -382,6 +382,11 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
           })()}
         </div>
         <div className="chat-header-actions">
+          {isE2E && (
+            <button className="e2e-badge" onClick={onShowSecurityCode} title="Сквозное шифрование — нажмите для проверки">
+              🔒 E2E
+            </button>
+          )}
           <button className="copy-link-btn" onClick={handleCopyLink} title="Скопировать ссылку на чат">
             🔗 Поделиться
           </button>
@@ -390,6 +395,11 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
       </div>
 
       <div className="messages" ref={messagesContainerRef}>
+        {isE2E && (
+          <div className="e2e-banner">
+            <span>🔒</span> Сообщения защищены сквозным шифрованием. Нажмите для проверки.
+          </div>
+        )}
         {messages.length === 0 && (
           <div className="empty-chat">
             <div className="empty-chat-content">
@@ -480,6 +490,7 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
                       )}
                       {!isGrouped && isOwn && msg.type === 'CHAT' && (
                         <span className={`message-status bottom-status ${msg.status === 'READ' ? 'read' : ''}`}>
+                          {msg.encrypted && <span className="msg-lock" title="Зашифровано">🔒</span>}
                           {msg.status === 'READ' ? '✓✓' : msg.status === 'DELIVERED' ? '✓✓' : '✓'}
                         </span>
                       )}

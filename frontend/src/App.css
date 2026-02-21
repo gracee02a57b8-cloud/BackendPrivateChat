@@ -2450,6 +2450,131 @@
   transition: all 0.2s ease;
 }
 
+/* ===== E2E Encryption UI ===== */
+.e2e-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, #059669, #10b981);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.02em;
+}
+
+.e2e-badge:hover {
+  background: linear-gradient(135deg, #047857, #059669);
+  transform: scale(1.05);
+}
+
+.e2e-banner {
+  text-align: center;
+  padding: 8px 16px;
+  margin: 8px 16px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 12px;
+  color: #6ee7b7;
+  font-size: 0.78rem;
+  cursor: default;
+}
+
+.e2e-banner span {
+  font-size: 0.9rem;
+}
+
+.msg-lock {
+  font-size: 0.6rem;
+  margin-right: 2px;
+  opacity: 0.7;
+}
+
+/* Security Code Modal */
+.security-code-modal {
+  max-width: 380px;
+  text-align: center;
+}
+
+.security-code-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.security-code-header .security-icon {
+  font-size: 1.5rem;
+}
+
+.security-code-header h3 {
+  margin: 0;
+}
+
+.security-code-desc {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.security-code-display {
+  font-family: 'Courier New', monospace;
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: #6ee7b7;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 16px 0;
+  word-break: break-all;
+}
+
+.security-code-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.security-code-actions .btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+
+.security-code-actions .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.security-code-actions .btn-primary {
+  background: linear-gradient(135deg, #059669, #10b981);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 20px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.security-code-actions .btn-primary:hover {
+  background: linear-gradient(135deg, #047857, #059669);
+}
+
 /* ===== Responsive: Large Desktops (1440px+) ===== */
 @media (min-width: 1440px) {
   .chat-sidebar {

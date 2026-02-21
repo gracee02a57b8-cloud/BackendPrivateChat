@@ -21,6 +21,17 @@ public class MessageDto {
     private String scheduledAt;
     private Map<String, String> extra;
 
+    // E2E encryption fields
+    private boolean encrypted;
+    private String encryptedContent;
+    private String iv;
+    private String ratchetKey;
+    private Integer messageNumber;
+    private Integer previousChainLength;
+    private String ephemeralKey;
+    private String senderIdentityKey;
+    private Integer oneTimeKeyId;
+
     public MessageDto() {}
 
     public MessageDto(String sender, String content, String timestamp, MessageType type) {
@@ -71,4 +82,31 @@ public class MessageDto {
 
     public Map<String, String> getExtra() { return extra; }
     public void setExtra(Map<String, String> extra) { this.extra = extra; }
+
+    public boolean isEncrypted() { return encrypted; }
+    public void setEncrypted(boolean encrypted) { this.encrypted = encrypted; }
+
+    public String getEncryptedContent() { return encryptedContent; }
+    public void setEncryptedContent(String encryptedContent) { this.encryptedContent = encryptedContent; }
+
+    public String getIv() { return iv; }
+    public void setIv(String iv) { this.iv = iv; }
+
+    public String getRatchetKey() { return ratchetKey; }
+    public void setRatchetKey(String ratchetKey) { this.ratchetKey = ratchetKey; }
+
+    public Integer getMessageNumber() { return messageNumber; }
+    public void setMessageNumber(Integer messageNumber) { this.messageNumber = messageNumber; }
+
+    public Integer getPreviousChainLength() { return previousChainLength; }
+    public void setPreviousChainLength(Integer previousChainLength) { this.previousChainLength = previousChainLength; }
+
+    public String getEphemeralKey() { return ephemeralKey; }
+    public void setEphemeralKey(String ephemeralKey) { this.ephemeralKey = ephemeralKey; }
+
+    public String getSenderIdentityKey() { return senderIdentityKey; }
+    public void setSenderIdentityKey(String senderIdentityKey) { this.senderIdentityKey = senderIdentityKey; }
+
+    public Integer getOneTimeKeyId() { return oneTimeKeyId; }
+    public void setOneTimeKeyId(Integer oneTimeKeyId) { this.oneTimeKeyId = oneTimeKeyId; }
 }

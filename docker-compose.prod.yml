@@ -14,8 +14,9 @@ services:
     ports: !reset []
 
   frontend:
+    environment:
+      - DOMAIN=${DOMAIN}
     volumes:
-      - ./frontend/nginx-ssl.conf:/etc/nginx/conf.d/default.conf:ro
       - certbot_certs:/etc/letsencrypt:ro
       - certbot_www:/var/www/certbot:ro
     ports:

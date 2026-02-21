@@ -22,13 +22,17 @@ RUN mkdir -p /var/cache/nginx/client_temp /var/cache/nginx/proxy_temp \
     chmod -R 755 /var/cache/nginx /var/run
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx-ssl.conf /etc/nginx/nginx-ssl.template
+COPY docker-entrypoint.sh /docker-entrypoint.sh
 COPY --from=build --chown=nginx:nginx /app/dist /usr/share/nginx/html
 
 # Fix pid path for non-root nginx
-RUN sed -i 's|/run/nginx.pid|/tmp/nginx.pid|' /etc/nginx/nginx.conf
+RUN sed -i 's|/run/nginx.pid|/tmp/nginx.pid|' /etc/nginx/nginx.conf && \
+    chmod +x /docker-entrypoint.sh && \
+    chown -R nginx:nginx /etc/nginx/conf.d
 
 USER nginx
 
 EXPOSE 8080
 
-CMD ["nginx", "-g", "daemon off;"]
+ENTRYPOINT ["/docker-entrypoint.sh"]
