@@ -138,8 +138,14 @@ class E2EManager {
     try {
       let session = await loadSession(peerUsername);
 
-      // X3DH responder side — initial message from peer
-      if (!session && msg.ephemeralKey && msg.senderIdentityKey) {
+      // X3DH responder side — initial message from peer (or session reset)
+      if (msg.ephemeralKey && msg.senderIdentityKey) {
+        // If peer sent a new initial message, always accept it
+        // (they may have regenerated keys or lost their session)
+        if (session) {
+          console.warn(`[E2E] Received initial message from ${peerUsername} but session exists — resetting`);
+          await deleteSession(peerUsername);
+        }
         session = await this._handleInitialMessage(peerUsername, msg);
       }
 
@@ -153,24 +159,8 @@ class E2EManager {
         n: msg.messageNumber || 0,
       };
 
-      let plaintext;
-      try {
-        const result = await ratchetDecrypt(session, header, msg.encryptedContent, msg.iv);
-        plaintext = result.plaintext;
-        await saveSession(peerUsername, result.state);
-      } catch (decryptErr) {
-        // If decrypt fails and this is an initial message, peer may have regenerated keys
-        if (msg.ephemeralKey && msg.senderIdentityKey) {
-          console.warn(`[E2E] Ratchet decrypt failed, re-establishing session with ${peerUsername}`);
-          await deleteSession(peerUsername);
-          session = await this._handleInitialMessage(peerUsername, msg);
-          const result = await ratchetDecrypt(session, header, msg.encryptedContent, msg.iv);
-          plaintext = result.plaintext;
-          await saveSession(peerUsername, result.state);
-        } else {
-          throw decryptErr;
-        }
-      }
+      const { plaintext, state } = await ratchetDecrypt(session, header, msg.encryptedContent, msg.iv);
+      await saveSession(peerUsername, state);
 
       // Parse payload (may contain fileKey for file encryption)
       try {

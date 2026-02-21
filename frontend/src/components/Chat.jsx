@@ -268,19 +268,21 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
 
       // Decrypt E2E message if encrypted
       if (msg.encrypted && msg.sender !== username) {
+        const fallbackContent = msg.content; // plaintext from server
         try {
           const result = await e2eManager.decrypt(msg.sender, msg);
           if (result.error) {
-            msg.content = '🔒 Не удалось расшифровать';
-            msg._decryptError = true;
+            // Decrypt failed — use server-stored plaintext as fallback
+            msg.content = fallbackContent || '🔒 Не удалось расшифровать';
+            if (!fallbackContent) msg._decryptError = true;
           } else {
             msg.content = result.text;
             if (result.fileKey) msg._fileKey = result.fileKey;
           }
         } catch (err) {
           console.error('[E2E] Decrypt error:', err);
-          msg.content = '🔒 Не удалось расшифровать';
-          msg._decryptError = true;
+          msg.content = fallbackContent || '🔒 Не удалось расшифровать';
+          if (!fallbackContent) msg._decryptError = true;
         }
       }
 
