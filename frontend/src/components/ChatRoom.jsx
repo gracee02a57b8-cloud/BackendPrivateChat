@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import EmojiPicker from './EmojiPicker';
+import MentionDropdown from './MentionDropdown';
 import { copyToClipboard } from '../utils/clipboard';
 
 function formatFileSize(bytes) {
@@ -61,6 +62,9 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
   const [dragging, setDragging] = useState(false);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [newMsgCount, setNewMsgCount] = useState(0);
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [selectionPopup, setSelectionPopup] = useState(null);
+  const [mentionQuery, setMentionQuery] = useState(null);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const inputRef = useRef(null);
@@ -103,6 +107,9 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
     setNewMsgCount(0);
     isAtBottom.current = true;
     setShowScrollBtn(false);
+    setReplyingTo(null);
+    setSelectionPopup(null);
+    setMentionQuery(null);
   }, [roomName]);
 
   // Close context menu on any click
@@ -134,8 +141,23 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
     }
 
     if (input.trim()) {
-      onSendMessage(input.trim());
+      // Extract @mentions from text
+      const mentionRegex = /@(\w+)/g;
+      const mentionMatches = [...input.matchAll(mentionRegex)];
+      const mentionedUsers = [...new Set(mentionMatches.map(m => m[1]).filter(u => onlineUsers?.includes(u)))];
+
+      const replyData = replyingTo ? {
+        replyToId: replyingTo.id,
+        replyToSender: replyingTo.sender,
+        replyToContent: replyingTo.content?.slice(0, 200) || '',
+      } : null;
+
+      const mentionsData = mentionedUsers.length > 0 ? JSON.stringify(mentionedUsers) : null;
+
+      onSendMessage(input.trim(), null, replyData, mentionsData);
       setInput('');
+      setReplyingTo(null);
+      setMentionQuery(null);
       resetTextarea();
     }
     setShowEmoji(false);
@@ -149,9 +171,20 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
   };
 
   const handleInputChange = (e) => {
-    setInput(e.target.value);
+    const val = e.target.value;
+    setInput(val);
     autoGrowTextarea(e.target);
     if (onTyping) onTyping();
+
+    // Detect @mention
+    const cursorPos = e.target.selectionStart;
+    const textBefore = val.slice(0, cursorPos);
+    const mentionMatch = textBefore.match(/@(\w*)$/);
+    if (mentionMatch) {
+      setMentionQuery(mentionMatch[1]);
+    } else {
+      setMentionQuery(null);
+    }
   };
 
   const autoGrowTextarea = (el) => {
@@ -301,6 +334,95 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
     setInput('');
   };
 
+  const scrollToMessage = (msgId) => {
+    const el = document.getElementById(`msg-${msgId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('highlight-flash');
+      setTimeout(() => el.classList.remove('highlight-flash'), 2000);
+    }
+  };
+
+  const startReply = (msg) => {
+    setReplyingTo(msg);
+    setEditingMsg(null);
+    setContextMenu(null);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  const cancelReply = () => {
+    setReplyingTo(null);
+  };
+
+  const handleTextSelection = useCallback(() => {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.toString().trim()) {
+      setSelectionPopup(null);
+      return;
+    }
+
+    // Find the message bubble ancestor
+    let node = sel.anchorNode;
+    let msgEl = null;
+    while (node && node !== document.body) {
+      if (node.nodeType === 1 && node.dataset?.msgId) {
+        msgEl = node;
+        break;
+      }
+      node = node.parentElement;
+    }
+    if (!msgEl) { setSelectionPopup(null); return; }
+
+    const msgId = msgEl.dataset.msgId;
+    const msg = messages.find(m => m.id === msgId);
+    if (!msg || msg.type !== 'CHAT') { setSelectionPopup(null); return; }
+
+    const range = sel.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    const containerRect = messagesContainerRef.current?.getBoundingClientRect() || { top: 0, left: 0 };
+
+    setSelectionPopup({
+      x: rect.left + rect.width / 2 - containerRect.left,
+      y: rect.top - containerRect.top - 40,
+      selectedText: sel.toString().trim(),
+      msg,
+    });
+  }, [messages]);
+
+  useEffect(() => {
+    document.addEventListener('mouseup', handleTextSelection);
+    return () => document.removeEventListener('mouseup', handleTextSelection);
+  }, [handleTextSelection]);
+
+  const replyToSelection = () => {
+    if (!selectionPopup) return;
+    setReplyingTo({
+      ...selectionPopup.msg,
+      content: selectionPopup.selectedText,
+    });
+    setSelectionPopup(null);
+    window.getSelection()?.removeAllRanges();
+    setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  const handleMentionSelect = (user) => {
+    if (!user) { setMentionQuery(null); return; }
+    const el = inputRef.current;
+    if (!el) return;
+    const cursorPos = el.selectionStart;
+    const textBefore = input.slice(0, cursorPos);
+    const atPos = textBefore.lastIndexOf('@');
+    if (atPos === -1) return;
+    const newVal = input.slice(0, atPos) + `@${user} ` + input.slice(cursorPos);
+    setInput(newVal);
+    setMentionQuery(null);
+    setTimeout(() => {
+      el.focus();
+      const pos = atPos + user.length + 2;
+      el.setSelectionRange(pos, pos);
+    }, 0);
+  };
+
   const handleDeleteMsg = (msg) => {
     setContextMenu(null);
     if (confirm('Удалить сообщение?')) {
@@ -434,6 +556,8 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
             <div key={msg.id || i}>
               {dateSep}
               <div
+                id={`msg-${msg.id}`}
+                data-msg-id={msg.id}
                 className={`${getMessageClass(msg)}${isGrouped ? ' grouped' : ''}`}
                 onContextMenu={(e) => handleContextMenu(e, msg)}
               >
@@ -453,6 +577,7 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
                       {/* Hover actions */}
                       {isOwn && msg.type === 'CHAT' && (
                         <div className="msg-hover-actions">
+                          <button title="Ответить" onClick={() => startReply(msg)}>↩️</button>
                           <button title="Редактировать" onClick={() => startEdit(msg)}>✏️</button>
                           <button title="Удалить" onClick={() => handleDeleteMsg(msg)}>🗑</button>
                           <button title="Копировать" onClick={() => copyMessage(msg)}>📋</button>
@@ -460,7 +585,20 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
                       )}
                       {!isOwn && msg.type === 'CHAT' && (
                         <div className="msg-hover-actions left">
+                          <button title="Ответить" onClick={() => startReply(msg)}>↩️</button>
                           <button title="Копировать" onClick={() => copyMessage(msg)}>📋</button>
+                        </div>
+                      )}
+
+                      {/* Reply quote */}
+                      {msg.replyToId && (
+                        <div className="reply-quote" onClick={() => scrollToMessage(msg.replyToId)}>
+                          <span className="reply-quote-sender">{msg.replyToSender}</span>
+                          <span className="reply-quote-text">
+                            {msg.replyToContent?.length > 100
+                              ? msg.replyToContent.slice(0, 100) + '...'
+                              : msg.replyToContent}
+                          </span>
                         </div>
                       )}
 
@@ -531,9 +669,17 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
       {/* Context Menu */}
       {contextMenu && (
         <div className="context-menu" style={{ top: contextMenu.y, left: contextMenu.x }} onClick={(e) => e.stopPropagation()}>
+          <button onClick={() => startReply(contextMenu.msg)}>↩️ Ответить</button>
           <button onClick={() => startEdit(contextMenu.msg)}>✏️ Редактировать</button>
           <button onClick={() => copyMessage(contextMenu.msg)}>📋 Копировать</button>
           <button onClick={() => handleDeleteMsg(contextMenu.msg)}>🗑 Удалить</button>
+        </div>
+      )}
+
+      {/* Selection Reply Popup */}
+      {selectionPopup && (
+        <div className="selection-popup" style={{ top: selectionPopup.y, left: selectionPopup.x }}>
+          <button onClick={replyToSelection}>↩️ Ответить</button>
         </div>
       )}
 
@@ -549,6 +695,20 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
         <div className="edit-banner">
           <span>✏️ Редактирование: <em>{editingMsg.content?.slice(0, 40)}</em></span>
           <button onClick={cancelEdit}>✕</button>
+        </div>
+      )}
+
+      {/* Reply Banner */}
+      {replyingTo && (
+        <div className="reply-banner">
+          <div className="reply-banner-content">
+            <span className="reply-banner-icon">↩️</span>
+            <div className="reply-banner-text">
+              <span className="reply-banner-sender">{replyingTo.sender}</span>
+              <span className="reply-banner-msg">{replyingTo.content?.slice(0, 60)}</span>
+            </div>
+          </div>
+          <button onClick={cancelReply}>✕</button>
         </div>
       )}
 
@@ -587,6 +747,13 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
             autoFocus
           />
           {showEmoji && <EmojiPicker onSelect={insertEmoji} onClose={() => setShowEmoji(false)} />}
+          {mentionQuery !== null && (
+            <MentionDropdown
+              users={(onlineUsers || []).filter(u => u !== username)}
+              filter={mentionQuery}
+              onSelect={handleMentionSelect}
+            />
+          )}
         </div>
         {showSchedule && (
           <div className="schedule-picker">

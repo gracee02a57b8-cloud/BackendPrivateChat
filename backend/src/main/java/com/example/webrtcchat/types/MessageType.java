@@ -13,5 +13,7 @@ public enum MessageType {
     TASK_CREATED,
     TASK_COMPLETED,
     TASK_OVERDUE,
-    TYPING
+    TYPING,
+    REPLY_NOTIFICATION,
+    MENTION_NOTIFICATION
 }

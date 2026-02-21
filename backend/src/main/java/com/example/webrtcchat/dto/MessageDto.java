@@ -21,6 +21,14 @@ public class MessageDto {
     private String scheduledAt;
     private Map<String, String> extra;
 
+    // Reply fields
+    private String replyToId;
+    private String replyToSender;
+    private String replyToContent;
+
+    // Mentions (JSON array of usernames)
+    private String mentions;
+
     // E2E encryption fields
     private boolean encrypted;
     private String encryptedContent;
@@ -109,4 +117,16 @@ public class MessageDto {
 
     public Integer getOneTimeKeyId() { return oneTimeKeyId; }
     public void setOneTimeKeyId(Integer oneTimeKeyId) { this.oneTimeKeyId = oneTimeKeyId; }
+
+    public String getReplyToId() { return replyToId; }
+    public void setReplyToId(String replyToId) { this.replyToId = replyToId; }
+
+    public String getReplyToSender() { return replyToSender; }
+    public void setReplyToSender(String replyToSender) { this.replyToSender = replyToSender; }
+
+    public String getReplyToContent() { return replyToContent; }
+    public void setReplyToContent(String replyToContent) { this.replyToContent = replyToContent; }
+
+    public String getMentions() { return mentions; }
+    public void setMentions(String mentions) { this.mentions = mentions; }
 }

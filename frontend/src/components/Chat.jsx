@@ -3,6 +3,7 @@ import Sidebar from './Sidebar';
 import ChatRoom from './ChatRoom';
 import TaskPanel from './TaskPanel';
 import TaskNotificationPopup from './TaskNotificationPopup';
+import ReplyNotificationPopup from './ReplyNotificationPopup';
 import SecurityCodeModal from './SecurityCodeModal';
 import e2eManager from '../crypto/E2EManager';
 
@@ -18,6 +19,7 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
   const [scheduledMessages, setScheduledMessages] = useState([]);
   const [showTasks, setShowTasks] = useState(false);
   const [taskNotification, setTaskNotification] = useState(null);
+  const [replyNotification, setReplyNotification] = useState(null);
   const [typingUsers, setTypingUsers] = useState({});
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [e2eReady, setE2eReady] = useState(false);
@@ -171,6 +173,12 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
         return;
       }
 
+      // Handle REPLY / MENTION notifications — show popup
+      if (msg.type === 'REPLY_NOTIFICATION' || msg.type === 'MENTION_NOTIFICATION') {
+        setReplyNotification(msg);
+        return;
+      }
+
       const roomId = msg.roomId || 'general';
 
       // Decrypt E2E message if encrypted
@@ -291,7 +299,7 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
     }
   };
 
-  const sendMessage = async (content, fileData) => {
+  const sendMessage = async (content, fileData, replyData, mentions) => {
     if (!wsRef.current) return;
     if (!content && !fileData) return;
     const msg = { content: content || '', roomId: activeRoomId };
@@ -300,6 +308,14 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
       msg.fileName = fileData.fileName;
       msg.fileSize = fileData.fileSize;
       msg.fileType = fileData.fileType;
+    }
+    if (replyData) {
+      msg.replyToId = replyData.replyToId;
+      msg.replyToSender = replyData.replyToSender;
+      msg.replyToContent = replyData.replyToContent;
+    }
+    if (mentions) {
+      msg.mentions = mentions;
     }
 
     // E2E encrypt for private rooms
@@ -519,6 +535,17 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
           securityCode={securityCode}
           peerUsername={securityCodePeer}
           onClose={() => { setSecurityCode(null); setSecurityCodePeer(null); }}
+        />
+      )}
+      {replyNotification && (
+        <ReplyNotificationPopup
+          notification={replyNotification}
+          onClose={() => setReplyNotification(null)}
+          onGoToMessage={(notif) => {
+            if (notif.roomId && notif.roomId !== activeRoomId) {
+              selectRoom(notif.roomId);
+            }
+          }}
         />
       )}
     </div>

@@ -72,6 +72,18 @@ public class MessageEntity {
     @Column(name = "one_time_key_id")
     private Integer oneTimeKeyId;
 
+    @Column(name = "reply_to_id", length = 36)
+    private String replyToId;
+
+    @Column(name = "reply_to_sender", length = 50)
+    private String replyToSender;
+
+    @Column(name = "reply_to_content", columnDefinition = "TEXT")
+    private String replyToContent;
+
+    @Column(columnDefinition = "TEXT")
+    private String mentions;
+
     @Column(name = "seq_id", insertable = false, updatable = false)
     private Long seqId;
 
@@ -145,4 +157,16 @@ public class MessageEntity {
     public void setOneTimeKeyId(Integer oneTimeKeyId) { this.oneTimeKeyId = oneTimeKeyId; }
 
     public Long getSeqId() { return seqId; }
+
+    public String getReplyToId() { return replyToId; }
+    public void setReplyToId(String replyToId) { this.replyToId = replyToId; }
+
+    public String getReplyToSender() { return replyToSender; }
+    public void setReplyToSender(String replyToSender) { this.replyToSender = replyToSender; }
+
+    public String getReplyToContent() { return replyToContent; }
+    public void setReplyToContent(String replyToContent) { this.replyToContent = replyToContent; }
+
+    public String getMentions() { return mentions; }
+    public void setMentions(String mentions) { this.mentions = mentions; }
 }

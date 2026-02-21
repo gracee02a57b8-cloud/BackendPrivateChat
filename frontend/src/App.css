@@ -3461,3 +3461,276 @@
     padding-bottom: calc(14px + env(safe-area-inset-bottom));
   }
 }
+
+/* ===== Reply Quote (inside message bubble) ===== */
+.reply-quote {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  border-left: 3px solid #e94560;
+  background: rgba(233, 69, 96, 0.1);
+  border-radius: 0 8px 8px 0;
+  cursor: pointer;
+  transition: background 0.2s;
+  max-width: 100%;
+  overflow: hidden;
+}
+.reply-quote:hover {
+  background: rgba(233, 69, 96, 0.18);
+}
+.reply-quote-sender {
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: #e94560;
+}
+.reply-quote-text {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ===== Reply Banner (above form) ===== */
+.reply-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(233, 69, 96, 0.1);
+  border-left: 3px solid #e94560;
+  padding: 8px 12px;
+  margin: 0 0.6rem;
+  border-radius: 0 8px 8px 0;
+  animation: slideDown 0.2s ease;
+}
+.reply-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+.reply-banner-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+.reply-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.reply-banner-sender {
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: #e94560;
+}
+.reply-banner-msg {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.reply-banner button {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 50%;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.reply-banner button:hover {
+  color: #e94560;
+  background: rgba(233, 69, 96, 0.15);
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== Selection Reply Popup ===== */
+.selection-popup {
+  position: absolute;
+  transform: translateX(-50%);
+  z-index: 1000;
+  background: rgba(22, 33, 62, 0.97);
+  border: 1px solid rgba(233, 69, 96, 0.3);
+  border-radius: 10px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+  padding: 0;
+  overflow: hidden;
+  animation: popIn 0.15s ease;
+}
+.selection-popup button {
+  background: none;
+  border: none;
+  color: #fff;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+.selection-popup button:hover {
+  background: rgba(233, 69, 96, 0.2);
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: translateX(-50%) scale(0.9); }
+  to { opacity: 1; transform: translateX(-50%) scale(1); }
+}
+
+/* ===== Mention Dropdown ===== */
+.mention-dropdown {
+  position: absolute;
+  bottom: 100%;
+  left: 50px;
+  background: rgba(22, 33, 62, 0.98);
+  border: 1px solid rgba(233, 69, 96, 0.25);
+  border-radius: 10px;
+  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.35);
+  z-index: 1000;
+  overflow: hidden;
+  min-width: 180px;
+  margin-bottom: 4px;
+  animation: slideUp 0.15s ease;
+}
+.mention-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-size: 0.9rem;
+}
+.mention-item:hover, .mention-item.selected {
+  background: rgba(233, 69, 96, 0.15);
+}
+.mention-at {
+  color: #e94560;
+  font-weight: 600;
+}
+.mention-name {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== Highlight flash (scroll to message) ===== */
+.highlight-flash {
+  animation: highlightFlash 2s ease;
+}
+@keyframes highlightFlash {
+  0% { background: rgba(233, 69, 96, 0.3); }
+  100% { background: transparent; }
+}
+
+/* ===== Reply / Mention Notification Popup ===== */
+.reply-notification-popup {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  background: rgba(22, 33, 62, 0.97);
+  border: 1px solid rgba(233, 69, 96, 0.3);
+  border-radius: 14px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+  padding: 14px 18px;
+  min-width: 280px;
+  max-width: 380px;
+  cursor: pointer;
+  animation: slideInRight 0.3s ease;
+  backdrop-filter: blur(12px);
+}
+.reply-notification-popup:hover {
+  border-color: rgba(233, 69, 96, 0.5);
+}
+.reply-notification-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.reply-notification-icon {
+  font-size: 1.2rem;
+}
+.reply-notification-title {
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: #e94560;
+  flex: 1;
+}
+.reply-notification-close {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+.reply-notification-close:hover {
+  color: #e94560;
+  background: rgba(233, 69, 96, 0.15);
+}
+.reply-notification-body {
+  padding-left: 28px;
+}
+.reply-notification-content {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0 0 4px;
+  line-height: 1.4;
+}
+.reply-notification-original {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 0;
+  font-style: italic;
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(60px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* ===== @mention highlight inside message body ===== */
+/* Can be applied later with regex in render */
+
+/* ===== Mobile adjustments for reply/mention ===== */
+@media (max-width: 600px) {
+  .reply-notification-popup {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    min-width: unset;
+    max-width: unset;
+  }
+  .reply-banner {
+    margin: 0 0.4rem;
+    padding: 6px 10px;
+  }
+  .mention-dropdown {
+    left: 10px;
+    right: 10px;
+    min-width: unset;
+  }
+  .selection-popup {
+    position: fixed;
+    top: unset;
+    bottom: 80px;
+    left: 50% !important;
+  }
+}

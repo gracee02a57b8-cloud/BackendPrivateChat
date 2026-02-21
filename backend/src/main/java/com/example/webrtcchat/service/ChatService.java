@@ -167,6 +167,11 @@ public class ChatService {
         e.setEphemeralKey(dto.getEphemeralKey());
         e.setSenderIdentityKey(dto.getSenderIdentityKey());
         e.setOneTimeKeyId(dto.getOneTimeKeyId());
+        // Reply fields
+        e.setReplyToId(dto.getReplyToId());
+        e.setReplyToSender(dto.getReplyToSender());
+        e.setReplyToContent(dto.getReplyToContent());
+        e.setMentions(dto.getMentions());
         return e;
     }
 
@@ -195,6 +200,11 @@ public class ChatService {
         dto.setEphemeralKey(e.getEphemeralKey());
         dto.setSenderIdentityKey(e.getSenderIdentityKey());
         dto.setOneTimeKeyId(e.getOneTimeKeyId());
+        // Reply fields
+        dto.setReplyToId(e.getReplyToId());
+        dto.setReplyToSender(e.getReplyToSender());
+        dto.setReplyToContent(e.getReplyToContent());
+        dto.setMentions(e.getMentions());
         return dto;
     }
 }

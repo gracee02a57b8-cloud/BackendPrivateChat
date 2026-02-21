@@ -175,6 +175,18 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
         // Check if any recipient is online → mark as DELIVERED
         sendDeliveryStatus(username, incoming, roomId);
+
+        // Send REPLY_NOTIFICATION to the original message author
+        if (incoming.getReplyToSender() != null
+                && !incoming.getReplyToSender().isEmpty()
+                && !incoming.getReplyToSender().equals(username)) {
+            sendReplyNotification(username, incoming);
+        }
+
+        // Send MENTION_NOTIFICATION to each @mentioned user
+        if (incoming.getMentions() != null && !incoming.getMentions().isEmpty()) {
+            sendMentionNotifications(username, incoming);
+        }
     }
 
     /**
@@ -361,6 +373,58 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
         log.error("Transport error for session {}: {}", session.getId(), exception.getMessage());
         session.close(CloseStatus.SERVER_ERROR);
+    }
+
+    /**
+     * Send a REPLY_NOTIFICATION to the author of the original message.
+     */
+    private void sendReplyNotification(String sender, MessageDto reply) {
+        WebSocketSession targetSession = userSessions.get(reply.getReplyToSender());
+        if (targetSession == null || !targetSession.isOpen()) return;
+
+        MessageDto notification = new MessageDto();
+        notification.setType(MessageType.REPLY_NOTIFICATION);
+        notification.setId(UUID.randomUUID().toString());
+        notification.setSender(sender);
+        notification.setContent(reply.getContent());
+        notification.setRoomId(reply.getRoomId());
+        notification.setTimestamp(now());
+        notification.setReplyToId(reply.getReplyToId());
+        notification.setReplyToSender(reply.getReplyToSender());
+        notification.setReplyToContent(reply.getReplyToContent());
+
+        sendSafe(targetSession, serialize(notification));
+    }
+
+    /**
+     * Parse the mentions JSON array and send MENTION_NOTIFICATION to each user.
+     */
+    private void sendMentionNotifications(String sender, MessageDto message) {
+        try {
+            // Mentions are stored as JSON array: ["user1","user2"]
+            List<String> mentionedUsers = objectMapper.readValue(
+                    message.getMentions(),
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, String.class));
+
+            for (String mentioned : mentionedUsers) {
+                if (mentioned.equals(sender)) continue; // don't notify self
+                WebSocketSession targetSession = userSessions.get(mentioned);
+                if (targetSession == null || !targetSession.isOpen()) continue;
+
+                MessageDto notification = new MessageDto();
+                notification.setType(MessageType.MENTION_NOTIFICATION);
+                notification.setId(UUID.randomUUID().toString());
+                notification.setSender(sender);
+                notification.setContent(message.getContent());
+                notification.setRoomId(message.getRoomId());
+                notification.setTimestamp(now());
+                notification.setMentions(message.getMentions());
+
+                sendSafe(targetSession, serialize(notification));
+            }
+        } catch (Exception e) {
+            log.warn("Failed to parse mentions for message {}: {}", message.getId(), e.getMessage());
+        }
     }
 
     private void broadcastToRoom(String roomId, MessageDto message) {
