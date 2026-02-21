@@ -239,13 +239,36 @@ class E2EManager {
 
   // ======================== Security Code ========================
 
-  /** Generate safety number for identity verification between two users. */
+  /**
+   * Generate safety number for identity verification between two users.
+   *
+   * Fixes applied:
+   *   - Verifies OUR identity key matches server (detects multi-device conflict)
+   *   - Re-syncs our key if mismatch detected
+   *   - Warns when using stale cached peer key (server unreachable)
+   */
   async getSecurityCode(peerUsername, token) {
     const myIK = await keyManager.getIdentityPublicKey();
     if (!myIK) return null;
 
+    // FIX: Verify OUR key matches what server has (detect multi-device overwrite)
+    try {
+      const myRes = await fetch('/api/keys/identity/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (myRes.ok) {
+        const myData = await myRes.json();
+        if (myData.identityKey && myData.identityKey !== myIK) {
+          console.warn('[E2E] ⚠ My identity key on server differs from local!',
+            'Attempting re-sync before generating security code...');
+          try { await keyManager.syncWithServer(token); } catch { /* best effort */ }
+        }
+      }
+    } catch { /* server unreachable — proceed with local key */ }
+
     // Always fetch peer's CURRENT identity key from server for accurate code
     let peerIK = null;
+    let peerIKFromServer = false;
     try {
       const res = await fetch(`/api/keys/identity/${encodeURIComponent(peerUsername)}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -253,6 +276,7 @@ class E2EManager {
       if (res.ok) {
         const data = await res.json();
         peerIK = data.identityKey;
+        peerIKFromServer = true;
         // Update trusted key store if changed
         if (peerIK) {
           const trusted = await cryptoStore.getTrustedKey(peerUsername);
@@ -262,13 +286,16 @@ class E2EManager {
         }
       }
     } catch {
-      // Fallback to stored trusted key
+      // Will try fallback to cached key below
     }
 
     if (!peerIK) {
       const trusted = await cryptoStore.getTrustedKey(peerUsername);
       if (!trusted) return null;
       peerIK = trusted.identityKey;
+      // FIX: Warn that we're using potentially stale cached key
+      console.warn('[E2E] ⚠ Using CACHED identity key for', peerUsername,
+        '(server unreachable). Security code may be inaccurate.');
     }
 
     return generateSecurityCode(myIK, peerIK);

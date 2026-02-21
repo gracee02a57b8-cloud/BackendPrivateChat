@@ -89,6 +89,20 @@ public class KeyBundleController {
     }
 
     /**
+     * Get the authenticated user's own identity key (for self-verification).
+     * Used by the client to detect multi-device key conflicts.
+     */
+    @GetMapping("/identity/me")
+    public ResponseEntity<?> getMyIdentityKey(Authentication auth) {
+        String username = auth.getName();
+        String identityKey = keyBundleService.getIdentityKey(username);
+        if (identityKey == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(Map.of("identityKey", identityKey));
+    }
+
+    /**
      * Get a user's current identity key (without consuming OTK).
      */
     @GetMapping("/identity/{username}")

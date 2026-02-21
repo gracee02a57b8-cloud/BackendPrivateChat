@@ -86,10 +86,28 @@ class KeyManager {
    * After DB wipe, multi-device login, or server migration, the server's
    * copy may be missing or stale — causing security code mismatch.
    * The server endpoint is idempotent (upsert), so re-uploading is safe.
+   *
+   * Fixes applied:
+   *   1. Regenerates signedPreKey if missing (instead of silently skipping)
+   *   2. Retries upload up to 3 times with backoff
+   *   3. Verifies server key after upload to detect desync
+   *   4. Detects multi-device conflict (server has different key)
    */
   async _ensureBundleOnServer(token) {
     try {
-      if (!this.identityKeyPair || !this.signingKeyPair || !this.signedPreKeyPair) return;
+      if (!this.identityKeyPair || !this.signingKeyPair) return;
+
+      // FIX #2: If signedPreKey is missing, regenerate it instead of skipping
+      if (!this.signedPreKeyPair) {
+        console.warn('[KeyManager] SignedPreKey missing from IndexedDB, regenerating...');
+        this.signedPreKeyPair = await generateECDHKeyPair();
+        const spkPub = await exportPublicKey(this.signedPreKeyPair.publicKey);
+        const spkSig = await ecdsaSign(this.signingKeyPair.privateKey, spkPub);
+        await cryptoStore.saveSignedPreKey({
+          keyPair: await exportKeyPair(this.signedPreKeyPair),
+          signature: spkSig,
+        });
+      }
 
       const ikPub = await exportPublicKey(this.identityKeyPair.publicKey);
       const sigPub = await exportPublicKey(this.signingKeyPair.publicKey);
@@ -97,20 +115,73 @@ class KeyManager {
       const spk = await cryptoStore.getSignedPreKey();
       const spkSig = spk?.signature || await ecdsaSign(this.signingKeyPair.privateKey, spkPub);
 
+      // FIX #6: Check what server currently has to detect multi-device conflict
+      const serverIK = await this._fetchMyIdentityKey(token);
+      if (serverIK === ikPub) {
+        this._syncFailed = false;
+        console.log('[KeyManager] Server identity key matches local — no sync needed');
+        return;
+      }
+      if (serverIK && serverIK !== ikPub) {
+        console.warn('[KeyManager] ⚠ Server has DIFFERENT identity key!',
+          'Multi-device conflict detected. Re-uploading current device key...');
+      }
+
       // Gather existing OTKs from IndexedDB
       const existingOTKs = await cryptoStore.getAll('oneTimePreKeys');
       const otks = existingOTKs.map(k => ({ id: k.id, publicKey: k.keyPair.publicKey }));
 
-      await this._uploadBundle(token, {
+      // FIX #3: Upload with retry (3 attempts with backoff)
+      await this._uploadBundleWithRetry(token, {
         identityKey: ikPub,
         signingKey: sigPub,
         signedPreKey: spkPub,
         signedPreKeySignature: spkSig,
         oneTimePreKeys: otks,
       });
-      console.log('[KeyManager] Bundle synced with server');
+
+      // FIX #1: Verify server actually stored our key
+      const verifiedIK = await this._fetchMyIdentityKey(token);
+      if (verifiedIK && verifiedIK !== ikPub) {
+        console.error('[KeyManager] CRITICAL: Server key does not match after upload!',
+          { local: ikPub?.slice(0, 20), server: verifiedIK?.slice(0, 20) });
+        this._syncFailed = true;
+      } else {
+        this._syncFailed = false;
+        console.log('[KeyManager] Bundle synced and verified with server ✓');
+      }
     } catch (e) {
-      console.warn('[KeyManager] Bundle sync failed (will retry on next init):', e);
+      console.error('[KeyManager] Bundle sync failed:', e);
+      this._syncFailed = true;
+    }
+  }
+
+  /** Fetch our own identity key from the server (for verification). */
+  async _fetchMyIdentityKey(token) {
+    try {
+      const res = await fetch('/api/keys/identity/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.identityKey || null;
+    } catch { return null; }
+  }
+
+  /** Upload bundle with retry and exponential backoff. */
+  async _uploadBundleWithRetry(token, bundle, maxRetries = 3) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await this._uploadBundle(token, bundle);
+        return; // Success
+      } catch (e) {
+        if (attempt === maxRetries) {
+          throw new Error(`Upload failed after ${maxRetries} attempts: ${e.message}`);
+        }
+        const delay = attempt * 1000; // 1s, 2s, 3s
+        console.warn(`[KeyManager] Upload attempt ${attempt}/${maxRetries} failed, retrying in ${delay}ms...`);
+        await new Promise(r => setTimeout(r, delay));
+      }
     }
   }
 
@@ -121,6 +192,14 @@ class KeyManager {
       body: JSON.stringify(bundle),
     });
     if (!res.ok) throw new Error('Failed to upload key bundle');
+  }
+
+  /** Check if the last sync with server failed. */
+  get syncFailed() { return !!this._syncFailed; }
+
+  /** Force re-sync bundle with server. */
+  async syncWithServer(token) {
+    await this._ensureBundleOnServer(token);
   }
 
   /** Fetch peer's key bundle for X3DH. */
