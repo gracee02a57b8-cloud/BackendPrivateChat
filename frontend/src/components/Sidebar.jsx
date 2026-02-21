@@ -257,25 +257,6 @@ export default function Sidebar({
         )}
       </div>
 
-      {/* ── Online users compact bar ── */}
-      <div className="sb-online-bar">
-        <span className="sb-online-label">🟢 В сети: {onlineUsers.length}</span>
-        <div className="sb-online-avatars">
-          {onlineUsers.slice(0, 5).map((user, i) => (
-            <div
-              key={i}
-              className="sb-online-mini"
-              style={{ background: getAvatarColor(user) }}
-              title={user}
-              onClick={() => { if (user !== username) onStartPrivateChat(user); }}
-            >
-              {getInitials(user)}
-            </div>
-          ))}
-          {onlineUsers.length > 5 && <span className="sb-online-more">+{onlineUsers.length - 5}</span>}
-        </div>
-      </div>
-
       {showCreate && <CreateRoom onCreateRoom={onCreateRoom} onClose={() => setShowCreate(false)} />}
       {showJoin && <JoinRoom onJoinRoom={onJoinRoom} onClose={() => setShowJoin(false)} />}
     </div>
