@@ -21,6 +21,7 @@ import org.springframework.web.socket.WebSocketSession;
 
 import java.net.URI;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -272,6 +273,303 @@ class ChatWebSocketHandlerTest {
         handler.handleTextMessage(session, new TextMessage(objectMapper.writeValueAsString(incoming)));
 
         verify(chatService).deleteMessage("general", "msg-1");
+    }
+
+    // === TYPING ===
+
+    @Test
+    @DisplayName("handleTextMessage - TYPING broadcasts to room members except sender")
+    void handleMessage_typing() throws Exception {
+        setupConnectedSession("session1", "alice");
+
+        RoomDto room = createRoom("room1", RoomType.ROOM);
+        room.setMembers(new CopyOnWriteArraySet<>(Set.of("alice", "bob")));
+        when(roomService.getRoomById("room1")).thenReturn(room);
+
+        // Bob's session must exist for broadcast
+        WebSocketSession bobSession = mock(WebSocketSession.class);
+        when(bobSession.isOpen()).thenReturn(true);
+        when(bobSession.getId()).thenReturn("session-bob");
+        Map<String, Object> bobAttrs = new HashMap<>();
+        bobAttrs.put("username", "bob");
+        when(bobSession.getAttributes()).thenReturn(bobAttrs);
+
+        // Connect bob
+        when(bobSession.getUri()).thenReturn(new URI("ws://localhost/ws/chat?token=bob-token"));
+        when(jwtService.isTokenValid("bob-token")).thenReturn(true);
+        when(jwtService.extractUsername("bob-token")).thenReturn("bob");
+        when(roomService.joinRoom("general", "bob")).thenReturn(createRoom("general", RoomType.GENERAL));
+        handler.afterConnectionEstablished(bobSession);
+
+        MessageDto typing = new MessageDto();
+        typing.setType(MessageType.TYPING);
+        typing.setRoomId("room1");
+
+        handler.handleTextMessage(session, new TextMessage(objectMapper.writeValueAsString(typing)));
+
+        // TYPING should NOT persist
+        verify(chatService, never()).send(anyString(), argThat(msg ->
+                msg.getType() == MessageType.TYPING));
+
+        // Bob should receive the typing notification
+        verify(bobSession, atLeastOnce()).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"type\":\"TYPING\"") && payload.contains("\"sender\":\"alice\"");
+        }));
+    }
+
+    // === SCHEDULED ===
+
+    @Test
+    @DisplayName("handleTextMessage - SCHEDULED message triggers scheduler")
+    void handleMessage_scheduled() throws Exception {
+        // Need full connection flow so session is in userSessions map
+        setupSession("session1", "alice", "valid-token");
+        when(jwtService.isTokenValid("valid-token")).thenReturn(true);
+        when(jwtService.extractUsername("valid-token")).thenReturn("alice");
+
+        RoomDto generalRoom = createRoom("general", RoomType.GENERAL);
+        when(roomService.joinRoom("general", "alice")).thenReturn(generalRoom);
+        when(roomService.getRoomById("general")).thenReturn(generalRoom);
+        handler.afterConnectionEstablished(session);
+
+        MessageDto scheduled = new MessageDto();
+        scheduled.setType(MessageType.SCHEDULED);
+        scheduled.setContent("Future message");
+        scheduled.setRoomId("general");
+        scheduled.setScheduledAt("2099-12-31 23:59:59");
+
+        handler.handleTextMessage(session, new TextMessage(objectMapper.writeValueAsString(scheduled)));
+
+        // Verify scheduler was called
+        verify(schedulerService).schedule(anyString(), eq("2099-12-31 23:59:59"), any(Runnable.class));
+
+        // Verify confirmation sent back to sender
+        verify(session, atLeastOnce()).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"type\":\"SCHEDULED\"") && payload.contains("Future message");
+        }));
+    }
+
+    @Test
+    @DisplayName("handleTextMessage - SCHEDULED without scheduledAt is ignored")
+    void handleMessage_scheduled_noDate() throws Exception {
+        setupConnectedSession("session1", "alice");
+
+        RoomDto room = createRoom("general", RoomType.GENERAL);
+        when(roomService.getRoomById("general")).thenReturn(room);
+
+        MessageDto scheduled = new MessageDto();
+        scheduled.setType(MessageType.SCHEDULED);
+        scheduled.setContent("No date message");
+        scheduled.setRoomId("general");
+        // scheduledAt is null
+
+        handler.handleTextMessage(session, new TextMessage(objectMapper.writeValueAsString(scheduled)));
+
+        verify(schedulerService, never()).schedule(anyString(), anyString(), any());
+    }
+
+    // === READ_RECEIPT ===
+
+    @Test
+    @DisplayName("handleTextMessage - READ_RECEIPT marks messages and sends status updates")
+    void handleMessage_readReceipt() throws Exception {
+        setupConnectedSession("session1", "alice");
+
+        // Setup bob's session (alice reads bob's messages → bob gets status updates)
+        WebSocketSession bobSession = mock(WebSocketSession.class);
+        when(bobSession.isOpen()).thenReturn(true);
+        when(bobSession.getId()).thenReturn("session-bob");
+        Map<String, Object> bobAttrs = new HashMap<>();
+        bobAttrs.put("username", "bob");
+        when(bobSession.getAttributes()).thenReturn(bobAttrs);
+        when(bobSession.getUri()).thenReturn(new URI("ws://localhost/ws/chat?token=bob-token"));
+        when(jwtService.isTokenValid("bob-token")).thenReturn(true);
+        when(jwtService.extractUsername("bob-token")).thenReturn("bob");
+
+        RoomDto generalRoom = createRoom("general", RoomType.GENERAL);
+        when(roomService.joinRoom("general", "bob")).thenReturn(generalRoom);
+        when(roomService.getRoomById("general")).thenReturn(generalRoom);
+        handler.afterConnectionEstablished(bobSession);
+
+        // Mock markMessagesAsRead
+        when(chatService.markMessagesAsRead("general", "alice"))
+                .thenReturn(java.util.Map.of("bob", List.of("msg-1", "msg-2")));
+
+        MessageDto readReceipt = new MessageDto();
+        readReceipt.setType(MessageType.READ_RECEIPT);
+        readReceipt.setRoomId("general");
+
+        handler.handleTextMessage(session, new TextMessage(objectMapper.writeValueAsString(readReceipt)));
+
+        verify(chatService).markMessagesAsRead("general", "alice");
+
+        // Bob should get STATUS_UPDATE for each message
+        verify(bobSession, atLeast(2)).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"type\":\"STATUS_UPDATE\"") && payload.contains("\"status\":\"READ\"");
+        }));
+    }
+
+    // === Session Replacement ===
+
+    @Test
+    @DisplayName("afterConnectionEstablished - replaces existing session with code 4001")
+    void connect_sessionReplacement() throws Exception {
+        // First connection
+        WebSocketSession firstSession = mock(WebSocketSession.class);
+        Map<String, Object> firstAttrs = new HashMap<>();
+        when(firstSession.getId()).thenReturn("first-session");
+        when(firstSession.getAttributes()).thenReturn(firstAttrs);
+        when(firstSession.getUri()).thenReturn(new URI("ws://localhost/ws/chat?token=alice-token"));
+        when(firstSession.isOpen()).thenReturn(true);
+
+        when(jwtService.isTokenValid("alice-token")).thenReturn(true);
+        when(jwtService.extractUsername("alice-token")).thenReturn("alice");
+
+        RoomDto generalRoom = createRoom("general", RoomType.GENERAL);
+        when(roomService.joinRoom("general", "alice")).thenReturn(generalRoom);
+        when(roomService.getRoomById("general")).thenReturn(generalRoom);
+
+        handler.afterConnectionEstablished(firstSession);
+
+        // Second connection (same user)
+        WebSocketSession secondSession = mock(WebSocketSession.class);
+        Map<String, Object> secondAttrs = new HashMap<>();
+        when(secondSession.getId()).thenReturn("second-session");
+        when(secondSession.getAttributes()).thenReturn(secondAttrs);
+        when(secondSession.getUri()).thenReturn(new URI("ws://localhost/ws/chat?token=alice-token"));
+        when(secondSession.isOpen()).thenReturn(true);
+
+        handler.afterConnectionEstablished(secondSession);
+
+        // First session should be closed with code 4001
+        verify(firstSession).close(argThat(status ->
+                status.getCode() == 4001
+        ));
+    }
+
+    // === Reply Notification ===
+
+    @Test
+    @DisplayName("handleTextMessage - CHAT with replyToSender sends REPLY_NOTIFICATION")
+    void handleMessage_replyNotification() throws Exception {
+        setupConnectedSession("session1", "alice");
+
+        // Bob's session
+        WebSocketSession bobSession = mock(WebSocketSession.class);
+        when(bobSession.isOpen()).thenReturn(true);
+        when(bobSession.getId()).thenReturn("session-bob");
+        Map<String, Object> bobAttrs = new HashMap<>();
+        bobAttrs.put("username", "bob");
+        when(bobSession.getAttributes()).thenReturn(bobAttrs);
+        when(bobSession.getUri()).thenReturn(new URI("ws://localhost/ws/chat?token=bob-token"));
+        when(jwtService.isTokenValid("bob-token")).thenReturn(true);
+        when(jwtService.extractUsername("bob-token")).thenReturn("bob");
+
+        RoomDto generalRoom = createRoom("general", RoomType.GENERAL);
+        when(roomService.joinRoom("general", "bob")).thenReturn(generalRoom);
+        when(roomService.getRoomById("general")).thenReturn(generalRoom);
+        handler.afterConnectionEstablished(bobSession);
+
+        // Alice sends a reply to Bob's message
+        MessageDto reply = new MessageDto();
+        reply.setType(MessageType.CHAT);
+        reply.setContent("I agree!");
+        reply.setRoomId("general");
+        reply.setReplyToId("bob-msg-1");
+        reply.setReplyToSender("bob");
+        reply.setReplyToContent("What do you think?");
+
+        handler.handleTextMessage(session, new TextMessage(objectMapper.writeValueAsString(reply)));
+
+        // Bob should get REPLY_NOTIFICATION
+        verify(bobSession, atLeastOnce()).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("REPLY_NOTIFICATION");
+        }));
+    }
+
+    // === Mention Notification ===
+
+    @Test
+    @DisplayName("handleTextMessage - CHAT with mentions sends MENTION_NOTIFICATION")
+    void handleMessage_mentionNotification() throws Exception {
+        setupConnectedSession("session1", "alice");
+
+        // Bob's session
+        WebSocketSession bobSession = mock(WebSocketSession.class);
+        when(bobSession.isOpen()).thenReturn(true);
+        when(bobSession.getId()).thenReturn("session-bob");
+        Map<String, Object> bobAttrs = new HashMap<>();
+        bobAttrs.put("username", "bob");
+        when(bobSession.getAttributes()).thenReturn(bobAttrs);
+        when(bobSession.getUri()).thenReturn(new URI("ws://localhost/ws/chat?token=bob-token"));
+        when(jwtService.isTokenValid("bob-token")).thenReturn(true);
+        when(jwtService.extractUsername("bob-token")).thenReturn("bob");
+
+        RoomDto generalRoom = createRoom("general", RoomType.GENERAL);
+        when(roomService.joinRoom("general", "bob")).thenReturn(generalRoom);
+        when(roomService.getRoomById("general")).thenReturn(generalRoom);
+        handler.afterConnectionEstablished(bobSession);
+
+        // Alice mentions Bob
+        MessageDto msg = new MessageDto();
+        msg.setType(MessageType.CHAT);
+        msg.setContent("Hey @bob check this out");
+        msg.setRoomId("general");
+        msg.setMentions("[\"bob\"]");
+
+        handler.handleTextMessage(session, new TextMessage(objectMapper.writeValueAsString(msg)));
+
+        // Bob should get MENTION_NOTIFICATION
+        verify(bobSession, atLeastOnce()).sendMessage(argThat(m -> {
+            String payload = ((TextMessage) m).getPayload();
+            return payload.contains("MENTION_NOTIFICATION");
+        }));
+    }
+
+    // === E2E Field Propagation via WebSocket ===
+
+    @Test
+    @DisplayName("handleTextMessage - E2E encrypted message fields are saved and broadcast")
+    void handleMessage_e2eFieldsBroadcast() throws Exception {
+        setupConnectedSession("session1", "alice");
+
+        RoomDto room = createRoom("general", RoomType.GENERAL);
+        when(roomService.getRoomById("general")).thenReturn(room);
+
+        MessageDto encrypted = new MessageDto();
+        encrypted.setType(MessageType.CHAT);
+        encrypted.setContent("[encrypted]");
+        encrypted.setRoomId("general");
+        encrypted.setEncrypted(true);
+        encrypted.setEncryptedContent("cipher-base64");
+        encrypted.setIv("iv-base64");
+        encrypted.setRatchetKey("ratchet-key-base64");
+        encrypted.setMessageNumber(1);
+        encrypted.setPreviousChainLength(0);
+        encrypted.setEphemeralKey("eph-key-base64");
+        encrypted.setSenderIdentityKey("sender-ik-base64");
+        encrypted.setOneTimeKeyId(5);
+
+        handler.handleTextMessage(session, new TextMessage(objectMapper.writeValueAsString(encrypted)));
+
+        // Verify E2E fields are passed to chatService.send
+        ArgumentCaptor<MessageDto> captor = ArgumentCaptor.forClass(MessageDto.class);
+        verify(chatService).send(eq("general"), captor.capture());
+        MessageDto saved = captor.getValue();
+
+        assertTrue(saved.isEncrypted());
+        assertEquals("cipher-base64", saved.getEncryptedContent());
+        assertEquals("iv-base64", saved.getIv());
+        assertEquals("ratchet-key-base64", saved.getRatchetKey());
+        assertEquals(1, saved.getMessageNumber());
+        assertEquals(0, saved.getPreviousChainLength());
+        assertEquals("eph-key-base64", saved.getEphemeralKey());
+        assertEquals("sender-ik-base64", saved.getSenderIdentityKey());
+        assertEquals(5, saved.getOneTimeKeyId());
     }
 
     // === Disconnect ===

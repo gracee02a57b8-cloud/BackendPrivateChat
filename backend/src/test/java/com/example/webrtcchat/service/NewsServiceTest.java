@@ -2,6 +2,7 @@ package com.example.webrtcchat.service;
 
 import com.example.webrtcchat.dto.NewsDto;
 import com.example.webrtcchat.entity.NewsEntity;
+import com.example.webrtcchat.repository.NewsCommentRepository;
 import com.example.webrtcchat.repository.NewsRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -23,6 +24,9 @@ class NewsServiceTest {
 
     @Mock
     private NewsRepository newsRepository;
+
+    @Mock
+    private NewsCommentRepository commentRepository;
 
     @InjectMocks
     private NewsService newsService;
