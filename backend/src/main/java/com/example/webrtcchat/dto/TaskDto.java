@@ -11,6 +11,9 @@ public class TaskDto {
     private String status; // OPEN, IN_PROGRESS, DONE
     private String createdAt;
     private String roomId;
+    private String fileUrl;
+    private String fileName;
+    private String fileType;
 
     public TaskDto() {}
 
@@ -40,4 +43,13 @@ public class TaskDto {
 
     public String getRoomId() { return roomId; }
     public void setRoomId(String roomId) { this.roomId = roomId; }
+
+    public String getFileUrl() { return fileUrl; }
+    public void setFileUrl(String fileUrl) { this.fileUrl = fileUrl; }
+
+    public String getFileName() { return fileName; }
+    public void setFileName(String fileName) { this.fileName = fileName; }
+
+    public String getFileType() { return fileType; }
+    public void setFileType(String fileType) { this.fileType = fileType; }
 }

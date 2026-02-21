@@ -22,6 +22,15 @@ export default function TaskPanel({ token, username, onClose }) {
   const [filter, setFilter] = useState('all');
   const [searchUser, setSearchUser] = useState('');
   const [userSuggestions, setUserSuggestions] = useState([]);
+  const [taskFile, setTaskFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+
+  // Get current Moscow time as datetime-local string
+  const getMskNow = () => {
+    const msk = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${msk.getFullYear()}-${pad(msk.getMonth() + 1)}-${pad(msk.getDate())}T${pad(msk.getHours())}:${pad(msk.getMinutes())}`;
+  };
 
   useEffect(() => {
     fetchTasks();
@@ -56,22 +65,44 @@ export default function TaskPanel({ token, username, onClose }) {
   const createTask = async (e) => {
     e.preventDefault();
     if (!title.trim() || !assignedTo.trim() || !deadline) return;
+    setUploading(true);
     try {
+      let fileUrl = null, fileName = null, fileType = null;
+
+      if (taskFile) {
+        const formData = new FormData();
+        formData.append('file', taskFile);
+        const uploadRes = await fetch('/api/upload/file', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        });
+        if (uploadRes.ok) {
+          const data = await uploadRes.json();
+          fileUrl = data.url;
+          fileName = taskFile.name;
+          fileType = taskFile.type || 'application/octet-stream';
+        }
+      }
+
       const res = await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ title, description, assignedTo, deadline }),
+        body: JSON.stringify({ title, description, assignedTo, deadline, fileUrl, fileName, fileType }),
       });
       if (res.ok) {
         setTitle('');
         setDescription('');
         setAssignedTo('');
         setDeadline('');
+        setTaskFile(null);
         setShowForm(false);
         fetchTasks();
       }
     } catch (err) {
       console.error(err);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -118,7 +149,7 @@ export default function TaskPanel({ token, username, onClose }) {
       <div className="task-header">
         <h2>📋 Задачи</h2>
         <div className="task-header-actions">
-          <button className="add-task-btn" onClick={() => setShowForm(!showForm)}>
+          <button className="add-task-btn" onClick={() => { if (!showForm) setDeadline(getMskNow()); setShowForm(!showForm); }}>
             {showForm ? '✕ Закрыть' : '➕ Новая задача'}
           </button>
           <button className="back-btn" onClick={onClose}>← Назад в чат</button>
@@ -163,12 +194,21 @@ export default function TaskPanel({ token, username, onClose }) {
               type="datetime-local"
               value={deadline}
               onChange={(e) => setDeadline(e.target.value)}
-              min={new Date().toISOString().slice(0, 16)}
+              min={getMskNow()}
               required
             />
           </div>
-          <button type="submit" disabled={!title.trim() || !assignedTo.trim() || !deadline}>
-            Создать задачу
+          <div className="task-file-upload">
+            <label className="task-file-label">
+              📎 {taskFile ? taskFile.name : 'Прикрепить файл'}
+              <input type="file" onChange={(e) => setTaskFile(e.target.files[0] || null)} hidden />
+            </label>
+            {taskFile && (
+              <button type="button" className="task-file-remove" onClick={() => setTaskFile(null)}>✕</button>
+            )}
+          </div>
+          <button type="submit" disabled={!title.trim() || !assignedTo.trim() || !deadline || uploading}>
+            {uploading ? 'Загрузка...' : 'Создать задачу'}
           </button>
         </form>
       )}
@@ -199,6 +239,11 @@ export default function TaskPanel({ token, username, onClose }) {
               )}
             </div>
             {task.description && <p className="task-desc">{task.description}</p>}
+            {task.fileUrl && (
+              <a className="task-file-link" href={task.fileUrl} target="_blank" rel="noopener noreferrer">
+                📎 {task.fileName || 'Файл'}
+              </a>
+            )}
             <div className="task-meta">
               <span>👤 {task.assignedTo}</span>
               <span>📝 {task.createdBy}</span>

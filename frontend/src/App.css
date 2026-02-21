@@ -2875,6 +2875,72 @@
   background: rgba(136, 146, 176, 0.4);
 }
 
+/* ===== Task File Upload & Attachment ===== */
+.task-file-upload {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.task-file-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 14px;
+  background: #0e1621;
+  border: 1px dashed #232e3c;
+  border-radius: 8px;
+  color: #6ab3f3;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.task-file-label:hover {
+  border-color: #6ab3f3;
+  background: rgba(106, 179, 243, 0.05);
+}
+
+.task-file-remove {
+  background: none;
+  border: none;
+  color: #e74c3c;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.task-file-remove:hover {
+  background: rgba(231, 76, 60, 0.12);
+}
+
+.task-file-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  margin-top: 6px;
+  background: rgba(106, 179, 243, 0.08);
+  border: 1px solid rgba(106, 179, 243, 0.2);
+  border-radius: 8px;
+  color: #6ab3f3;
+  font-size: 0.82rem;
+  text-decoration: none;
+  transition: all 0.15s;
+  word-break: break-all;
+}
+
+.task-file-link:hover {
+  background: rgba(106, 179, 243, 0.15);
+  border-color: #6ab3f3;
+}
+
 /* ===== Scrollbar Styling ===== */
 .messages::-webkit-scrollbar,
 .sb-chat-list::-webkit-scrollbar {

@@ -32,6 +32,15 @@ public class TaskEntity {
     @Column(length = 100)
     private String roomId;
 
+    @Column(length = 500)
+    private String fileUrl;
+
+    @Column(length = 255)
+    private String fileName;
+
+    @Column(length = 50)
+    private String fileType;
+
     public TaskEntity() {}
 
     public String getId() { return id; }
@@ -60,4 +69,13 @@ public class TaskEntity {
 
     public String getRoomId() { return roomId; }
     public void setRoomId(String roomId) { this.roomId = roomId; }
+
+    public String getFileUrl() { return fileUrl; }
+    public void setFileUrl(String fileUrl) { this.fileUrl = fileUrl; }
+
+    public String getFileName() { return fileName; }
+    public void setFileName(String fileName) { this.fileName = fileName; }
+
+    public String getFileType() { return fileType; }
+    public void setFileType(String fileType) { this.fileType = fileType; }
 }

@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -15,6 +16,7 @@ import java.util.stream.Collectors;
 public class TaskService {
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final ZoneId MSK = ZoneId.of("Europe/Moscow");
     private final TaskRepository taskRepository;
 
     public TaskService(TaskRepository taskRepository) {
@@ -31,8 +33,11 @@ public class TaskService {
         entity.setAssignedTo(task.getAssignedTo());
         entity.setDeadline(task.getDeadline());
         entity.setStatus("OPEN");
-        entity.setCreatedAt(LocalDateTime.now().format(FORMATTER));
+        entity.setCreatedAt(LocalDateTime.now(MSK).format(FORMATTER));
         entity.setRoomId(task.getRoomId());
+        entity.setFileUrl(task.getFileUrl());
+        entity.setFileName(task.getFileName());
+        entity.setFileType(task.getFileType());
         taskRepository.save(entity);
         return toDto(entity);
     }
@@ -77,7 +82,7 @@ public class TaskService {
 
     @Transactional(readOnly = true)
     public List<TaskDto> getOverdueTasks() {
-        String now = LocalDateTime.now().format(FORMATTER);
+        String now = LocalDateTime.now(MSK).format(FORMATTER);
         return taskRepository.findByStatusNotAndDeadlineNotNullAndDeadlineLessThan("DONE", now)
                 .stream().map(this::toDto).collect(Collectors.toList());
     }
@@ -102,6 +107,9 @@ public class TaskService {
         dto.setStatus(e.getStatus());
         dto.setCreatedAt(e.getCreatedAt());
         dto.setRoomId(e.getRoomId());
+        dto.setFileUrl(e.getFileUrl());
+        dto.setFileName(e.getFileName());
+        dto.setFileType(e.getFileType());
         return dto;
     }
 }
