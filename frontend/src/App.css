@@ -1815,6 +1815,150 @@
   background: rgba(106, 179, 243, 0.8);
 }
 
+/* ===== News Comments ===== */
+.news-comments-toggle {
+  display: block;
+  width: 100%;
+  padding: 10px 1.2rem;
+  background: none;
+  border: none;
+  border-top: 1px solid #232e3c;
+  color: #6ab3f3;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.news-comments-toggle:hover {
+  background: rgba(106, 179, 243, 0.06);
+}
+
+.news-comments {
+  border-top: 1px solid #232e3c;
+  background: rgba(14, 22, 33, 0.4);
+}
+
+.nc-loading,
+.nc-empty {
+  padding: 12px 1.2rem;
+  font-size: 0.82rem;
+  color: #6c7883;
+  text-align: center;
+}
+
+.nc-list {
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.nc-item {
+  padding: 8px 1.2rem;
+  border-bottom: 1px solid rgba(35, 46, 60, 0.5);
+  position: relative;
+}
+
+.nc-item:last-child {
+  border-bottom: none;
+}
+
+.nc-item:hover .nc-delete {
+  opacity: 0.7;
+}
+
+.nc-item-header {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  margin-bottom: 2px;
+}
+
+.nc-author {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #6ab3f3;
+}
+
+.nc-time {
+  font-size: 0.68rem;
+  color: #6c7883;
+}
+
+.nc-text {
+  font-size: 0.85rem;
+  color: #ccc;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.nc-delete {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: #e74c3c;
+  font-size: 0.75rem;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.nc-delete:hover {
+  opacity: 1 !important;
+  background: rgba(231, 76, 60, 0.12);
+}
+
+.nc-form {
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px;
+  border-top: 1px solid #232e3c;
+}
+
+.nc-form input {
+  flex: 1;
+  background: #0e1621;
+  border: 1px solid #232e3c;
+  border-radius: 18px;
+  padding: 7px 14px;
+  color: #eee;
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.nc-form input:focus {
+  border-color: #6ab3f3;
+}
+
+.nc-form button {
+  background: #6ab3f3;
+  border: none;
+  color: white;
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.nc-form button:hover:not(:disabled) {
+  background: #5a9fd8;
+}
+
+.nc-form button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* ===== Unread Badge ===== */
 .unread-badge {
   margin-left: auto;

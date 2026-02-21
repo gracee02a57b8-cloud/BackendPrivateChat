@@ -144,7 +144,7 @@ export default function NewsBoard({ token, username, onBack }) {
           </div>
         )}
         {newsList.map((news) => (
-          <NewsCard key={news.id} news={news} username={username} onDelete={handleDelete} />
+          <NewsCard key={news.id} news={news} username={username} onDelete={handleDelete} token={token} />
         ))}
       </div>
     </div>

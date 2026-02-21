@@ -8,6 +8,7 @@ public class NewsDto {
     private String content;
     private String imageUrl;
     private String createdAt;
+    private long commentCount;
 
     public NewsDto() {}
 
@@ -37,4 +38,7 @@ public class NewsDto {
 
     public String getCreatedAt() { return createdAt; }
     public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
+
+    public long getCommentCount() { return commentCount; }
+    public void setCommentCount(long commentCount) { this.commentCount = commentCount; }
 }

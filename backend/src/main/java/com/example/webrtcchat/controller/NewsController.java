@@ -1,5 +1,6 @@
 package com.example.webrtcchat.controller;
 
+import com.example.webrtcchat.dto.NewsCommentDto;
 import com.example.webrtcchat.dto.NewsDto;
 import com.example.webrtcchat.service.NewsService;
 import org.springframework.http.ResponseEntity;
@@ -46,6 +47,33 @@ public class NewsController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteNews(@PathVariable String id, Principal principal) {
         boolean deleted = newsService.deleteNews(id, principal.getName());
+        if (!deleted) return ResponseEntity.status(403).build();
+        return ResponseEntity.ok().build();
+    }
+
+    // ── Comments ──
+
+    @GetMapping("/{newsId}/comments")
+    public ResponseEntity<List<NewsCommentDto>> getComments(@PathVariable String newsId) {
+        return ResponseEntity.ok(newsService.getComments(newsId));
+    }
+
+    @PostMapping("/{newsId}/comments")
+    public ResponseEntity<NewsCommentDto> addComment(
+            @PathVariable String newsId,
+            @RequestBody Map<String, String> body,
+            Principal principal) {
+        String text = body.get("text");
+        if (text == null || text.isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+        NewsCommentDto comment = newsService.addComment(newsId, principal.getName(), text.trim());
+        return ResponseEntity.ok(comment);
+    }
+
+    @DeleteMapping("/comments/{commentId}")
+    public ResponseEntity<Void> deleteComment(@PathVariable String commentId, Principal principal) {
+        boolean deleted = newsService.deleteComment(commentId, principal.getName());
         if (!deleted) return ResponseEntity.status(403).build();
         return ResponseEntity.ok().build();
     }
