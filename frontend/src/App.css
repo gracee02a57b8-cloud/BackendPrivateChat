@@ -994,15 +994,59 @@
 /* ===== Messages ===== */
 .message {
   max-width: 65%;
-  padding: 0.3rem 0.55rem;
-  border-radius: 10px;
-  animation: fadeIn 0.3s ease;
+  padding: 0.35rem 0.55rem;
+  border-radius: 12px;
+  animation: fadeIn 0.2s ease;
   position: relative;
 }
 
-.message.grouped {
-  padding-top: 0.15rem;
-  margin-top: -2px;
+/* === Single message (no group) — has tail === */
+.message.own {
+  align-self: flex-end;
+  background: #2b5278;
+  color: #e1e3e6;
+  border-radius: 12px 12px 4px 12px;
+}
+
+.message.other {
+  align-self: flex-start;
+  background: #182533;
+  border-radius: 12px 12px 12px 4px;
+}
+
+/* === First in group (more messages follow from same sender) === */
+.message.own.first {
+  border-radius: 12px 12px 4px 12px;
+}
+
+.message.other.first {
+  border-radius: 12px 12px 12px 4px;
+}
+
+/* === Middle of group === */
+.message.own.grouped.middle {
+  border-radius: 12px 4px 4px 12px;
+  margin-top: 1px;
+  padding-top: 0.25rem;
+}
+
+.message.other.grouped.middle {
+  border-radius: 4px 12px 12px 4px;
+  margin-top: 1px;
+  padding-top: 0.25rem;
+}
+
+/* === Last in group — has tail === */
+.message.own.grouped.last {
+  border-radius: 12px 4px 12px 12px;
+  margin-top: 1px;
+  padding-top: 0.25rem;
+}
+
+.message.other.grouped.last {
+  border-radius: 4px 12px 12px 12px;
+  margin-top: 1px;
+  padding-top: 0.25rem;
 }
 
 @keyframes fadeIn {
@@ -1025,27 +1069,6 @@
 .message-bubble {
   position: relative;
   min-width: 0;
-}
-
-.message.own {
-  align-self: flex-end;
-  background: #2b5278;
-  color: #e1e3e6;
-  border-bottom-right-radius: 3px;
-}
-
-.message.own.grouped {
-  border-radius: 10px 3px 3px 10px;
-}
-
-.message.other {
-  align-self: flex-start;
-  background: #182533;
-  border-bottom-left-radius: 3px;
-}
-
-.message.other.grouped {
-  border-radius: 3px 10px 10px 3px;
 }
 
 .message.system {

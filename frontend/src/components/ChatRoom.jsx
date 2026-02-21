@@ -630,12 +630,25 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
 
           // Group consecutive messages from same sender
           const prevMsg = messages[i - 1];
+          const nextMsg = messages[i + 1];
           const isGrouped = prevMsg && prevMsg.sender === msg.sender
             && prevMsg.type !== 'JOIN' && prevMsg.type !== 'LEAVE'
             && msg.type !== 'JOIN' && msg.type !== 'LEAVE';
 
+          // Is this the last message in a group from the same sender?
+          const isLastInGroup = !nextMsg
+            || nextMsg.sender !== msg.sender
+            || nextMsg.type === 'JOIN' || nextMsg.type === 'LEAVE'
+            || msg.type === 'JOIN' || msg.type === 'LEAVE';
+
           const isOwn = msg.sender === username;
           const isSys = msg.type === 'JOIN' || msg.type === 'LEAVE';
+
+          // Build class: grouped middle/last for proper border-radius
+          let msgClass = getMessageClass(msg);
+          if (isGrouped && !isLastInGroup) msgClass += ' grouped middle';
+          else if (isGrouped && isLastInGroup) msgClass += ' grouped last';
+          else if (!isGrouped && !isLastInGroup) msgClass += ' first';
 
           return (
             <div key={msg.id || i}>
@@ -643,20 +656,20 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
               <div
                 id={`msg-${msg.id}`}
                 data-msg-id={msg.id}
-                className={`${getMessageClass(msg)}${isGrouped ? ' grouped' : ''}`}
+                className={msgClass}
                 onContextMenu={(e) => handleContextMenu(e, msg)}
               >
                 {isSys ? (
                   <span className="system-text">{msg.content}</span>
                 ) : (
                   <div className="message-row">
-                    {/* Avatar */}
-                    {!isOwn && !isGrouped && (
+                    {/* Avatar — shown on last message in group (Telegram-style) */}
+                    {!isOwn && isLastInGroup && (
                       <div className="avatar-circle" style={{ background: getAvatarColor(msg.sender) }}>
                         {getInitials(msg.sender)}
                       </div>
                     )}
-                    {!isOwn && isGrouped && <div className="avatar-spacer" />}
+                    {!isOwn && !isLastInGroup && <div className="avatar-spacer" />}
 
                     <div className="message-bubble">
 
