@@ -70,18 +70,29 @@ export default function TaskPanel({ token, username, onClose }) {
       let fileUrl = null, fileName = null, fileType = null;
 
       if (taskFile) {
-        const formData = new FormData();
-        formData.append('file', taskFile);
-        const uploadRes = await fetch('/api/upload/file', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-          body: formData,
-        });
-        if (uploadRes.ok) {
-          const data = await uploadRes.json();
-          fileUrl = data.url;
-          fileName = taskFile.name;
-          fileType = taskFile.type || 'application/octet-stream';
+        try {
+          // Sanitize filename: keep only ASCII + extension for upload (avoids encoding issues)
+          const origName = taskFile.name;
+          const dotIdx = origName.lastIndexOf('.');
+          const ext = dotIdx >= 0 ? origName.substring(dotIdx) : '';
+          const safeName = 'file_' + Date.now() + ext;
+
+          const formData = new FormData();
+          formData.append('file', taskFile, safeName);
+          const uploadRes = await fetch('/api/upload/file', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: formData,
+          });
+          if (uploadRes.ok) {
+            const data = await uploadRes.json();
+            fileUrl = data.url;
+            fileName = origName; // Keep original name for display
+            fileType = taskFile.type || 'application/octet-stream';
+          }
+        } catch (uploadErr) {
+          console.error('File upload failed:', uploadErr);
+          // Continue creating task without file
         }
       }
 
