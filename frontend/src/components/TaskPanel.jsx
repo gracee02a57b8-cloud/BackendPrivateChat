@@ -29,7 +29,7 @@ export default function TaskPanel({ token, username, onClose }) {
 
   const fetchTasks = () => {
     fetch('/api/tasks', { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => r.json())
+      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(setTasks)
       .catch(console.error);
   };
@@ -41,7 +41,7 @@ export default function TaskPanel({ token, username, onClose }) {
       fetch(`/api/chat/users?search=${encodeURIComponent(val)}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
-        .then((r) => r.json())
+        .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
         .then((data) => {
           if (Array.isArray(data)) {
             setUserSuggestions(data.map(u => typeof u === 'string' ? u : u.username).filter(u => u !== username));

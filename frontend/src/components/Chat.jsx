@@ -235,7 +235,7 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
     fetch('/api/rooms', {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((res) => res.json())
+      .then((res) => { if (!res.ok) throw new Error(res.status); return res.json(); })
       .then((data) => setRooms(data))
       .catch(console.error);
   };
@@ -246,7 +246,7 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
     fetch(`/api/rooms/${roomId}/history`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((res) => res.json())
+      .then((res) => { if (!res.ok) throw new Error(res.status); return res.json(); })
       .then((data) => {
         if (data.length > 0) {
           setMessagesByRoom((prev) => ({ ...prev, [roomId]: data }));
@@ -259,7 +259,7 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
     fetch('/api/chat/users', {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((res) => res.json())
+      .then((res) => { if (!res.ok) throw new Error(res.status); return res.json(); })
       .then((data) => setOnlineUsers(data))
       .catch(console.error);
   };
@@ -351,6 +351,7 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const room = await res.json();
       fetchRooms();
       selectRoom(room.id);
@@ -366,6 +367,7 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ name }),
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const room = await res.json();
       fetchRooms();
       selectRoom(room.id);

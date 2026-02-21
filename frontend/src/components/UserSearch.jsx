@@ -13,7 +13,7 @@ export default function UserSearch({ token, username, onStartChat, onClose }) {
       fetch(`/api/chat/users?search=${encodeURIComponent(query)}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
-        .then((res) => res.json())
+        .then((res) => { if (!res.ok) throw new Error(res.status); return res.json(); })
         .then((data) => setResults(data.filter((u) => u.username !== username)))
         .catch(console.error);
     }, 300);

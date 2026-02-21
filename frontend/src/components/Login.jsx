@@ -32,11 +32,13 @@ export default function Login({ onLogin }) {
         body: JSON.stringify({ username: username.trim(), password }),
       });
 
-      const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Ошибка');
+        let errMsg = 'Ошибка сервера';
+        try { const d = await res.json(); errMsg = d.error || errMsg; } catch {}
+        throw new Error(errMsg);
       }
 
+      const data = await res.json();
       onLogin(data.token, data.username);
     } catch (err) {
       setError(err.message);

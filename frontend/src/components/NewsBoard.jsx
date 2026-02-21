@@ -18,7 +18,7 @@ export default function NewsBoard({ token, username, onBack }) {
     fetch('/api/news', {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((res) => res.json())
+      .then((res) => { if (!res.ok) throw new Error(res.status); return res.json(); })
       .then((data) => setNewsList(data))
       .catch(console.error);
   };
