@@ -664,21 +664,6 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
                     {!isOwn && isGrouped && <div className="avatar-spacer" />}
 
                     <div className="message-bubble">
-                      {/* Hover actions */}
-                      {isOwn && msg.type === 'CHAT' && (
-                        <div className="msg-hover-actions">
-                          <button title="Ответить" onClick={() => startReply(msg)}>↩️</button>
-                          <button title="Редактировать" onClick={() => startEdit(msg)}>✏️</button>
-                          <button title="Удалить" onClick={() => handleDeleteMsg(msg)}>🗑</button>
-                          <button title="Копировать" onClick={() => copyMessage(msg)}>📋</button>
-                        </div>
-                      )}
-                      {!isOwn && msg.type === 'CHAT' && (
-                        <div className="msg-hover-actions left">
-                          <button title="Ответить" onClick={() => startReply(msg)}>↩️</button>
-                          <button title="Копировать" onClick={() => copyMessage(msg)}>📋</button>
-                        </div>
-                      )}
 
                       {/* Reply quote */}
                       {msg.replyToId && (
@@ -692,19 +677,39 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
                         </div>
                       )}
 
-                      {!isGrouped && (
-                        <div className="message-header">
-                          <strong style={{ color: isOwn ? 'rgba(255,255,255,0.9)' : getAvatarColor(msg.sender) }}>
-                            {msg.sender}
-                          </strong>
-                          <span className="time">
-                            {msg.edited && <span className="edited-badge">(ред.) </span>}
+                      {!isOwn && !isGrouped && (
+                        <div className="message-sender" style={{ color: getAvatarColor(msg.sender) }}>
+                          {msg.sender}
+                        </div>
+                      )}
+                      {msg.content && (
+                        <div className="message-body">
+                          {msg.content}
+                          <span className="msg-meta">
+                            {msg.edited && <span className="edited-badge">ред. </span>}
                             {msg.timestamp}
+                            {isOwn && msg.type === 'CHAT' && (
+                              <span className={`msg-check ${msg.status === 'READ' ? 'read' : ''}`}>
+                                {msg.status === 'READ' ? ' ✓✓' : msg.status === 'DELIVERED' ? ' ✓✓' : ' ✓'}
+                              </span>
+                            )}
                           </span>
                         </div>
                       )}
-                      {msg.content && <div className="message-body">{msg.content}</div>}
-                      {renderAttachment(msg)}
+                      {!msg.content && renderAttachment(msg)}
+                      {msg.content && renderAttachment(msg)}
+                      {/* Meta for file-only messages */}
+                      {!msg.content && (
+                        <span className="msg-meta standalone">
+                          {msg.edited && <span className="edited-badge">ред. </span>}
+                          {msg.timestamp}
+                          {isOwn && msg.type === 'CHAT' && (
+                            <span className={`msg-check ${msg.status === 'READ' ? 'read' : ''}`}>
+                              {msg.status === 'READ' ? ' ✓✓' : msg.status === 'DELIVERED' ? ' ✓✓' : ' ✓'}
+                            </span>
+                          )}
+                        </span>
+                      )}
                       {/* Reactions */}
                       {reactions[msg.id] && Object.keys(reactions[msg.id]).length > 0 && (
                         <div className="msg-reactions">
@@ -720,23 +725,6 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
                             )
                           ))}
                         </div>
-                      )}
-                      {isGrouped && (
-                        <span className="time grouped-time">
-                          {msg.edited && <span className="edited-badge">(ред.) </span>}
-                          {msg.timestamp}
-                          {isOwn && msg.type === 'CHAT' && (
-                            <span className={`message-status ${msg.status === 'READ' ? 'read' : ''}`}>
-                              {msg.status === 'READ' ? ' ✓✓' : msg.status === 'DELIVERED' ? ' ✓✓' : ' ✓'}
-                            </span>
-                          )}
-                        </span>
-                      )}
-                      {!isGrouped && isOwn && msg.type === 'CHAT' && (
-                        <span className={`message-status bottom-status ${msg.status === 'READ' ? 'read' : ''}`}>
-                          {msg.encrypted && <span className="msg-lock" title="Зашифровано">🔒</span>}
-                          {msg.status === 'READ' ? '✓✓' : msg.status === 'DELIVERED' ? '✓✓' : '✓'}
-                        </span>
                       )}
                     </div>
                   </div>
