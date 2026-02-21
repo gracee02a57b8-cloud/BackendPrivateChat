@@ -4,6 +4,7 @@ import com.example.webrtcchat.entity.KeyBundleEntity;
 import com.example.webrtcchat.entity.OneTimePreKeyEntity;
 import com.example.webrtcchat.repository.KeyBundleRepository;
 import com.example.webrtcchat.repository.OneTimePreKeyRepository;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,6 +24,7 @@ class KeyBundleServiceTest {
 
     @Mock private KeyBundleRepository bundleRepo;
     @Mock private OneTimePreKeyRepository otkRepo;
+    @Mock private EntityManager entityManager;
 
     @InjectMocks private KeyBundleService keyBundleService;
 

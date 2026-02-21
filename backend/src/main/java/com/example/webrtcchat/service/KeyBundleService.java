@@ -4,6 +4,7 @@ import com.example.webrtcchat.entity.KeyBundleEntity;
 import com.example.webrtcchat.entity.OneTimePreKeyEntity;
 import com.example.webrtcchat.repository.KeyBundleRepository;
 import com.example.webrtcchat.repository.OneTimePreKeyRepository;
+import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,10 +15,14 @@ public class KeyBundleService {
 
     private final KeyBundleRepository bundleRepo;
     private final OneTimePreKeyRepository otkRepo;
+    private final EntityManager entityManager;
 
-    public KeyBundleService(KeyBundleRepository bundleRepo, OneTimePreKeyRepository otkRepo) {
+    public KeyBundleService(KeyBundleRepository bundleRepo,
+                            OneTimePreKeyRepository otkRepo,
+                            EntityManager entityManager) {
         this.bundleRepo = bundleRepo;
         this.otkRepo = otkRepo;
+        this.entityManager = entityManager;
     }
 
     /**
@@ -35,8 +40,11 @@ public class KeyBundleService {
         bundle.setSignedPreKeySignature(signedPreKeySignature);
         bundleRepo.save(bundle);
 
-        // Replace all one-time pre-keys
+        // Replace all one-time pre-keys.
+        // CRITICAL: flush() after delete ensures the DELETE SQL executes in the DB
+        // before new INSERTs, preventing unique constraint violation on (username, key_id).
         otkRepo.deleteAllByUsername(username);
+        entityManager.flush();
         if (oneTimePreKeys != null) {
             for (Map<String, Object> otk : oneTimePreKeys) {
                 int keyId = ((Number) otk.get("id")).intValue();
