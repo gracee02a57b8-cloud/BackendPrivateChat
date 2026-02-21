@@ -552,7 +552,7 @@
 .sb-chat-actions {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   flex-shrink: 0;
   opacity: 0;
   transition: opacity 0.15s;
@@ -564,10 +564,10 @@
 
 .sb-delete-btn,
 .sb-share-btn {
-  font-size: 0.8rem;
+  font-size: 1.15rem;
   cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
+  padding: 5px;
+  border-radius: 6px;
   transition: background 0.15s;
   line-height: 1;
 }
