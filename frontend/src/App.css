@@ -893,6 +893,10 @@
   scroll-behavior: smooth;
 }
 
+.messages > div {
+  display: contents;
+}
+
 /* ===== Empty Chat ===== */
 .empty-chat {
   display: flex;
