@@ -1,124 +1,310 @@
-# BarsikChat
+# 🐱 BarsikChat
 
-Real-time chat application with rooms, private messaging, file sharing, emoji picker, and news board.
+Защищённый мессенджер с **E2E-шифрованием (Signal Protocol)**, комнатами, личными сообщениями, файлами и новостной лентой.
 
-## Architecture
+![Java 21](https://img.shields.io/badge/Java-21-orange) ![Spring Boot 3.3.5](https://img.shields.io/badge/Spring%20Boot-3.3.5-green) ![React 19](https://img.shields.io/badge/React-19-blue) ![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16-336791) ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED)
+
+---
+
+## 🔒 Безопасность
+
+### E2E-шифрование (Signal Protocol)
+
+| Компонент | Реализация |
+|---|---|
+| Согласование ключей | **X3DH** (Extended Triple Diffie-Hellman) |
+| Шифрование сообщений | **Double Ratchet** с PFS на каждое сообщение |
+| Кривая | ECDH P-256 + ECDSA P-256 |
+| Симметричный шифр | **AES-256-GCM** (AEAD, 12-byte IV) |
+| KDF | HKDF-SHA-256 |
+| Шифрование файлов | AES-256-GCM (отдельный ключ на файл) |
+| Хранение ключей | IndexedDB (клиентская сторона) |
+| Верификация | Safety Number (24-значный код) |
+
+- Сервер **не видит** содержимое зашифрованных сообщений (`content: null`)
+- E2E включается **автоматически** во всех личных чатах
+- 20 One-Time Pre-Keys с автоматическим пополнением
+
+### Транспортная безопасность
+
+- TLS 1.2 / 1.3 (ECDHE + AES-GCM, no session tickets)
+- HSTS (2 года, preload-ready)
+- Let's Encrypt с автообновлением (certbot)
+- OCSP Stapling
+
+### Заголовки безопасности
+
+`Content-Security-Policy` · `X-Content-Type-Options: nosniff` · `X-Frame-Options: DENY` · `Referrer-Policy` · `Permissions-Policy` · Server tokens отключены
+
+### Аутентификация
+
+- Регистрация/вход по логину + паролю
+- Пароли: **BCrypt** (cost 10)
+- JWT (HMAC-SHA256, 24h TTL)
+- Rate limiting: 10 запросов/мин на `/api/auth/*` (per-IP)
+- WebSocket: JWT-валидация при подключении
+
+---
+
+## ✨ Возможности
+
+### Чат
+- 💬 Real-time WebSocket-чат
+- 🔐 E2E-шифрование в личных чатах (Signal Protocol)
+- 🏠 Комнаты: общий чат, приватные, пользовательские
+- 🔗 Приглашения по ссылке
+- ✏️ Редактирование и удаление сообщений
+- ⏰ Отложенные сообщения
+- 📊 Статусы доставки / прочтения
+- 🟢 Индикатор онлайн
+- ⌨️ Индикатор набора текста
+
+### Файлы и медиа
+- 📎 Файлы до 100 МБ (с E2E-шифрованием)
+- 😊 Emoji Picker (160 эмодзи)
+- 📰 Новостная лента с изображениями
+
+### Управление
+- ✅ Задачи (канбан-доска)
+- 👥 Поиск пользователей
+- 🗑️ Удаление комнат
+- 📱 Адаптивный дизайн (мобильные + десктоп)
+
+---
+
+## 🏗️ Архитектура
 
 ```
-├── backend/           # Spring Boot 3.3 (Java 21) — REST API + WebSocket + JPA
-│   ├── Dockerfile     # Multi-stage: Maven build → Alpine JRE runtime
-│   ├── pom.xml
-│   └── src/
-├── frontend/          # React 19 + Vite — SPA with nginx in production
-│   ├── Dockerfile     # Multi-stage: Node build → Nginx runtime
-│   ├── nginx.conf     # Reverse proxy: /api/ & /ws/ → backend
-│   └── src/
-├── docker-compose.yml # PostgreSQL + Backend + Frontend
-├── .env.example       # Environment variables template
-└── .env               # Your local secrets (git-ignored)
+├── backend/                  # Spring Boot 3.3.5 (Java 21)
+│   ├── controller/           # 8 контроллеров (REST + WebSocket)
+│   │   ├── AuthController        # Регистрация / логин
+│   │   ├── ChatWebSocketHandler  # WebSocket чат
+│   │   ├── KeyBundleController   # E2E ключи (X3DH)
+│   │   ├── RoomController        # Управление комнатами
+│   │   ├── FileController        # Загрузка файлов
+│   │   ├── NewsController        # Новостная лента
+│   │   └── TaskController        # Задачи
+│   ├── service/              # 7 сервисов
+│   ├── entity/               # 7 JPA-сущностей
+│   ├── config/               # Security, WebSocket, CORS, ExceptionHandler
+│   └── resources/
+│       ├── application.yml
+│       └── db/migration/     # Flyway (V1–V3)
+├── frontend/                 # React 19 + Vite 7.3
+│   ├── src/
+│   │   ├── components/       # 13 React-компонентов
+│   │   └── crypto/           # 6 модулей E2E-шифрования
+│   │       ├── X3DH.js           # Key Agreement
+│   │       ├── DoubleRatchet.js  # Forward Secrecy
+│   │       ├── E2EManager.js     # Оркестратор
+│   │       ├── KeyManager.js     # Управление ключами
+│   │       ├── CryptoStore.js    # IndexedDB хранилище
+│   │       └── utils.js          # Web Crypto API утилиты
+│   ├── Dockerfile            # Multi-stage → nginx:alpine
+│   ├── nginx.conf            # Reverse proxy (HTTP)
+│   └── nginx-ssl.conf        # Reverse proxy (HTTPS + TLS)
+├── docker-compose.yml        # Dev: PostgreSQL + Backend + Frontend
+├── docker-compose.prod.yml   # Prod: + HTTPS + certbot
+└── .env.example
 ```
 
-## Quick Start with Docker
+---
+
+## 🚀 Быстрый старт
+
+### Docker (рекомендуется)
 
 ```bash
-# 1. Copy env template and edit secrets
+# 1. Настроить переменные окружения
 cp .env.example .env
-# Edit .env — at minimum change JWT_SECRET and DB_PASSWORD
+# Обязательно изменить: JWT_SECRET, DB_PASSWORD
 
-# 2. Build and run all services (postgres + backend + frontend)
+# 2. Собрать и запустить
 docker compose up -d --build
 
-# 3. Open in browser
-# http://localhost
+# 3. Открыть http://localhost
 ```
 
-### Docker Services
-
-| Service     | Image                      | Port  | Description                    |
-|-------------|----------------------------|-------|--------------------------------|
-| `postgres`  | postgres:16-alpine         | 5432  | PostgreSQL database            |
-| `backend`   | eclipse-temurin:21-jre-alpine | 9001  | Spring Boot API + WebSocket |
-| `frontend`  | nginx:alpine               | 80    | React SPA + reverse proxy      |
-
-### Useful Docker Commands
+### Production (HTTPS)
 
 ```bash
-# View logs
-docker compose logs -f backend
-docker compose logs -f postgres
+# 1. Настроить .env (указать DOMAIN и CERTBOT_EMAIL)
+# 2. Запустить с production-оверлеем
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 
-# Restart a single service
-docker compose restart backend
+# 3. Получить сертификат (первый раз)
+docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm certbot \
+  certonly --webroot -w /var/www/certbot -d yourdomain.com
 
-# Stop everything
-docker compose down
-
-# Stop and remove data volumes (full reset)
-docker compose down -v
+# 4. Перезапустить frontend для применения сертификата
+docker compose -f docker-compose.yml -f docker-compose.prod.yml restart frontend
 ```
 
-## Development (without Docker)
+### Разработка (без Docker)
 
-### PostgreSQL
 ```bash
-# Option 1: Use Docker for DB only
+# PostgreSQL (через Docker или локально)
 docker compose up -d postgres
+# Или создать БД: barsikdb, user: barsik, password: barsik
 
-# Option 2: Local PostgreSQL
-# Create database: barsikdb, user: barsik, password: barsik
-```
-
-### Backend
-```bash
+# Backend (Java 21 required)
 cd backend
-# Set JAVA_HOME to JDK 21
-# Set env vars: DB_HOST=localhost DB_PORT=5432 DB_NAME=barsikdb DB_USER=barsik DB_PASSWORD=barsik
 mvn spring-boot:run
-# Runs on http://localhost:9001
-```
+# → http://localhost:9001
 
-### Frontend
-```bash
+# Frontend
 cd frontend
 npm install
 npm run dev
-# Runs on http://localhost:5173 with proxy to backend
+# → http://localhost:5173 (proxy → backend)
 ```
 
-## Environment Variables
+---
 
-| Variable | Default | Description |
+## 🐳 Docker-сервисы
+
+| Сервис | Образ | Порт | Описание | Ресурсы |
+|---|---|---|---|---|
+| `postgres` | postgres:16-alpine | 5432 (внутренний) | PostgreSQL с healthcheck | 512M / 1 CPU |
+| `backend` | eclipse-temurin:21-jre-alpine | 9001 (внутренний) | Spring Boot API + WebSocket | 768M / 2 CPU |
+| `frontend` | nginx:alpine | 80, 443 | React SPA + reverse proxy | 128M / 0.5 CPU |
+| `certbot` | certbot/certbot | — | Let's Encrypt автообновление | Только prod |
+
+```bash
+# Логи
+docker compose logs -f backend
+
+# Перезапуск сервиса
+docker compose restart backend
+
+# Полный сброс (с удалением данных)
+docker compose down -v
+```
+
+---
+
+## ⚙️ Переменные окружения
+
+### Backend
+
+| Переменная | По умолчанию | Описание |
 |---|---|---|
-| `JWT_SECRET` | *(required)* | JWT signing key (min 32 chars) |
-| `JWT_EXPIRATION` | `86400000` | Token expiry in ms (24h) |
-| `SERVER_PORT` | `9001` | Backend port |
-| `DB_HOST` | `localhost` | PostgreSQL host (Docker: `barsik-db`) |
-| `DB_PORT` | `5432` | PostgreSQL port |
-| `DB_NAME` | `barsikdb` | Database name |
-| `DB_USER` | `barsik` | Database user |
-| `DB_PASSWORD` | `barsik` | Database password |
-| `MAX_FILE_SIZE` | `100MB` | Max upload file size |
-| `MAX_REQUEST_SIZE` | `100MB` | Max HTTP request size |
-| `UPLOAD_DIR` | `/app/uploads` | File upload directory |
-| `CORS_ORIGINS` | `http://localhost:*` | Allowed CORS origins |
-| `LOG_LEVEL` | `INFO` | Root log level |
-| `APP_LOG_LEVEL` | `DEBUG` | Application log level |
+| `JWT_SECRET` | *(обязательно)* | Ключ подписи JWT (мин. 32 символа) |
+| `JWT_EXPIRATION` | `86400000` | Время жизни токена, мс (24ч) |
+| `SERVER_PORT` | `9001` | Порт backend |
+| `DB_HOST` | `localhost` | Хост PostgreSQL (`barsik-db` в Docker) |
+| `DB_PORT` | `5432` | Порт PostgreSQL |
+| `DB_NAME` | `barsikdb` | Имя базы данных |
+| `DB_USER` | `barsik` | Пользователь БД |
+| `DB_PASSWORD` | `barsik` | Пароль БД |
+| `MAX_FILE_SIZE` | `100MB` | Макс. размер файла |
+| `UPLOAD_DIR` | `/app/uploads` | Директория загрузок |
+| `CORS_ORIGINS` | `http://localhost:*` | Разрешённые CORS-источники |
+| `DDL_AUTO` | `validate` | Hibernate DDL (`update` / `validate`) |
+| `HIKARI_MAX_POOL` | `10` | Макс. соединений в пуле |
+| `LOG_LEVEL` | `INFO` | Уровень логирования |
 
-## Features
+### Production (HTTPS)
 
-- 🔐 JWT authentication
-- 💬 Real-time WebSocket chat
-- 🏠 Rooms (general, private, custom)
-- 🔗 Join rooms by invite link
-- 📎 File attachments (up to 100MB)
-- 😊 Emoji picker (160 emojis)
-- 📰 News board with images (up to 20MB)
-- ✏️ Message edit & delete
-- ⏰ Scheduled messages
-- ✅ Task management (kanban)
-- 📊 Read/delivery status
-- 🟢 Online indicators
-- ⌨️ Typing indicators
-- 🗑️ Room deletion
-- 👥 Online users & user search
-- 🐘 PostgreSQL persistent storage
+| Переменная | Описание |
+|---|---|
+| `DOMAIN` | Домен для SSL-сертификата |
+| `CERTBOT_EMAIL` | Email для Let's Encrypt |
+
+---
+
+## 🗄️ База данных
+
+**Flyway** автоматически применяет миграции:
+
+| Миграция | Описание |
+|---|---|
+| `V1__init_schema.sql` | users, messages, rooms, news, tasks |
+| `V2__create_key_bundles.sql` | key_bundles + one_time_pre_keys (E2E) |
+| `V3__add_encryption_fields.sql` | Поля шифрования в messages (9 колонок) |
+
+---
+
+## 🔌 API Endpoints
+
+### Аутентификация
+| Метод | Путь | Описание |
+|---|---|---|
+| POST | `/api/auth/register` | Регистрация |
+| POST | `/api/auth/login` | Вход |
+
+### Чат
+| Метод | Путь | Описание |
+|---|---|---|
+| WS | `/ws/chat?token=JWT` | WebSocket-подключение |
+| GET | `/api/chat/users` | Список онлайн-пользователей |
+
+### Комнаты
+| Метод | Путь | Описание |
+|---|---|---|
+| GET | `/api/rooms` | Мои комнаты |
+| POST | `/api/rooms/create` | Создать комнату |
+| POST | `/api/rooms/private/{username}` | Создать личный чат |
+| POST | `/api/rooms/join/{roomId}` | Войти в комнату |
+| GET | `/api/rooms/{roomId}/history` | История сообщений |
+| DELETE | `/api/rooms/{roomId}` | Удалить комнату |
+
+### E2E ключи (Signal Protocol)
+| Метод | Путь | Описание |
+|---|---|---|
+| POST | `/api/keys/bundle` | Загрузить Key Bundle |
+| GET | `/api/keys/bundle/{username}` | Получить ключи пользователя |
+| POST | `/api/keys/replenish` | Пополнить One-Time Pre-Keys |
+| GET | `/api/keys/count` | Количество оставшихся OTK |
+| GET | `/api/keys/has-bundle/{username}` | Есть ли E2E у пользователя |
+
+### Файлы, новости, задачи
+| Метод | Путь | Описание |
+|---|---|---|
+| POST | `/api/upload` | Загрузить файл |
+| GET | `/api/uploads/{filename}` | Скачать файл |
+| GET/POST | `/api/news` | Новостная лента |
+| GET/POST/PUT | `/api/tasks` | Управление задачами |
+
+---
+
+## 🛠️ Стек технологий
+
+### Backend
+- **Java 21** + **Spring Boot 3.3.5**
+- Spring Security + JWT (HMAC-SHA256)
+- Spring WebSocket
+- Spring Data JPA + Hibernate
+- PostgreSQL 16 + Flyway
+- BCrypt (password hashing)
+
+### Frontend
+- **React 19** + **Vite 7.3**
+- Web Crypto API (ECDH, ECDSA, AES-GCM, HKDF, HMAC)
+- IndexedDB (хранение ключей E2E)
+- CSS (адаптивный дизайн)
+
+### Инфраструктура
+- **Docker** + Docker Compose
+- **nginx** (reverse proxy + TLS termination)
+- **Let's Encrypt** (certbot, автообновление)
+- Flyway (миграции БД)
+
+---
+
+## 📐 Сравнение с Telegram
+
+| Категория | BarsikChat | Telegram |
+|---|---|---|
+| Протокол E2E | ✅ Signal (X3DH + Double Ratchet) | ⚠️ MTProto 2.0 (кастомный) |
+| E2E по умолчанию | ✅ Авто в личных | ❌ Ручной запуск |
+| Forward Secrecy | ✅ Per-message | ⚠️ Per-session |
+| Шифр | ✅ AES-256-GCM (AEAD) | ⚠️ AES-256-IGE |
+| TLS | ✅ 1.2/1.3 стандарт | Кастомный транспорт |
+| Сервер видит сообщения | ❌ Нет | ✅ Cloud Chats |
+
+---
+
+## 📄 Лицензия
+
+MIT

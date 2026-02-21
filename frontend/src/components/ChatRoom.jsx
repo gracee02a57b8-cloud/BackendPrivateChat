@@ -586,18 +586,6 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
             rows={1}
             autoFocus
           />
-          <button type="button" className="emoji-btn" onClick={() => setShowEmoji(!showEmoji)} title="Эмодзи">
-            😊
-          </button>
-          <button
-            type="button"
-            className="schedule-btn"
-            onClick={() => { setShowSchedule(!showSchedule); setEditingMsg(null); }}
-            disabled={!connected || !!editingMsg}
-            title="Отложить сообщение"
-          >
-            ⏰
-          </button>
           {showEmoji && <EmojiPicker onSelect={insertEmoji} onClose={() => setShowEmoji(false)} />}
         </div>
         {showSchedule && (
@@ -611,9 +599,28 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
             <span className="schedule-hint">Сообщение будет отправлено в указанное время</span>
           </div>
         )}
-        <button type="submit" disabled={!connected || (!input.trim() && !uploading)}>
-          {editingMsg ? '✏️' : showSchedule && scheduleDate ? '⏰' : '➤'}
-        </button>
+        <div className="form-actions">
+          <button
+            type="button"
+            className="action-btn emoji-btn"
+            onClick={() => setShowEmoji(!showEmoji)}
+            title="Эмодзи"
+          >
+            😊
+          </button>
+          <button
+            type="button"
+            className="action-btn schedule-btn"
+            onClick={() => { setShowSchedule(!showSchedule); setEditingMsg(null); }}
+            disabled={!connected || !!editingMsg}
+            title="Отложить сообщение"
+          >
+            ⏰
+          </button>
+          <button type="submit" className="action-btn send-btn" disabled={!connected || (!input.trim() && !uploading)}>
+            {editingMsg ? '✏️' : showSchedule && scheduleDate ? '⏰' : '➤'}
+          </button>
+        </div>
       </form>
     </div>
   );

@@ -1017,27 +1017,60 @@
   align-items: flex-end;
 }
 
-.message-form > button[type="submit"] {
-  padding: 0.7rem 1.2rem;
+/* Form actions group: emoji + schedule + send */
+.form-actions {
+  display: flex;
+  gap: 0.4rem;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+
+.action-btn {
+  padding: 0.6rem 0.8rem;
   border: none;
   border-radius: 10px;
-  background: linear-gradient(135deg, #e94560, #d63d56);
-  color: white;
   font-size: 1.1rem;
-  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s;
   flex-shrink: 0;
   line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  min-height: 40px;
 }
 
-.message-form > button[type="submit"]:hover:not(:disabled) {
+.action-btn.send-btn {
+  background: linear-gradient(135deg, #e94560, #d63d56);
+  color: white;
+  font-weight: 600;
+}
+
+.action-btn.send-btn:hover:not(:disabled) {
   background: linear-gradient(135deg, #c73a52, #e94560);
   transform: translateY(-1px);
 }
 
-.message-form > button[type="submit"]:disabled {
+.action-btn.send-btn:disabled {
   opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.action-btn.emoji-btn,
+.action-btn.schedule-btn {
+  background: rgba(15, 52, 96, 0.6);
+  color: white;
+}
+
+.action-btn.emoji-btn:hover,
+.action-btn.schedule-btn:hover:not(:disabled) {
+  background: rgba(15, 52, 96, 1);
+  transform: translateY(-1px);
+}
+
+.action-btn.schedule-btn:disabled {
+  opacity: 0.3;
   cursor: not-allowed;
 }
 
@@ -1051,7 +1084,7 @@
 
 .input-wrapper textarea {
   flex: 1;
-  padding: 0.65rem 4.5rem 0.65rem 0.8rem;
+  padding: 0.65rem 0.8rem;
   border: 2px solid #0f3460;
   border-radius: 10px;
   background: #1a1a2e;
@@ -1071,23 +1104,7 @@
   border-color: #e94560;
 }
 
-.emoji-btn {
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
-  background: none;
-  border: none;
-  font-size: 1.2rem;
-  cursor: pointer;
-  opacity: 0.5;
-  transition: opacity 0.2s;
-  padding: 0;
-  line-height: 1;
-}
-
-.emoji-btn:hover {
-  opacity: 1;
-}
+/* emoji-btn styles now via .action-btn.emoji-btn */
 
 /* ===== Attach Button ===== */
 .attach-btn {
@@ -1825,29 +1842,7 @@
   padding: 0 0.5rem;
 }
 
-/* ===== Schedule Button ===== */
-.schedule-btn {
-  position: absolute;
-  right: 34px;
-  bottom: 8px;
-  background: none;
-  border: none;
-  font-size: 1rem;
-  cursor: pointer;
-  opacity: 0.4;
-  transition: opacity 0.2s;
-  padding: 0;
-  line-height: 1;
-}
-
-.schedule-btn:hover {
-  opacity: 1;
-}
-
-.schedule-btn:disabled {
-  opacity: 0.2;
-  cursor: not-allowed;
-}
+/* schedule-btn styles now via .action-btn.schedule-btn */
 
 /* ===== Schedule Picker ===== */
 .schedule-picker {
@@ -2411,11 +2406,6 @@
   background: rgba(136, 146, 176, 0.4);
 }
 
-/* ===== Input wrapper adjustments for schedule btn ===== */
-.input-wrapper textarea {
-  padding-right: 4.5rem !important;
-}
-
 /* ===== Scrollbar Styling ===== */
 .messages::-webkit-scrollbar,
 .room-list::-webkit-scrollbar,
@@ -2725,14 +2715,20 @@
     gap: 0.4rem;
   }
 
-  .message-form > button[type="submit"] {
+  .message-form > .form-actions .send-btn {
     padding: 0.6rem 1rem;
     font-size: 1rem;
   }
 
+  .form-actions .action-btn {
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0.5rem 0.7rem;
+  }
+
   .input-wrapper textarea {
     font-size: 0.9rem;
-    padding: 0.55rem 4rem 0.55rem 0.7rem !important;
+    padding: 0.55rem 0.7rem !important;
   }
 
   /* --- Schedule picker --- */
@@ -2967,23 +2963,25 @@
     gap: 0.3rem;
   }
 
-  .message-form > button[type="submit"] {
+  .message-form > .form-actions .send-btn {
     padding: 0.5rem 0.8rem;
     font-size: 0.95rem;
     border-radius: 8px;
   }
 
-  .input-wrapper textarea {
-    font-size: 0.85rem;
-    padding: 0.5rem 3.5rem 0.5rem 0.6rem !important;
-    min-height: 20px;
+  .form-actions .action-btn {
+    min-width: 34px;
+    min-height: 34px;
+    padding: 0.45rem 0.6rem;
+    font-size: 1rem;
     border-radius: 8px;
   }
 
-  .emoji-btn {
-    right: 6px;
-    bottom: 6px;
-    font-size: 1.1rem;
+  .input-wrapper textarea {
+    font-size: 0.85rem;
+    padding: 0.5rem 0.6rem !important;
+    min-height: 20px;
+    border-radius: 8px;
   }
 
   .attach-btn {

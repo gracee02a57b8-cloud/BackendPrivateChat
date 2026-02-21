@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -37,6 +38,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
     private final Map<String, WebSocketSession> userSessions = new ConcurrentHashMap<>();
+    private final Set<String> announcedUsers = ConcurrentHashMap.newKeySet();
     private final ChatService chatService;
     private final JwtService jwtService;
     private final RoomService roomService;
@@ -81,15 +83,18 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         chatService.addUser(username);
         roomService.joinRoom("general", username);
 
-        MessageDto joinMsg = new MessageDto();
-        joinMsg.setId(UUID.randomUUID().toString());
-        joinMsg.setSender(username);
-        joinMsg.setContent(username + " присоединился к чату");
-        joinMsg.setTimestamp(now());
-        joinMsg.setType(MessageType.JOIN);
-        joinMsg.setRoomId("general");
-        chatService.send("general", joinMsg);
-        broadcastToRoom("general", joinMsg);
+        // Only announce JOIN once — skip on reconnections / session replacement
+        if (announcedUsers.add(username)) {
+            MessageDto joinMsg = new MessageDto();
+            joinMsg.setId(UUID.randomUUID().toString());
+            joinMsg.setSender(username);
+            joinMsg.setContent(username + " присоединился к чату");
+            joinMsg.setTimestamp(now());
+            joinMsg.setType(MessageType.JOIN);
+            joinMsg.setRoomId("general");
+            chatService.send("general", joinMsg);
+            broadcastToRoom("general", joinMsg);
+        }
 
         log.info("User '{}' connected. Online: {}", username, chatService.getOnlineUsers().size());
     }
@@ -335,6 +340,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             if (current != null && current.getId().equals(session.getId())) {
                 userSessions.remove(username);
                 chatService.removeUser(username);
+                announcedUsers.remove(username);
 
                 MessageDto leaveMsg = new MessageDto();
                 leaveMsg.setId(UUID.randomUUID().toString());
