@@ -242,6 +242,25 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
     e.target.value = '';
   };
 
+  const handlePaste = (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.kind === 'file') {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          if (file.size > 100 * 1024 * 1024) {
+            alert('Файл слишком большой (макс. 100 МБ)');
+            return;
+          }
+          uploadFile(file);
+        }
+        return;
+      }
+    }
+  };
+
   const uploadFile = (file) => {
     setUploading(true);
     setUploadProgress(0);
@@ -741,6 +760,7 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
             value={input}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             placeholder={editingMsg ? 'Редактировать сообщение...' : 'Введите сообщение...'}
             disabled={!connected}
             rows={1}
