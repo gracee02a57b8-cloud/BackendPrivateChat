@@ -16,4 +16,11 @@ export default defineConfig({
       },
     },
   },
+  test: {
+    // Component tests use jsdom via /** @vitest-environment jsdom */ comment
+    // Crypto tests use default node environment
+    environmentMatchGlobs: [
+      ['src/components/**', 'jsdom'],
+    ],
+  },
 })

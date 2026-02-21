@@ -291,6 +291,11 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
         [roomId]: [...(prev[roomId] || []), msg],
       }));
 
+      // Auto-discover new private chat: if message arrives for unknown room, refresh sidebar
+      if (msg.sender !== username && !rooms.find(r => r.id === roomId)) {
+        fetchRooms();
+      }
+
       // Browser push notification for new messages
       if ((msg.type === 'CHAT' || msg.type === 'PRIVATE') && msg.sender !== username) {
         const roomObj = rooms.find(r => r.id === roomId);
