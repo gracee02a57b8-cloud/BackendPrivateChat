@@ -4,6 +4,7 @@ import com.example.webrtcchat.dto.MessageDto;
 import com.example.webrtcchat.dto.RoomDto;
 import com.example.webrtcchat.service.ChatService;
 import com.example.webrtcchat.service.RoomService;
+import com.example.webrtcchat.types.RoomType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -43,6 +44,9 @@ public class RoomController {
         if (name == null || name.isBlank()) {
             return ResponseEntity.badRequest().build();
         }
+        if (name.trim().length() > 50) {
+            return ResponseEntity.badRequest().build();
+        }
         RoomDto room = roomService.createRoom(name.trim(), principal.getName());
         return ResponseEntity.ok(room);
     }
@@ -57,17 +61,34 @@ public class RoomController {
     }
 
     @GetMapping("/{roomId}")
-    public ResponseEntity<RoomDto> getRoom(@PathVariable String roomId) {
+    public ResponseEntity<RoomDto> getRoom(@PathVariable String roomId, Principal principal) {
         RoomDto room = roomService.getRoomById(roomId);
         if (room == null) {
             return ResponseEntity.notFound().build();
+        }
+        // Check membership (C8): non-general rooms require membership
+        if (room.getType() != RoomType.GENERAL && !room.getMembers().contains(principal.getName())) {
+            return ResponseEntity.status(403).build();
         }
         return ResponseEntity.ok(room);
     }
 
     @GetMapping("/{roomId}/history")
-    public ResponseEntity<List<MessageDto>> getRoomHistory(@PathVariable String roomId) {
-        return ResponseEntity.ok(chatService.getHistory(roomId));
+    public ResponseEntity<List<MessageDto>> getRoomHistory(
+            @PathVariable String roomId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "100") int size,
+            Principal principal) {
+        RoomDto room = roomService.getRoomById(roomId);
+        if (room == null) {
+            return ResponseEntity.notFound().build();
+        }
+        // Check membership (C8): non-general rooms require membership
+        if (room.getType() != RoomType.GENERAL && !room.getMembers().contains(principal.getName())) {
+            return ResponseEntity.status(403).build();
+        }
+        int safeSize = Math.min(size, 200);
+        return ResponseEntity.ok(chatService.getHistory(roomId, page, safeSize));
     }
 
     @DeleteMapping("/{roomId}")

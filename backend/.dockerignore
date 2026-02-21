@@ -3,3 +3,9 @@ target/
 .idea/
 .vscode/
 uploads/
+.git/
+.gitignore
+.env*
+*.log
+Dockerfile
+.dockerignore

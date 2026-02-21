@@ -13,12 +13,14 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -29,6 +31,19 @@ public class FileController {
     private static final long MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20MB
     private static final long MAX_FILE_SIZE = 100L * 1024 * 1024; // 100MB
     private final Path uploadDir;
+
+    // Allowed image extensions (C10)
+    private static final Set<String> ALLOWED_IMAGE_EXT = Set.of(
+            ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".ico"
+    );
+
+    // Blocked dangerous extensions (R6)
+    private static final Set<String> BLOCKED_EXTENSIONS = Set.of(
+            ".exe", ".bat", ".cmd", ".sh", ".ps1", ".msi", ".dll", ".com",
+            ".scr", ".vbs", ".vbe", ".js", ".jse", ".wsf", ".wsh", ".pif",
+            ".hta", ".cpl", ".reg", ".inf", ".jar", ".class", ".php", ".asp",
+            ".aspx", ".jsp", ".py", ".rb", ".pl", ".cgi"
+    );
 
     public FileController(@Value("${upload.dir:uploads}") String uploadDirPath) {
         this.uploadDir = Paths.get(uploadDirPath).toAbsolutePath().normalize();
@@ -48,12 +63,19 @@ public class FileController {
             return ResponseEntity.badRequest().body(Map.of("error", "Image too large (max 20MB)"));
         }
 
-        String contentType = file.getContentType();
-        if (contentType == null || !contentType.startsWith("image/")) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Only images allowed"));
+        // Validate extension is an image type (C10)
+        String ext = getExtension(file.getOriginalFilename()).toLowerCase();
+        if (!ALLOWED_IMAGE_EXT.contains(ext)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Only image files allowed"));
         }
 
-        return saveFile(file);
+        // Server-side content-type detection (C10) — don't trust client header
+        String detectedType = detectContentType(file);
+        if (detectedType == null || !detectedType.startsWith("image/")) {
+            return ResponseEntity.badRequest().body(Map.of("error", "File content is not a valid image"));
+        }
+
+        return saveFile(file, detectedType);
     }
 
     @PostMapping("/upload/file")
@@ -65,23 +87,31 @@ public class FileController {
             return ResponseEntity.badRequest().body(Map.of("error", "File too large (max 100MB)"));
         }
 
-        return saveFile(file);
+        // Block dangerous extensions (R6)
+        String ext = getExtension(file.getOriginalFilename()).toLowerCase();
+        if (BLOCKED_EXTENSIONS.contains(ext)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "File type not allowed: " + ext));
+        }
+
+        String detectedType = detectContentType(file);
+        return saveFile(file, detectedType);
     }
 
-    private ResponseEntity<?> saveFile(MultipartFile file) {
+    private ResponseEntity<?> saveFile(MultipartFile file, String contentType) {
         try {
             String ext = getExtension(file.getOriginalFilename());
-            String filename = UUID.randomUUID().toString().substring(0, 12) + ext;
+            String filename = UUID.randomUUID().toString() + ext;
             Path target = uploadDir.resolve(filename);
             Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
 
+            String safeContentType = contentType != null ? contentType : "application/octet-stream";
             String url = "/api/uploads/" + filename;
             return ResponseEntity.ok(Map.of(
                     "url", url,
                     "filename", filename,
                     "originalName", file.getOriginalFilename() != null ? file.getOriginalFilename() : filename,
                     "size", file.getSize(),
-                    "contentType", file.getContentType() != null ? file.getContentType() : "application/octet-stream"
+                    "contentType", safeContentType
             ));
         } catch (IOException e) {
             log.error("Upload failed", e);
@@ -122,10 +152,34 @@ public class FileController {
         }
     }
 
+    /**
+     * Detect content type from file bytes (server-side, not trusting client header).
+     */
+    private String detectContentType(MultipartFile file) {
+        try {
+            // Use file magic bytes detection
+            Path tempFile = Files.createTempFile("upload-check-", getExtension(file.getOriginalFilename()));
+            try {
+                Files.copy(file.getInputStream(), tempFile, StandardCopyOption.REPLACE_EXISTING);
+                String probed = Files.probeContentType(tempFile);
+                return probed != null ? probed : file.getContentType();
+            } finally {
+                Files.deleteIfExists(tempFile);
+            }
+        } catch (IOException e) {
+            log.warn("Content type detection failed, falling back to client header", e);
+            return file.getContentType();
+        }
+    }
+
     private String getExtension(String filename) {
         if (filename != null && filename.contains(".")) {
-            return filename.substring(filename.lastIndexOf("."));
+            String ext = filename.substring(filename.lastIndexOf("."));
+            // Sanitize extension — only allow alphanumeric
+            if (ext.matches("\\.[a-zA-Z0-9]+")) {
+                return ext;
+            }
         }
-        return ".png";
+        return ".bin";
     }
 }

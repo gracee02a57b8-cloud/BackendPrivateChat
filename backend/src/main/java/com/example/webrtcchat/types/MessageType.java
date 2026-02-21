@@ -4,5 +4,14 @@ public enum MessageType {
     CHAT,
     JOIN,
     LEAVE,
-    PRIVATE
+    PRIVATE,
+    STATUS_UPDATE,
+    READ_RECEIPT,
+    EDIT,
+    DELETE,
+    SCHEDULED,
+    TASK_CREATED,
+    TASK_COMPLETED,
+    TASK_OVERDUE,
+    TYPING
 }

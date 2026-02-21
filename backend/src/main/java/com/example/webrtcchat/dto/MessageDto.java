@@ -13,6 +13,10 @@ public class MessageDto {
     private String fileName;
     private long fileSize;
     private String fileType;
+    private String id;
+    private String status;
+    private boolean edited;
+    private String scheduledAt;
 
     public MessageDto() {}
 
@@ -49,4 +53,16 @@ public class MessageDto {
 
     public String getFileType() { return fileType; }
     public void setFileType(String fileType) { this.fileType = fileType; }
+
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+
+    public boolean isEdited() { return edited; }
+    public void setEdited(boolean edited) { this.edited = edited; }
+
+    public String getScheduledAt() { return scheduledAt; }
+    public void setScheduledAt(String scheduledAt) { this.scheduledAt = scheduledAt; }
 }

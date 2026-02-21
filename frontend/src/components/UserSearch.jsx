@@ -14,7 +14,7 @@ export default function UserSearch({ token, username, onStartChat, onClose }) {
         headers: { Authorization: `Bearer ${token}` },
       })
         .then((res) => res.json())
-        .then((data) => setResults(data.filter((u) => u !== username)))
+        .then((data) => setResults(data.filter((u) => u.username !== username)))
         .catch(console.error);
     }, 300);
     return () => clearTimeout(timer);
@@ -34,8 +34,8 @@ export default function UserSearch({ token, username, onStartChat, onClose }) {
       </div>
       <div className="search-results">
         {results.map((user, i) => (
-          <div key={i} className="search-result-item" onClick={() => onStartChat(user)}>
-            <span className="user-dot">●</span> {user}
+          <div key={i} className="search-result-item" onClick={() => onStartChat(user.username)}>
+            <span className={`user-dot ${user.online ? 'online' : 'offline'}`}>●</span> {user.username}
           </div>
         ))}
         {query && results.length === 0 && (

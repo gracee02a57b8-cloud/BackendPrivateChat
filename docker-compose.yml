@@ -1,33 +1,65 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: barsik-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-barsikdb}
+      POSTGRES_USER: ${DB_USER:-barsik}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-barsik}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # Port NOT exposed externally (C5) — only accessible within barsik-net
+    networks:
+      - barsik-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-barsik} -d ${DB_NAME:-barsikdb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: barsik-backend
     restart: unless-stopped
-    env_file: .env
     environment:
-      - SERVER_PORT=${SERVER_PORT:-9001}
-      - JWT_SECRET=${JWT_SECRET}
-      - JWT_EXPIRATION=${JWT_EXPIRATION:-86400000}
-      - MAX_FILE_SIZE=${MAX_FILE_SIZE:-100MB}
-      - MAX_REQUEST_SIZE=${MAX_REQUEST_SIZE:-100MB}
-      - UPLOAD_DIR=${UPLOAD_DIR:-/app/uploads}
-      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:*,http://frontend:*}
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
-      - APP_LOG_LEVEL=${APP_LOG_LEVEL:-DEBUG}
+      SERVER_PORT: ${SERVER_PORT:-9001}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE:-100MB}
+      MAX_REQUEST_SIZE: ${MAX_REQUEST_SIZE:-100MB}
+      UPLOAD_DIR: /app/uploads
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:*,http://barsik-frontend:*}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      APP_LOG_LEVEL: ${APP_LOG_LEVEL:-INFO}
+      DB_HOST: barsik-db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-barsikdb}
+      DB_USER: ${DB_USER:-barsik}
+      DB_PASSWORD: ${DB_PASSWORD:-barsik}
+      DDL_AUTO: ${DDL_AUTO:-update}
+      HIKARI_MAX_POOL: ${HIKARI_MAX_POOL:-10}
+      JAVA_OPTS: ${JAVA_OPTS:--Xmx512m -Xms256m}
     volumes:
       - uploads_data:/app/uploads
-    ports:
-      - "${SERVER_PORT:-9001}:${SERVER_PORT:-9001}"
+    # Port NOT exposed externally — only reachable via nginx on barsik-net
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - barsik-net
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${SERVER_PORT:-9001}/api/auth/login || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+          cpus: "2.0"
 
   frontend:
     build:
@@ -36,14 +68,21 @@ services:
     container_name: barsik-frontend
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "80:8080"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - barsik-net
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.5"
 
 volumes:
   uploads_data:
+  postgres_data:
 
 networks:
   barsik-net:

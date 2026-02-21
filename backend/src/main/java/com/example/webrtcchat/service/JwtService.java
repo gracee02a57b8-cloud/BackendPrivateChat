@@ -42,12 +42,13 @@ public class JwtService {
 
     public boolean isTokenValid(String token) {
         try {
+            if (token == null || token.isBlank()) return false;
             Jwts.parserBuilder()
                     .setSigningKey(key)
                     .build()
                     .parseClaimsJws(token);
             return true;
-        } catch (JwtException e) {
+        } catch (JwtException | IllegalArgumentException e) {
             return false;
         }
     }

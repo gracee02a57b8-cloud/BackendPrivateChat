@@ -2,13 +2,37 @@ server:
   port: ${SERVER_PORT:9001}
 
 spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:barsikdb}
+    username: ${DB_USER:barsik}
+    password: ${DB_PASSWORD:barsik}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${HIKARI_MAX_POOL:10}
+      minimum-idle: ${HIKARI_MIN_IDLE:2}
+      idle-timeout: 300000
+      connection-timeout: 20000
+      max-lifetime: 1200000
+  jpa:
+    hibernate:
+      ddl-auto: ${DDL_AUTO:validate}
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+  flyway:
+    enabled: ${FLYWAY_ENABLED:true}
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
   servlet:
     multipart:
       max-file-size: ${MAX_FILE_SIZE:100MB}
       max-request-size: ${MAX_REQUEST_SIZE:100MB}
 
 jwt:
-  secret: ${JWT_SECRET:changeme-default-dev-secret-key-min-32-chars!!}
+  secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION:86400000}
 
 cors:
@@ -20,4 +44,13 @@ upload:
 logging:
   level:
     root: ${LOG_LEVEL:INFO}
-    com.example.webrtcchat: ${APP_LOG_LEVEL:DEBUG}
+    com.example.webrtcchat: ${APP_LOG_LEVEL:INFO}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
