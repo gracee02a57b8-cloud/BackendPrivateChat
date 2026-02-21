@@ -65,6 +65,9 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
   const [replyingTo, setReplyingTo] = useState(null);
   const [selectionPopup, setSelectionPopup] = useState(null);
   const [mentionQuery, setMentionQuery] = useState(null);
+  const [pinnedMsgId, setPinnedMsgId] = useState(null);
+  const [forwardTarget, setForwardTarget] = useState(null);
+  const [reactions, setReactions] = useState({});
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const inputRef = useRef(null);
@@ -336,9 +339,62 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
   };
 
   const handleContextMenu = (e, msg) => {
-    if (msg.sender !== username || msg.type !== 'CHAT') return;
+    if (msg.type === 'JOIN' || msg.type === 'LEAVE') return;
     e.preventDefault();
-    setContextMenu({ x: e.clientX, y: e.clientY, msg });
+
+    // Position to the right of the message bubble
+    const bubble = e.target.closest('.message-bubble') || e.target.closest('.message');
+    const isOwn = msg.sender === username;
+    let x, y;
+    if (bubble) {
+      const rect = bubble.getBoundingClientRect();
+      x = isOwn ? rect.left - 10 : rect.right + 10;
+      y = rect.top;
+    } else {
+      x = e.clientX;
+      y = e.clientY;
+    }
+
+    // Clamp so menu doesn't overflow the viewport
+    const menuW = 220, menuH = 340;
+    if (x + menuW > window.innerWidth) x = window.innerWidth - menuW - 12;
+    if (x < 8) x = 8;
+    if (y + menuH > window.innerHeight) y = window.innerHeight - menuH - 12;
+    if (y < 8) y = 8;
+
+    setContextMenu({ x, y, msg });
+  };
+
+  const handlePinMsg = (msg) => {
+    setPinnedMsgId(prev => prev === msg.id ? null : msg.id);
+    setContextMenu(null);
+  };
+
+  const handleForwardMsg = (msg) => {
+    setContextMenu(null);
+    // Copy text to input with a forward prefix
+    const forwardText = `↪ ${msg.sender}: ${msg.content || ''}`;
+    setInput(forwardText);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  const QUICK_REACTIONS = ['❤️', '😆', '🐱', '😄', '🔥', '🎉', '🤝'];
+
+  const handleQuickReaction = (msg, emoji) => {
+    setContextMenu(null);
+    // For now, reactions are visual-only (no backend persistence)
+    // We'll add a reaction display on the message
+    setReactions(prev => {
+      const msgReactions = { ...(prev[msg.id] || {}) };
+      const users = msgReactions[emoji] || [];
+      if (users.includes(username)) {
+        msgReactions[emoji] = users.filter(u => u !== username);
+        if (msgReactions[emoji].length === 0) delete msgReactions[emoji];
+      } else {
+        msgReactions[emoji] = [...users, username];
+      }
+      return { ...prev, [msg.id]: msgReactions };
+    });
   };
 
   const startEdit = (msg) => {
@@ -536,6 +592,21 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
       </div>
 
       <div className="messages" ref={messagesContainerRef}>
+        {/* Pinned message banner */}
+        {pinnedMsgId && (() => {
+          const pinned = messages.find(m => m.id === pinnedMsgId);
+          if (!pinned) return null;
+          return (
+            <div className="pinned-bar" onClick={() => scrollToMessage(pinnedMsgId)}>
+              <span className="pinned-icon">📌</span>
+              <div className="pinned-info">
+                <span className="pinned-label">Закреплённое сообщение</span>
+                <span className="pinned-text">{pinned.content?.slice(0, 60) || '📎 Файл'}</span>
+              </div>
+              <button className="pinned-close" onClick={(e) => { e.stopPropagation(); setPinnedMsgId(null); }}>✕</button>
+            </div>
+          );
+        })()}
         {isE2E && (
           <div className="e2e-banner">
             <span>🔒</span> Сообщения защищены сквозным шифрованием. Нажмите для проверки.
@@ -634,6 +705,22 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
                       )}
                       {msg.content && <div className="message-body">{msg.content}</div>}
                       {renderAttachment(msg)}
+                      {/* Reactions */}
+                      {reactions[msg.id] && Object.keys(reactions[msg.id]).length > 0 && (
+                        <div className="msg-reactions">
+                          {Object.entries(reactions[msg.id]).map(([emoji, users]) => (
+                            users.length > 0 && (
+                              <button key={emoji}
+                                className={`msg-react-chip${users.includes(username) ? ' own' : ''}`}
+                                onClick={() => handleQuickReaction(msg, emoji)}
+                                title={users.join(', ')}
+                              >
+                                {emoji} {users.length > 1 ? users.length : ''}
+                              </button>
+                            )
+                          ))}
+                        </div>
+                      )}
                       {isGrouped && (
                         <span className="time grouped-time">
                           {msg.edited && <span className="edited-badge">(ред.) </span>}
@@ -685,13 +772,44 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
         </button>
       )}
 
-      {/* Context Menu */}
+      {/* Context Menu — Telegram style */}
       {contextMenu && (
-        <div className="context-menu" style={{ top: contextMenu.y, left: contextMenu.x }} onClick={(e) => e.stopPropagation()}>
-          <button onClick={() => startReply(contextMenu.msg)}>↩️ Ответить</button>
-          <button onClick={() => startEdit(contextMenu.msg)}>✏️ Редактировать</button>
-          <button onClick={() => copyMessage(contextMenu.msg)}>📋 Копировать</button>
-          <button onClick={() => handleDeleteMsg(contextMenu.msg)}>🗑 Удалить</button>
+        <div className="ctx-menu" style={{ top: contextMenu.y, left: contextMenu.x }} onClick={(e) => e.stopPropagation()}>
+          {/* Emoji reaction row */}
+          <div className="ctx-reactions">
+            {QUICK_REACTIONS.map((emoji) => {
+              const isActive = reactions[contextMenu.msg.id]?.[emoji]?.includes(username);
+              return (
+                <button key={emoji} className={`ctx-react-btn${isActive ? ' active' : ''}`}
+                  onClick={() => handleQuickReaction(contextMenu.msg, emoji)}>{emoji}</button>
+              );
+            })}
+          </div>
+          {/* Menu items */}
+          <div className="ctx-items">
+            <button onClick={() => startReply(contextMenu.msg)}>
+              <span className="ctx-icon">↩</span> Ответить
+            </button>
+            <button onClick={() => handlePinMsg(contextMenu.msg)}>
+              <span className="ctx-icon">📌</span> {pinnedMsgId === contextMenu.msg.id ? 'Открепить' : 'Закрепить'}
+            </button>
+            <button onClick={() => copyMessage(contextMenu.msg)}>
+              <span className="ctx-icon">📋</span> Копировать текст
+            </button>
+            <button onClick={() => handleForwardMsg(contextMenu.msg)}>
+              <span className="ctx-icon">↪</span> Переслать
+            </button>
+            {contextMenu.msg.sender === username && (
+              <button onClick={() => startEdit(contextMenu.msg)}>
+                <span className="ctx-icon">✏️</span> Редактировать
+              </button>
+            )}
+            {contextMenu.msg.sender === username && (
+              <button className="ctx-danger" onClick={() => handleDeleteMsg(contextMenu.msg)}>
+                <span className="ctx-icon">🗑</span> Удалить
+              </button>
+            )}
+          </div>
         </div>
       )}
 
