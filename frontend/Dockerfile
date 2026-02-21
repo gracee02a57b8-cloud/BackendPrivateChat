@@ -31,8 +31,10 @@ RUN sed -i 's|/run/nginx.pid|/tmp/nginx.pid|' /etc/nginx/nginx.conf && \
     chmod +x /docker-entrypoint.sh && \
     chown -R nginx:nginx /etc/nginx/conf.d
 
-USER nginx
+# When DOMAIN is set (SSL mode), nginx needs root to read Let's Encrypt certs.
+# Without DOMAIN, run as nginx user for hardening.
+# The entrypoint handles user switching.
 
-EXPOSE 8080
+EXPOSE 8080 8443
 
 ENTRYPOINT ["/docker-entrypoint.sh"]

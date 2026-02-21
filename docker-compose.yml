@@ -67,8 +67,13 @@ services:
       dockerfile: Dockerfile
     container_name: barsik-frontend
     restart: unless-stopped
+    environment:
+      - DOMAIN=${DOMAIN:-}
     ports:
       - "80:8080"
+      - "443:8443"
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       backend:
         condition: service_healthy
