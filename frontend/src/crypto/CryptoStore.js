@@ -4,7 +4,7 @@
  */
 
 const DB_NAME = 'barsik-e2e';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 class CryptoStore {
   constructor() {
@@ -44,6 +44,10 @@ class CryptoStore {
         // V3: group room E2E encryption keys
         if (!db.objectStoreNames.contains('groupKeys')) {
           db.createObjectStore('groupKeys', { keyPath: 'roomId' });
+        }
+        // V4: local plaintext cache for all decrypted messages (Signal Desktop approach)
+        if (!db.objectStoreNames.contains('decryptedMessages')) {
+          db.createObjectStore('decryptedMessages', { keyPath: 'id' });
         }
       };
 
@@ -167,6 +171,15 @@ class CryptoStore {
     }
   }
 
+  // === Decrypted Messages local cache (plaintext for ALL messages — own + others) ===
+  saveDecryptedContent(msgId, content, fileKey, thumbnailKey) {
+    return this.put('decryptedMessages', { id: msgId, content, fileKey, thumbnailKey, savedAt: Date.now() });
+  }
+
+  getDecryptedContent(msgId) {
+    return this.get('decryptedMessages', msgId);
+  }
+
   // === Group E2E keys ===
   async saveGroupKey(roomId, key) {
     return this.put('groupKeys', { roomId, key, updatedAt: Date.now() });
@@ -182,7 +195,7 @@ class CryptoStore {
   }
 
   async clearAll() {
-    for (const store of ['identityKeys', 'signedPreKeys', 'oneTimePreKeys', 'sessions', 'trustedKeys', 'skippedKeys', 'sentMessages', 'groupKeys']) {
+    for (const store of ['identityKeys', 'signedPreKeys', 'oneTimePreKeys', 'sessions', 'trustedKeys', 'skippedKeys', 'sentMessages', 'decryptedMessages', 'groupKeys']) {
       await this.clear(store);
     }
   }

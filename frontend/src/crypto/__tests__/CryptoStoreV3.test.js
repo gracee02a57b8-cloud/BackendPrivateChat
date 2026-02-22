@@ -146,7 +146,7 @@ describe('CryptoStore — clearAll with new stores', () => {
     expect(await cryptoStore.getGroupKey('room-x')).toBeNull();
   });
 
-  it('clears all 8 stores without error', async () => {
+  it('clears all 9 stores without error', async () => {
     await cryptoStore.put('identityKeys', { id: 'local', data: 'test' });
     await cryptoStore.put('sessions', { id: 'peer1', data: 'sess' });
     await cryptoStore.saveSentContent('m1', 'c', null, null);

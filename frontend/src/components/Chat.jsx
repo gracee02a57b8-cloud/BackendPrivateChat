@@ -340,6 +340,10 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
             msg.content = result.text;
             if (result.fileKey) msg._fileKey = result.fileKey;
             if (result.thumbnailKey) msg._thumbnailKey = result.thumbnailKey;
+            // Cache decrypted plaintext for future history loads
+            if (msg.id) {
+              cryptoStore.saveDecryptedContent(msg.id, result.text, result.fileKey, result.thumbnailKey).catch(() => {});
+            }
           }
         } catch (err) {
           console.error('[E2E] Decrypt error:', err);
@@ -360,6 +364,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           // Persist to IndexedDB so history reload works
           if (msg.id) {
             cryptoStore.saveSentContent(msg.id, pending.content, pending.fileKey, pending.thumbnailKey).catch(() => {});
+            cryptoStore.saveDecryptedContent(msg.id, pending.content, pending.fileKey, pending.thumbnailKey).catch(() => {});
           }
         }
       }
@@ -481,16 +486,46 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
                 result = await e2eManager.decrypt(msg.sender, msg);
               }
               if (!result || result.error) {
-                msg.content = '🔒 Не удалось расшифровать';
-                msg._decryptError = true;
+                // Decrypt failed — try local plaintext cache
+                try {
+                  const cached = await cryptoStore.getDecryptedContent(msg.id);
+                  if (cached) {
+                    msg.content = cached.content;
+                    msg._fileKey = cached.fileKey;
+                    msg._thumbnailKey = cached.thumbnailKey;
+                  } else {
+                    msg.content = '🔒 Не удалось расшифровать';
+                    msg._decryptError = true;
+                  }
+                } catch {
+                  msg.content = '🔒 Не удалось расшифровать';
+                  msg._decryptError = true;
+                }
               } else {
                 msg.content = result.text;
                 if (result.fileKey) msg._fileKey = result.fileKey;
                 if (result.thumbnailKey) msg._thumbnailKey = result.thumbnailKey;
+                // Cache decrypted plaintext for future history loads
+                if (msg.id) {
+                  cryptoStore.saveDecryptedContent(msg.id, result.text, result.fileKey, result.thumbnailKey).catch(() => {});
+                }
               }
             } catch {
-              msg.content = '🔒 Не удалось расшифровать';
-              msg._decryptError = true;
+              // Decrypt threw — try local plaintext cache
+              try {
+                const cached = await cryptoStore.getDecryptedContent(msg.id);
+                if (cached) {
+                  msg.content = cached.content;
+                  msg._fileKey = cached.fileKey;
+                  msg._thumbnailKey = cached.thumbnailKey;
+                } else {
+                  msg.content = '🔒 Не удалось расшифровать';
+                  msg._decryptError = true;
+                }
+              } catch {
+                msg.content = '🔒 Не удалось расшифровать';
+                msg._decryptError = true;
+              }
             }
           } else {
             // Own messages — restore from local IndexedDB cache
@@ -500,6 +535,14 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
                 msg.content = cached.content;
                 msg._fileKey = cached.fileKey;
                 msg._thumbnailKey = cached.thumbnailKey;
+              } else {
+                // Fallback to decryptedMessages cache
+                const dcached = await cryptoStore.getDecryptedContent(msg.id);
+                if (dcached) {
+                  msg.content = dcached.content;
+                  msg._fileKey = dcached.fileKey;
+                  msg._thumbnailKey = dcached.thumbnailKey;
+                }
               }
             } catch { /* ignore */ }
           }
