@@ -17,5 +17,6 @@ public enum MessageType {
     REPLY_NOTIFICATION,
     MENTION_NOTIFICATION,
     VOICE,
-    VIDEO_CIRCLE
+    VIDEO_CIRCLE,
+    AVATAR_UPDATE
 }

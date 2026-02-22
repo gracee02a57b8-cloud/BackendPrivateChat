@@ -30,7 +30,7 @@ public class ChatController {
     public ResponseEntity<?> getOnlineUsers(@RequestParam(required = false) String search) {
         if (search != null && !search.isBlank()) {
             List<UserDto> results = chatService.searchUsers(search).stream()
-                    .map(u -> new UserDto(u, chatService.isUserOnline(u)))
+                    .map(u -> new UserDto(u, chatService.isUserOnline(u), chatService.getLastSeen(u), chatService.getAvatarUrl(u)))
                     .toList();
             return ResponseEntity.ok(results);
         }
@@ -40,7 +40,7 @@ public class ChatController {
     @GetMapping("/contacts")
     public ResponseEntity<List<UserDto>> getAllContacts() {
         List<UserDto> contacts = chatService.getAllUsers().stream()
-                .map(u -> new UserDto(u, chatService.isUserOnline(u), chatService.getLastSeen(u)))
+                .map(u -> new UserDto(u, chatService.isUserOnline(u), chatService.getLastSeen(u), chatService.getAvatarUrl(u)))
                 .toList();
         return ResponseEntity.ok(contacts);
     }

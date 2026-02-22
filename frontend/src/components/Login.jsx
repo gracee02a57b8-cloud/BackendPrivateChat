@@ -39,7 +39,7 @@ export default function Login({ onLogin }) {
       }
 
       const data = await res.json();
-      onLogin(data.token, data.username, data.role);
+      onLogin(data.token, data.username, data.role, data.avatarUrl);
     } catch (err) {
       setError(err.message);
     } finally {

@@ -53,7 +53,7 @@ public class AuthController {
         userRepository.save(user);
 
         String token = jwtService.generateToken(username, user.getRole());
-        return ResponseEntity.ok(new AuthResponse(token, username, user.getRole()));
+        return ResponseEntity.ok(new AuthResponse(token, username, user.getRole(), user.getAvatarUrl()));
     }
 
     @PostMapping("/login")
@@ -77,6 +77,6 @@ public class AuthController {
         }
 
         String token = jwtService.generateToken(username, user.getRole());
-        return ResponseEntity.ok(new AuthResponse(token, username, user.getRole()));
+        return ResponseEntity.ok(new AuthResponse(token, username, user.getRole(), user.getAvatarUrl()));
     }
 }

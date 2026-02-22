@@ -22,6 +22,9 @@ public class UserEntity {
     @Column(name = "last_seen", length = 30)
     private String lastSeen;
 
+    @Column(name = "avatar_url", length = 500)
+    private String avatarUrl;
+
     private String createdAt;
 
     public UserEntity() {}
@@ -49,4 +52,7 @@ public class UserEntity {
 
     public String getLastSeen() { return lastSeen; }
     public void setLastSeen(String lastSeen) { this.lastSeen = lastSeen; }
+
+    public String getAvatarUrl() { return avatarUrl; }
+    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
 }

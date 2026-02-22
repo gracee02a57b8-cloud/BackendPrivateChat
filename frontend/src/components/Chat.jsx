@@ -9,7 +9,7 @@ import e2eManager from '../crypto/E2EManager';
 
 const WS_URL = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
 
-export default function Chat({ token, username, onLogout, joinRoomId, onShowNews }) {
+export default function Chat({ token, username, avatarUrl, onAvatarChange, onLogout, joinRoomId, onShowNews }) {
   const [rooms, setRooms] = useState([]);
   const [activeRoomId, setActiveRoomId] = useState('general');
   const [messagesByRoom, setMessagesByRoom] = useState({});
@@ -27,6 +27,7 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
   const [securityCode, setSecurityCode] = useState(null);
   const [securityCodePeer, setSecurityCodePeer] = useState(null);
   const [e2eUnavailable, setE2eUnavailable] = useState(false);
+  const [avatarMap, setAvatarMap] = useState({});
   const wsRef = useRef(null);
   const loadedRooms = useRef(new Set());
   const activeRoomIdRef = useRef('general');
@@ -266,6 +267,18 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
         return;
       }
 
+      // Handle AVATAR_UPDATE — update avatarMap for all users in real time
+      if (msg.type === 'AVATAR_UPDATE') {
+        setAvatarMap(prev => ({ ...prev, [msg.sender]: msg.content || '' }));
+        // If it's our own avatar, update parent state + localStorage
+        if (msg.sender === username && onAvatarChange) {
+          const newUrl = msg.content || '';
+          onAvatarChange(newUrl);
+          localStorage.setItem('avatarUrl', newUrl);
+        }
+        return;
+      }
+
       const roomId = msg.roomId || 'general';
 
       // Decrypt E2E message if encrypted
@@ -400,7 +413,13 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => { if (!res.ok) throw new Error(res.status); return res.json(); })
-      .then((data) => setAllUsers(data))
+      .then((data) => {
+        setAllUsers(data);
+        // Build avatar map from contacts
+        const map = {};
+        data.forEach(u => { if (u.avatarUrl) map[u.username] = u.avatarUrl; });
+        setAvatarMap(prev => ({ ...prev, ...map }));
+      })
       .catch(console.error);
   };
 
@@ -644,6 +663,10 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
         messagesByRoom={messagesByRoom}
         sidebarOpen={sidebarOpen}
         onCloseSidebar={() => setSidebarOpen(false)}
+        avatarMap={avatarMap}
+        avatarUrl={avatarUrl}
+        wsRef={wsRef}
+        onAvatarChange={onAvatarChange}
       />
       {showTasks ? (
         <TaskPanel token={token} username={username} onClose={() => setShowTasks(false)} />
@@ -666,6 +689,7 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
           onTyping={sendTyping}
           isE2E={isPrivateE2E}
           onShowSecurityCode={showSecurityCode}
+          avatarMap={avatarMap}
         />
       )}
       {taskNotification && (

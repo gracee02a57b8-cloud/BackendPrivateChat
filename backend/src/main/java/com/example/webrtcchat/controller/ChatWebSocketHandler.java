@@ -135,6 +135,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
+        // Handle AVATAR_UPDATE - broadcast to all online users
+        if (incoming.getType() == MessageType.AVATAR_UPDATE) {
+            handleAvatarUpdate(username, incoming);
+            return;
+        }
+
         // Handle EDIT
         if (incoming.getType() == MessageType.EDIT) {
             handleEdit(username, incoming);
@@ -157,7 +163,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         incoming.setSender(username);
         incoming.setTimestamp(now());
         // Preserve VOICE / VIDEO_CIRCLE type from frontend, otherwise set CHAT
-        if (incoming.getType() != MessageType.VOICE && incoming.getType() != MessageType.VIDEO_CIRCLE) {
+        if (incoming.getType() != MessageType.VOICE && incoming.getType() != MessageType.VIDEO_CIRCLE
+                && incoming.getType() != MessageType.AVATAR_UPDATE) {
             incoming.setType(MessageType.CHAT);
         }
         incoming.setId(UUID.randomUUID().toString());
@@ -342,6 +349,23 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 }
             });
         }
+    }
+
+    /**
+     * Broadcast AVATAR_UPDATE to all online users so they update the avatar in real time.
+     */
+    private void handleAvatarUpdate(String username, MessageDto incoming) {
+        MessageDto broadcast = new MessageDto();
+        broadcast.setType(MessageType.AVATAR_UPDATE);
+        broadcast.setSender(username);
+        broadcast.setContent(incoming.getContent()); // avatarUrl stored in content field
+        broadcast.setTimestamp(now());
+
+        String json = serialize(broadcast);
+        if (json == null) return;
+
+        // Send to all online users (including sender, to confirm)
+        userSessions.forEach((user, s) -> sendSafe(s, json));
     }
 
     @Override

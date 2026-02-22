@@ -5,6 +5,7 @@ public class UserDto {
     private String password;
     private boolean online;
     private String lastSeen;
+    private String avatarUrl;
 
     public UserDto() {}
 
@@ -23,6 +24,13 @@ public class UserDto {
         this.lastSeen = lastSeen;
     }
 
+    public UserDto(String username, boolean online, String lastSeen, String avatarUrl) {
+        this.username = username;
+        this.online = online;
+        this.lastSeen = lastSeen;
+        this.avatarUrl = avatarUrl;
+    }
+
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
 
@@ -34,4 +42,7 @@ public class UserDto {
 
     public String getLastSeen() { return lastSeen; }
     public void setLastSeen(String lastSeen) { this.lastSeen = lastSeen; }
+
+    public String getAvatarUrl() { return avatarUrl; }
+    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
 }

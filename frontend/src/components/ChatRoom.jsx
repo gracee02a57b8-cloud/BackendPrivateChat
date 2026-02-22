@@ -77,7 +77,7 @@ function formatLastSeenHeader(ts) {
   return `был(а) ${d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}`;
 }
 
-export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDeleteMessage, onScheduleMessage, scheduledMessages, roomName, username, connected, token, activeRoom, onlineUsers, allUsers = [], typingUsers = [], onTyping, isE2E, onShowSecurityCode }) {
+export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDeleteMessage, onScheduleMessage, scheduledMessages, roomName, username, connected, token, activeRoom, onlineUsers, allUsers = [], typingUsers = [], onTyping, isE2E, onShowSecurityCode, avatarMap = {} }) {
   const [input, setInput] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
@@ -732,8 +732,10 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
                   <div className="message-row">
                     {/* Avatar — shown on last message in group (Telegram-style) */}
                     {!isOwn && isLastInGroup && (
-                      <div className="avatar-circle" style={{ background: getAvatarColor(msg.sender) }}>
-                        {getInitials(msg.sender)}
+                      <div className="avatar-circle" style={{ background: avatarMap[msg.sender] ? 'transparent' : getAvatarColor(msg.sender) }}>
+                        {avatarMap[msg.sender]
+                          ? <img src={avatarMap[msg.sender]} alt="" className="avatar-img" />
+                          : getInitials(msg.sender)}
                       </div>
                     )}
                     {!isOwn && !isLastInGroup && <div className="avatar-spacer" />}

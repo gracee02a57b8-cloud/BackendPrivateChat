@@ -2,6 +2,7 @@ import { useState } from 'react';
 import UserSearch from './UserSearch';
 import CreateRoom from './CreateRoom';
 import JoinRoom from './JoinRoom';
+import ProfileModal from './ProfileModal';
 import { copyToClipboard } from '../utils/clipboard';
 
 const AVATAR_COLORS = [
@@ -83,6 +84,10 @@ export default function Sidebar({
   messagesByRoom = {},
   sidebarOpen,
   onCloseSidebar,
+  avatarMap = {},
+  avatarUrl,
+  wsRef,
+  onAvatarChange,
 }) {
   const [chatFilter, setChatFilter] = useState('all');
   const [showSearch, setShowSearch] = useState(false);
@@ -93,6 +98,7 @@ export default function Sidebar({
   const [shareCopied, setShareCopied] = useState(null);
   const [showContacts, setShowContacts] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [showProfile, setShowProfile] = useState(false);
 
   const copyShareLink = (e, roomId) => {
     e.stopPropagation();
@@ -173,8 +179,10 @@ export default function Sidebar({
         onClick={() => onSelectRoom(room.id)}
       >
         <div className="sb-chat-avatar-wrap">
-          <div className="sb-chat-avatar" style={{ background: getAvatarColor(displayName) }}>
-            {getInitials(displayName)}
+          <div className="sb-chat-avatar" style={{ background: avatarMap[displayName] ? 'transparent' : getAvatarColor(displayName) }}>
+            {avatarMap[displayName]
+              ? <img src={avatarMap[displayName]} alt="" className="sb-avatar-img" />
+              : getInitials(displayName)}
           </div>
           {room.type === 'PRIVATE' && (
             <span className={`sb-online-dot ${isOnline ? 'online' : 'offline'}`} />
@@ -209,8 +217,10 @@ export default function Sidebar({
       {/* ── Header: Avatar + Name + Status + Quick actions ── */}
       <div className="sb-header">
         <div className="sb-header-left">
-          <div className="sb-user-avatar" style={{ background: getAvatarColor(username) }}>
-            {getInitials(username)}
+          <div className="sb-user-avatar" style={{ background: avatarUrl ? 'transparent' : getAvatarColor(username) }} onClick={() => setShowProfile(true)} title="Открыть профиль">
+            {avatarUrl
+              ? <img src={avatarUrl} alt="" className="sb-avatar-img" />
+              : getInitials(username)}
           </div>
           <div className="sb-user-meta">
             <span className="sb-user-name">{username}</span>
@@ -226,7 +236,8 @@ export default function Sidebar({
           <button className="sb-menu-btn" onClick={() => setShowMenu(!showMenu)}>⋮</button>
           {showMenu && (
             <div className="sb-menu-dropdown">
-              <button onClick={() => { setShowMenu(false); setShowSearch(!showSearch); }}>👤 Написать</button>
+              <button onClick={() => { setShowMenu(false); setShowProfile(true); }}>👤 Профиль</button>
+              <button onClick={() => { setShowMenu(false); setShowSearch(!showSearch); }}>✉️ Написать</button>
               <button onClick={() => { setShowMenu(false); setShowCreate(true); }}>➕ Создать группу</button>
               <button onClick={() => { setShowMenu(false); setShowJoin(true); }}>🔗 Войти по ссылке</button>
               <button onClick={() => { setShowMenu(false); onLogout(); }}>🚪 Выйти</button>
@@ -308,8 +319,10 @@ export default function Sidebar({
                     onClick={() => { onStartPrivateChat(user.username); setShowContacts(false); }}
                   >
                     <div className="sb-chat-avatar-wrap">
-                      <div className="sb-chat-avatar" style={{ background: getAvatarColor(user.username) }}>
-                        {getInitials(user.username)}
+                      <div className="sb-chat-avatar" style={{ background: (avatarMap[user.username] || user.avatarUrl) ? 'transparent' : getAvatarColor(user.username) }}>
+                        {(avatarMap[user.username] || user.avatarUrl)
+                          ? <img src={avatarMap[user.username] || user.avatarUrl} alt="" className="sb-avatar-img" />
+                          : getInitials(user.username)}
                       </div>
                       <span className="sb-online-dot online" />
                     </div>
@@ -331,8 +344,10 @@ export default function Sidebar({
                     onClick={() => { onStartPrivateChat(user.username); setShowContacts(false); }}
                   >
                     <div className="sb-chat-avatar-wrap">
-                      <div className="sb-chat-avatar" style={{ background: getAvatarColor(user.username) }}>
-                        {getInitials(user.username)}
+                      <div className="sb-chat-avatar" style={{ background: (avatarMap[user.username] || user.avatarUrl) ? 'transparent' : getAvatarColor(user.username) }}>
+                        {(avatarMap[user.username] || user.avatarUrl)
+                          ? <img src={avatarMap[user.username] || user.avatarUrl} alt="" className="sb-avatar-img" />
+                          : getInitials(user.username)}
                       </div>
                       <span className="sb-online-dot offline" />
                     </div>
@@ -381,6 +396,17 @@ export default function Sidebar({
 
       {showCreate && <CreateRoom onCreateRoom={onCreateRoom} onClose={() => setShowCreate(false)} />}
       {showJoin && <JoinRoom onJoinRoom={onJoinRoom} onClose={() => setShowJoin(false)} />}
+
+      {showProfile && (
+        <ProfileModal
+          username={username}
+          avatarUrl={avatarUrl}
+          token={token}
+          wsRef={wsRef}
+          onAvatarChange={onAvatarChange}
+          onClose={() => setShowProfile(false)}
+        />
+      )}
 
       {/* Delete confirmation modal */}
       {deleteConfirm && (

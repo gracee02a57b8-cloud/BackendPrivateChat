@@ -153,6 +153,22 @@ public class ChatService {
     }
 
     @Transactional(readOnly = true)
+    public String getAvatarUrl(String username) {
+        return userRepository.findByUsername(username)
+                .map(UserEntity::getAvatarUrl)
+                .orElse(null);
+    }
+
+    @Transactional
+    public String updateAvatarUrl(String username, String avatarUrl) {
+        return userRepository.findByUsername(username).map(user -> {
+            user.setAvatarUrl(avatarUrl);
+            userRepository.save(user);
+            return avatarUrl;
+        }).orElse(null);
+    }
+
+    @Transactional(readOnly = true)
     public List<String> searchUsers(String query) {
         if (query == null || query.isBlank()) return getAllUsers();
         return userRepository.findByUsernameContainingIgnoreCase(query)
