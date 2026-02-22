@@ -234,6 +234,130 @@ class KeyBundleServiceTest {
         verify(otkRepo).delete(otk2);
     }
 
+    // === OTK Duplicate Key Vulnerability (root cause of security code mismatch) ===
+
+    @Test
+    @DisplayName("uploadBundle calls entityManager.flush() after OTK delete — prevents duplicate key")
+    void uploadBundle_flushesAfterDelete() {
+        when(bundleRepo.findByUsername("alice")).thenReturn(Optional.empty());
+        when(bundleRepo.save(any(KeyBundleEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        List<Map<String, Object>> otks = List.of(
+                Map.of("id", 0, "publicKey", "key0")
+        );
+
+        keyBundleService.uploadBundle("alice", "ik", "sk", "spk", "sig", otks);
+
+        // CRITICAL: flush() MUST be called between delete and save
+        var inOrder = inOrder(otkRepo, entityManager);
+        inOrder.verify(otkRepo).deleteAllByUsername("alice");
+        inOrder.verify(entityManager).flush();
+        inOrder.verify(otkRepo).save(any(OneTimePreKeyEntity.class));
+    }
+
+    @Test
+    @DisplayName("re-upload bundle with SAME OTK key_ids succeeds (delete+flush+insert)")
+    void uploadBundle_sameOtkKeyIds_noConflict() {
+        // First upload
+        KeyBundleEntity existing = createBundle("alice");
+        when(bundleRepo.findByUsername("alice")).thenReturn(Optional.of(existing));
+        when(bundleRepo.save(any(KeyBundleEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // Same key IDs as would exist in DB (the exact scenario that caused the bug)
+        List<Map<String, Object>> otks = List.of(
+                Map.of("id", 0, "publicKey", "new-key0"),
+                Map.of("id", 1, "publicKey", "new-key1"),
+                Map.of("id", 5, "publicKey", "new-key5")
+        );
+
+        // Should NOT throw — flush ensures deletes complete before inserts
+        assertDoesNotThrow(() ->
+                keyBundleService.uploadBundle("alice", "new-ik", "sk", "spk", "sig", otks));
+
+        verify(otkRepo).deleteAllByUsername("alice");
+        verify(entityManager).flush();
+        verify(otkRepo, times(3)).save(any(OneTimePreKeyEntity.class));
+    }
+
+    @Test
+    @DisplayName("identity key is updated even when OTKs have duplicate IDs")
+    void uploadBundle_identityKeyUpdatedDespiteSameOtkIds() {
+        KeyBundleEntity existing = createBundle("alice");
+        existing.setIdentityKey("old-ik");
+        when(bundleRepo.findByUsername("alice")).thenReturn(Optional.of(existing));
+        when(bundleRepo.save(any(KeyBundleEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        List<Map<String, Object>> otks = List.of(
+                Map.of("id", 5, "publicKey", "key5")  // key_id=5 was the exact one that caused the prod bug
+        );
+
+        keyBundleService.uploadBundle("alice", "brand-new-ik", "sk", "spk", "sig", otks);
+
+        // Identity key MUST be updated (this was the core failure in production)
+        assertEquals("brand-new-ik", existing.getIdentityKey());
+        verify(bundleRepo).save(existing);
+    }
+
+    @Test
+    @DisplayName("flush is called exactly once per uploadBundle call")
+    void uploadBundle_flushCalledOnce() {
+        when(bundleRepo.findByUsername("alice")).thenReturn(Optional.empty());
+        when(bundleRepo.save(any(KeyBundleEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        List<Map<String, Object>> otks = List.of(
+                Map.of("id", 0, "publicKey", "k0"),
+                Map.of("id", 1, "publicKey", "k1"),
+                Map.of("id", 2, "publicKey", "k2"),
+                Map.of("id", 3, "publicKey", "k3"),
+                Map.of("id", 4, "publicKey", "k4")
+        );
+
+        keyBundleService.uploadBundle("alice", "ik", "sk", "spk", "sig", otks);
+
+        verify(entityManager, times(1)).flush();
+        verify(otkRepo, times(5)).save(any(OneTimePreKeyEntity.class));
+    }
+
+    @Test
+    @DisplayName("flush is called even when OTK list is null")
+    void uploadBundle_flushCalledEvenWithNullOtks() {
+        when(bundleRepo.findByUsername("alice")).thenReturn(Optional.empty());
+        when(bundleRepo.save(any(KeyBundleEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        keyBundleService.uploadBundle("alice", "ik", "sk", "spk", "sig", null);
+
+        // flush MUST still be called after delete, even if no new OTKs to insert
+        verify(otkRepo).deleteAllByUsername("alice");
+        verify(entityManager).flush();
+    }
+
+    @Test
+    @DisplayName("ensureBundleOnServer scenario: repeated uploads with same OTKs")
+    void uploadBundle_repeatedUploads_noConflict() {
+        KeyBundleEntity bundle = createBundle("alice");
+        when(bundleRepo.findByUsername("alice")).thenReturn(Optional.of(bundle));
+        when(bundleRepo.save(any(KeyBundleEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        List<Map<String, Object>> otks = List.of(
+                Map.of("id", 0, "publicKey", "k0"),
+                Map.of("id", 1, "publicKey", "k1")
+        );
+
+        // Simulates _ensureBundleOnServer being called multiple times
+        for (int i = 0; i < 5; i++) {
+            assertDoesNotThrow(() ->
+                    keyBundleService.uploadBundle("alice", "ik-v" + System.nanoTime(),
+                            "sk", "spk", "sig", otks));
+        }
+
+        // 5 uploads × 1 flush each = 5 flushes
+        verify(entityManager, times(5)).flush();
+        // 5 uploads × 1 delete each = 5 deletes
+        verify(otkRepo, times(5)).deleteAllByUsername("alice");
+        // 5 uploads × 2 OTKs each = 10 OTK saves
+        verify(otkRepo, times(10)).save(any(OneTimePreKeyEntity.class));
+    }
+
     // === Helper ===
 
     private KeyBundleEntity createBundle(String username) {

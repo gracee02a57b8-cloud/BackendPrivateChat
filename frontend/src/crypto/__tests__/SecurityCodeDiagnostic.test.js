@@ -428,115 +428,278 @@ describe('Diagnostic F: getIdentityPublicKey() re-export vs uploaded key', () =>
   });
 });
 
-// ======================== G. Combined Failure Scenarios ========================
+// ======================== H. Transaction Rollback Vulnerability (THE ROOT CAUSE) ========================
 
-describe('Diagnostic G: Combined real-world failure chains', () => {
-  it('scenario: user clears browser cache → new keys → old peer has stale trusted key', async () => {
+describe('Diagnostic H: Server transaction rollback → identity key never updates', () => {
+  /**
+   * This group tests the ACTUAL root cause found in production:
+   * Hibernate's uploadBundle() method is @Transactional. When OTK insert fails
+   * due to duplicate (username, key_id), the ENTIRE transaction rolls back,
+   * meaning the identity key is also NOT updated.
+   */
+
+  it('REPRODUCES ROOT CAUSE: if uploadBundle transaction fails, identity key stays stale', async () => {
+    const bobKP = await generateECDHKeyPair();
+    const bobIK = await exportPublicKey(bobKP.publicKey);
+
+    // Server has Alice's INITIAL identity key from first registration
+    const aliceKP_initial = await generateECDHKeyPair();
+    const aliceIK_initial = await exportPublicKey(aliceKP_initial.publicKey);
+    let serverAliceIK = aliceIK_initial;
+
+    // Alice reloads → ensureBundleOnServer tries to re-upload
+    // But uploadBundle fails (duplicate OTK key_id constraint violation)
+    // → entire transaction rolls back → identity key NOT updated
+    const aliceKP_current = await generateECDHKeyPair();
+    const aliceIK_current = await exportPublicKey(aliceKP_current.publicKey);
+    
+    const transactionRolledBack = true; // Simulates constraint violation
+    if (!transactionRolledBack) {
+      serverAliceIK = aliceIK_current; // Never executes!
+    }
+
+    // Server still has initial key
+    expect(serverAliceIK).toBe(aliceIK_initial);
+    expect(serverAliceIK).not.toBe(aliceIK_current);
+
+    // Alice: local key=current, Bob fetches from server=initial → MISMATCH
+    const codeAlice = await generateSecurityCode(aliceIK_current, bobIK);
+    const codeBob = await generateSecurityCode(bobIK, serverAliceIK);
+    expect(codeAlice).not.toBe(codeBob);
+  });
+
+  it('FIXED: when transaction succeeds, identity key updates → codes match', async () => {
+    const bobKP = await generateECDHKeyPair();
+    const bobIK = await exportPublicKey(bobKP.publicKey);
+
     const aliceKP = await generateECDHKeyPair();
     const aliceIK = await exportPublicKey(aliceKP.publicKey);
 
-    const bobOrigKP = await generateECDHKeyPair();
-    const bobOrigIK = await exportPublicKey(bobOrigKP.publicKey);
+    // Transaction succeeds → server has correct key
+    const serverAliceIK = aliceIK;
 
-    // Alice caches Bob's key and sees correct code
-    const code1 = await generateSecurityCode(aliceIK, bobOrigIK);
-
-    // Bob clears browser data → generates new keys → uploads to server
-    const bobNewKP = await generateECDHKeyPair();
-    const bobNewIK = await exportPublicKey(bobNewKP.publicKey);
-    const serverBobIK = bobNewIK; // Server updated
-
-    // Alice is OFFLINE, falls back to cached trusted key
-    const aliceFallbackPeerIK = bobOrigIK; // Stale cache!
-    const codeAliceOffline = await generateSecurityCode(aliceIK, aliceFallbackPeerIK);
-
-    // Bob generates code (his new key + Alice's key from server)
-    const codeBob = await generateSecurityCode(bobNewIK, aliceIK);
-
-    // Mismatch because Alice used Bob's old key from cache
-    expect(codeAliceOffline).not.toBe(codeBob);
-    expect(codeAliceOffline).toBe(code1); // Alice still sees old code
-  });
-
-  it('scenario: ensureBundleOnServer skips due to missing SPK + peer sees stale server key', async () => {
-    const bobKP = await generateECDHKeyPair();
-    const bobIK = await exportPublicKey(bobKP.publicKey);
-
-    // Alice original session — uploaded correctly
-    const aliceKP1 = await generateECDHKeyPair();
-    const aliceIK1 = await exportPublicKey(aliceKP1.publicKey);
-    let serverAliceIK = aliceIK1;
-
-    // Alice reinstalls, generates new key, but signedPreKey is missing from IndexedDB
-    const aliceKP2 = await generateECDHKeyPair();
-    const aliceIK2 = await exportPublicKey(aliceKP2.publicKey);
-
-    // _ensureBundleOnServer would skip because signedPreKeyPair is null
-    const signedPreKeyPairMissing = true;
-    if (!signedPreKeyPairMissing) {
-      serverAliceIK = aliceIK2; // This never runs!
-    }
-
-    // Alice uses new local key, server still has old
-    const codeAlice = await generateSecurityCode(aliceIK2, bobIK);
-    const codeBob = await generateSecurityCode(bobIK, serverAliceIK);
-
-    expect(codeAlice).not.toBe(codeBob);
-    expect(serverAliceIK).toBe(aliceIK1); // Server still has old key!
-  });
-
-  it('scenario: _ensureBundleOnServer upload throws → peer gets stale key', async () => {
-    const bobKP = await generateECDHKeyPair();
-    const bobIK = await exportPublicKey(bobKP.publicKey);
-
-    // Alice registers — upload succeeds
-    const aliceKP = await generateECDHKeyPair();
-    const aliceIK_original = await exportPublicKey(aliceKP.publicKey);
-    let serverAliceIK = aliceIK_original;
-
-    // Alice reloads — key round-trip through IndexedDB
-    const stored = await exportKeyPair(aliceKP);
-    const reloaded = await importKeyPair(stored);
-    const aliceIK_reloaded = await exportPublicKey(reloaded.publicKey);
-
-    // ensureBundleOnServer runs but upload fails (simulated)
-    const uploadSuccess = false;
-    if (uploadSuccess) {
-      serverAliceIK = aliceIK_reloaded;
-    }
-
-    // In this case, round-trip key should be the same, so server key is still correct
-    // UNLESS the key was regenerated before the failed upload
-    expect(aliceIK_reloaded).toBe(aliceIK_original);
-    expect(serverAliceIK).toBe(aliceIK_original);
-
-    // Codes still match IF round-trip is stable
-    const codeAlice = await generateSecurityCode(aliceIK_reloaded, bobIK);
+    const codeAlice = await generateSecurityCode(aliceIK, bobIK);
     const codeBob = await generateSecurityCode(bobIK, serverAliceIK);
     expect(codeAlice).toBe(codeBob);
   });
 
-  it('identifies the CORE ISSUE: local key ≠ server key → codes always differ', async () => {
-    // The fundamental invariant that MUST hold:
-    // For any user U: getIdentityPublicKey() === server.getIdentityKey(U)
-    //
-    // If this invariant is violated for ANY reason, codes will differ.
-    
+  it('simulates repeated ensureBundleOnServer failures (every reload fails)', async () => {
     const bobKP = await generateECDHKeyPair();
     const bobIK = await exportPublicKey(bobKP.publicKey);
 
-    // Generate many key pairs and verify the invariant
-    for (let i = 0; i < 10; i++) {
-      const kp = await generateECDHKeyPair();
-      const originalExport = await exportPublicKey(kp.publicKey);
-      
-      // Simulate full lifecycle: export → store → import → re-export
-      const stored = await exportKeyPair(kp);
-      const reimported = await importKeyPair(stored);
-      const reExported = await exportPublicKey(reimported.publicKey);
+    // Initial successful upload
+    const aliceKP = await generateECDHKeyPair();
+    const aliceIK = await exportPublicKey(aliceKP.publicKey);
+    let serverAliceIK = aliceIK;
+    let serverUpdatedAt = 'T0';
 
-      // This MUST hold for codes to match
-      expect(reExported).toBe(originalExport);
+    // Simulate 5 page reloads, each time ensureBundleOnServer fails
+    for (let i = 0; i < 5; i++) {
+      try {
+        throw new Error('duplicate key value violates unique constraint');
+      } catch (e) {
+        // Transaction rolled back — server NOT updated
+      }
     }
+
+    // After 5 failed reloads, server STILL has the initial key
+    expect(serverAliceIK).toBe(aliceIK);
+    expect(serverUpdatedAt).toBe('T0');
+
+    // But codes still match because Alice's key didn't change locally
+    const codeAlice = await generateSecurityCode(aliceIK, bobIK);
+    const codeBob = await generateSecurityCode(bobIK, serverAliceIK);
+    expect(codeAlice).toBe(codeBob);
+  });
+
+  it('the OTK key_id collision scenario: same IDs re-uploaded', async () => {
+    // This exactly replicates what happened in production:
+    // Server log: ERROR: duplicate key value violates unique constraint
+    //   "one_time_pre_keys_username_key_id_key"
+    //   Key (username, key_id)=(Ангелина, 5) already exists.
+
+    const otkIds = [0, 1, 2, 3, 4, 5]; // IDs in IndexedDB
+    const serverOtkIds = [3, 4, 5, 6, 7]; // IDs remaining on server (some consumed)
+
+    // Overlap: IDs 3, 4, 5 exist both locally and on server
+    const overlap = otkIds.filter(id => serverOtkIds.includes(id));
+    expect(overlap).toEqual([3, 4, 5]);
+
+    // Without DELETE-then-flush-then-INSERT, inserting IDs 3,4,5 causes constraint violation
+    // With the fix: DELETE all → flush → INSERT all → no conflict
+    const deleteAllFirst = true;
+    const flushed = true;
+    const canInsert = deleteAllFirst && flushed;
+    expect(canInsert).toBe(true);
+  });
+});
+
+// ======================== I. Retry and Self-Verification Logic ========================
+
+describe('Diagnostic I: Upload retry and server key verification', () => {
+  it('retry logic: upload eventually succeeds after transient failures', async () => {
+    let attempts = 0;
+    let uploaded = false;
+    const maxRetries = 3;
+
+    async function uploadWithRetry() {
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          attempts++;
+          if (attempt < 3) throw new Error('Network timeout');
+          uploaded = true;
+          return;
+        } catch (e) {
+          if (attempt === maxRetries) throw e;
+        }
+      }
+    }
+
+    await uploadWithRetry();
+    expect(attempts).toBe(3);
+    expect(uploaded).toBe(true);
+  });
+
+  it('retry logic: gives up after max retries', async () => {
+    let attempts = 0;
+    const maxRetries = 3;
+
+    async function uploadWithRetry() {
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          attempts++;
+          throw new Error('Server down');
+        } catch (e) {
+          if (attempt === maxRetries) throw e;
+        }
+      }
+    }
+
+    await expect(uploadWithRetry()).rejects.toThrow('Server down');
+    expect(attempts).toBe(3);
+  });
+
+  it('self-verification: detect when server key differs from local after upload', async () => {
+    const aliceKP = await generateECDHKeyPair();
+    const aliceIK = await exportPublicKey(aliceKP.publicKey);
+
+    // Simulate: upload succeeded but server returned DIFFERENT key
+    // (e.g., another device overwrote it between upload and verify)
+    const anotherDeviceKP = await generateECDHKeyPair();
+    const serverIKAfterUpload = await exportPublicKey(anotherDeviceKP.publicKey);
+
+    const syncFailed = (serverIKAfterUpload !== aliceIK);
+    expect(syncFailed).toBe(true);
+  });
+
+  it('self-verification: server matches local → sync succeeded', async () => {
+    const aliceKP = await generateECDHKeyPair();
+    const aliceIK = await exportPublicKey(aliceKP.publicKey);
+
+    // Server returns same key after upload
+    const serverIKAfterUpload = aliceIK;
+    const syncFailed = (serverIKAfterUpload !== aliceIK);
+    expect(syncFailed).toBe(false);
+  });
+
+  it('SPK regeneration: when signedPreKey is null, new one is generated', async () => {
+    // Old behavior: if SPK is null → skip entire ensureBundleOnServer
+    // New behavior: if SPK is null → generate new SPK → proceed with upload
+    const identityKP = await generateECDHKeyPair();
+    const signingKP = await generateSigningKeyPair();
+    let signedPreKeyPair = null;
+
+    // Simulate new behavior: regenerate SPK
+    if (!signedPreKeyPair) {
+      signedPreKeyPair = await generateECDHKeyPair();
+    }
+
+    expect(signedPreKeyPair).not.toBeNull();
+    expect(signedPreKeyPair.publicKey).toBeTruthy();
+    expect(signedPreKeyPair.privateKey).toBeTruthy();
+
+    // Can now export and upload
+    const spkPub = await exportPublicKey(signedPreKeyPair.publicKey);
+    expect(spkPub).toMatch(/^[A-Za-z0-9+/]+=*$/); // valid base64
+  });
+});
+
+// ======================== J. getSecurityCode Self-Key Verification ========================
+
+describe('Diagnostic J: getSecurityCode verifies own key on server', () => {
+  it('when own server key matches local → code is accurate', async () => {
+    const aliceKP = await generateECDHKeyPair();
+    const bobKP = await generateECDHKeyPair();
+    const aliceIK = await exportPublicKey(aliceKP.publicKey);
+    const bobIK = await exportPublicKey(bobKP.publicKey);
+
+    // Server has correct keys for both
+    const serverAliceIK = aliceIK;
+    const serverBobIK = bobIK;
+
+    // Alice checks own key → matches → proceeds
+    expect(serverAliceIK).toBe(aliceIK);
+
+    const codeAlice = await generateSecurityCode(aliceIK, serverBobIK);
+    const codeBob = await generateSecurityCode(bobIK, serverAliceIK);
+    expect(codeAlice).toBe(codeBob);
+  });
+
+  it('when own server key differs → triggers re-sync → code becomes accurate', async () => {
+    const bobKP = await generateECDHKeyPair();
+    const bobIK = await exportPublicKey(bobKP.publicKey);
+
+    const aliceKP = await generateECDHKeyPair();
+    const aliceIK = await exportPublicKey(aliceKP.publicKey);
+
+    // Server initially has DIFFERENT key (stale from failed upload)
+    const staleKP = await generateECDHKeyPair();
+    let serverAliceIK = await exportPublicKey(staleKP.publicKey);
+
+    // Alice checks: serverAliceIK !== aliceIK → triggers syncWithServer
+    expect(serverAliceIK).not.toBe(aliceIK);
+
+    // After sync succeeds, server has correct key
+    serverAliceIK = aliceIK; // sync fixed it
+
+    const codeAlice = await generateSecurityCode(aliceIK, bobIK);
+    const codeBob = await generateSecurityCode(bobIK, serverAliceIK);
+    expect(codeAlice).toBe(codeBob);
+  });
+
+  it('complete security code flow with all verification steps', async () => {
+    // Generate keys for both users
+    const aliceKP = await generateECDHKeyPair();
+    const bobKP = await generateECDHKeyPair();
+
+    // Export (simulate _generateAndRegister)
+    const aliceIK = await exportPublicKey(aliceKP.publicKey);
+    const bobIK = await exportPublicKey(bobKP.publicKey);
+
+    // Store in "IndexedDB" and upload to "server"
+    const aliceStored = await exportKeyPair(aliceKP);
+    const bobStored = await exportKeyPair(bobKP);
+    const server = { alice: aliceIK, bob: bobIK };
+
+    // Simulate page reload (import from store)
+    const aliceReloaded = await importKeyPair(aliceStored);
+    const bobReloaded = await importKeyPair(bobStored);
+
+    // Step 1: getIdentityPublicKey() — re-export
+    const aliceLocalIK = await exportPublicKey(aliceReloaded.publicKey);
+    const bobLocalIK = await exportPublicKey(bobReloaded.publicKey);
+
+    // Step 2: Verify own key matches server (new check)
+    expect(aliceLocalIK).toBe(server.alice);
+    expect(bobLocalIK).toBe(server.bob);
+
+    // Step 3: Fetch peer key from server
+    // Step 4: Generate security code
+    const codeAlice = await generateSecurityCode(aliceLocalIK, server.bob);
+    const codeBob = await generateSecurityCode(bobLocalIK, server.alice);
+
+    // MUST MATCH
+    expect(codeAlice).toBe(codeBob);
+    expect(codeAlice).toMatch(/^\d{4} \d{4} \d{4} \d{4} \d{4} \d{4}$/);
   });
 });

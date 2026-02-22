@@ -164,6 +164,45 @@ class KeyBundleControllerTest {
                 .andExpect(status().isNotFound());
     }
 
+    // === Identity Key (self) ===
+
+    @Test
+    @DisplayName("GET /api/keys/identity/me - returns own identity key")
+    void getMyIdentityKey_success() throws Exception {
+        when(keyBundleService.getIdentityKey("alice")).thenReturn("ik-alice-base64");
+
+        mockMvc.perform(get("/api/keys/identity/me")
+                        .principal(auth("alice")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.identityKey").value("ik-alice-base64"));
+    }
+
+    @Test
+    @DisplayName("GET /api/keys/identity/me - no bundle returns 404")
+    void getMyIdentityKey_notFound() throws Exception {
+        when(keyBundleService.getIdentityKey("alice")).thenReturn(null);
+
+        mockMvc.perform(get("/api/keys/identity/me")
+                        .principal(auth("alice")))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("GET /api/keys/identity/me - uses authenticated username, not path")
+    void getMyIdentityKey_usesAuthenticatedUser() throws Exception {
+        when(keyBundleService.getIdentityKey("alice")).thenReturn("ik-alice");
+        when(keyBundleService.getIdentityKey("bob")).thenReturn("ik-bob");
+
+        // Even though path is /me, it uses auth principal
+        mockMvc.perform(get("/api/keys/identity/me")
+                        .principal(auth("alice")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.identityKey").value("ik-alice"));
+
+        verify(keyBundleService).getIdentityKey("alice");
+        verify(keyBundleService, never()).getIdentityKey("me");
+    }
+
     // === Has Bundle ===
 
     @Test
