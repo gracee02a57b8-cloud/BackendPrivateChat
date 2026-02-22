@@ -520,6 +520,83 @@ class E2EFieldPropagationTest {
         }
     }
 
+    // === Group Encrypted Field ===
+
+    @Nested
+    @DisplayName("Group Encrypted Field Round-Trip")
+    class GroupEncryptedRoundTrip {
+
+        @Test
+        @DisplayName("groupEncrypted=true survives send → getHistory round-trip")
+        void groupEncrypted_true_survivesRoundTrip() {
+            String roomId = "group-enc-room-" + UUID.randomUUID();
+            MessageDto msg = buildFullE2eMessage(roomId);
+            msg.setGroupEncrypted(true);
+
+            chatService.send(roomId, msg);
+
+            List<MessageDto> history = chatService.getHistory(roomId, 0, 10);
+            assertEquals(1, history.size());
+            assertTrue(history.get(0).isGroupEncrypted(),
+                    "groupEncrypted=true must survive round-trip");
+        }
+
+        @Test
+        @DisplayName("groupEncrypted=false (default) survives round-trip")
+        void groupEncrypted_false_survivesRoundTrip() {
+            String roomId = "group-enc-false-" + UUID.randomUUID();
+            MessageDto msg = buildFullE2eMessage(roomId);
+            // groupEncrypted defaults to false, do not set it explicitly
+
+            chatService.send(roomId, msg);
+
+            List<MessageDto> history = chatService.getHistory(roomId, 0, 10);
+            assertEquals(1, history.size());
+            assertFalse(history.get(0).isGroupEncrypted(),
+                    "groupEncrypted=false must survive round-trip");
+        }
+
+        @Test
+        @DisplayName("groupEncrypted coexists with encrypted (DM E2E) flag")
+        void groupEncrypted_coexistsWithEncrypted() {
+            String roomId = "group-enc-both-" + UUID.randomUUID();
+            MessageDto msg = buildFullE2eMessage(roomId);
+            msg.setEncrypted(true);
+            msg.setGroupEncrypted(true);
+
+            chatService.send(roomId, msg);
+
+            List<MessageDto> history = chatService.getHistory(roomId, 0, 10);
+            MessageDto r = history.get(0);
+            assertTrue(r.isEncrypted(), "encrypted flag must survive");
+            assertTrue(r.isGroupEncrypted(), "groupEncrypted flag must survive");
+            assertEquals("base64-encrypted-content-data", r.getEncryptedContent());
+            assertEquals("base64-iv-12bytes", r.getIv());
+        }
+
+        @Test
+        @DisplayName("groupEncrypted with all E2E fields full round-trip")
+        void groupEncrypted_fullFieldsRoundTrip() {
+            String roomId = "group-full-" + UUID.randomUUID();
+            MessageDto msg = buildFullE2eMessage(roomId);
+            msg.setGroupEncrypted(true);
+            msg.setContent("[group-encrypted]");
+
+            chatService.send(roomId, msg);
+
+            List<MessageDto> history = chatService.getHistory(roomId, 0, 10);
+            MessageDto r = history.get(0);
+            assertTrue(r.isGroupEncrypted());
+            assertTrue(r.isEncrypted());
+            assertEquals("[group-encrypted]", r.getContent());
+            assertEquals("base64-encrypted-content-data", r.getEncryptedContent());
+            assertEquals("base64-iv-12bytes", r.getIv());
+            // ratchetKey, messageNumber etc. present from buildFullE2eMessage
+            assertEquals("base64-ratchet-public-key", r.getRatchetKey());
+            assertEquals(Integer.valueOf(42), r.getMessageNumber());
+        }
+    }
+
     // === Helper ===
 
     private MessageDto buildFullE2eMessage(String roomId) {

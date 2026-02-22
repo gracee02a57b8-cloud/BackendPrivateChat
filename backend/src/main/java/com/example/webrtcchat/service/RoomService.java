@@ -27,11 +27,7 @@ public class RoomService {
     @PostConstruct
     @Transactional
     public void init() {
-        // Ensure "general" room exists
-        if (roomRepository.findById("general").isEmpty()) {
-            RoomEntity general = new RoomEntity("general", "Общий чат", RoomType.GENERAL, "system", now());
-            roomRepository.save(general);
-        }
+        // General room removed — no auto-creation needed
     }
 
     @Transactional(readOnly = true)

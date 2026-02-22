@@ -5490,3 +5490,129 @@
     gap: 2rem;
   }
 }
+
+/* ===== Message Notification Popup (Bug 4 fix) ===== */
+.msg-notification-popup {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  background: rgba(22, 33, 62, 0.97);
+  border: 1px solid rgba(76, 205, 94, 0.25);
+  border-radius: 14px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+  padding: 14px 18px;
+  min-width: 280px;
+  max-width: 380px;
+  cursor: pointer;
+  animation: slideInRight 0.3s ease;
+  backdrop-filter: blur(12px);
+}
+.msg-notification-popup:hover {
+  border-color: rgba(76, 205, 94, 0.45);
+}
+.msg-notification-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.msg-notification-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #fff;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.msg-notification-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.msg-notification-meta {
+  flex: 1;
+  min-width: 0;
+}
+.msg-notification-sender {
+  display: block;
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: #4ccd5e;
+}
+.msg-notification-room {
+  display: block;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+.msg-notification-close {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+.msg-notification-close:hover {
+  color: #4ccd5e;
+  background: rgba(76, 205, 94, 0.12);
+}
+.msg-notification-body {
+  padding-left: 46px;
+  margin-top: 4px;
+}
+.msg-notification-content {
+  font-size: 0.84rem;
+  color: rgba(255, 255, 255, 0.75);
+  margin: 0;
+  line-height: 1.4;
+}
+@media (max-width: 600px) {
+  .msg-notification-popup {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    min-width: unset;
+    max-width: unset;
+  }
+}
+
+/* ===== Call Security Code (Bug 5 fix) ===== */
+.call-security-code {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(76, 205, 94, 0.3);
+  border-radius: 20px;
+  padding: 8px 18px;
+  z-index: 10;
+  animation: fadeIn 0.5s ease;
+}
+.call-security-icon {
+  font-size: 0.9rem;
+}
+.call-security-label {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.call-security-digits {
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #4ccd5e;
+  letter-spacing: 2px;
+}

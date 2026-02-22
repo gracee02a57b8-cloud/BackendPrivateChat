@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import UserSearch from './UserSearch';
 import CreateRoom from './CreateRoom';
 import JoinRoom from './JoinRoom';
@@ -99,6 +99,19 @@ export default function Sidebar({
   const [showContacts, setShowContacts] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
+  const menuRef = useRef(null);
+
+  // Click-outside handler for three-dot menu (Bug 3 fix)
+  useEffect(() => {
+    if (!showMenu) return;
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showMenu]);
 
   const copyShareLink = (e, roomId) => {
     e.stopPropagation();
@@ -142,7 +155,7 @@ export default function Sidebar({
     if (chatFilter === 'private') {
       list = list.filter(r => r.type === 'PRIVATE');
     } else if (chatFilter === 'groups') {
-      list = list.filter(r => r.type === 'ROOM' || r.type === 'GENERAL');
+      list = list.filter(r => r.type === 'ROOM');
     } else if (chatFilter === 'unread') {
       list = list.filter(r => (unreadCounts[r.id] || 0) > 0);
     }
@@ -235,7 +248,7 @@ export default function Sidebar({
           <button className="sb-icon-btn" onClick={onShowTasks} title="Задачи">📋</button>
           <button className="sb-menu-btn" onClick={() => setShowMenu(!showMenu)}>⋮</button>
           {showMenu && (
-            <div className="sb-menu-dropdown">
+            <div className="sb-menu-dropdown" ref={menuRef}>
               <button onClick={() => { setShowMenu(false); setShowProfile(true); }}>👤 Профиль</button>
               <button onClick={() => { setShowMenu(false); setShowSearch(!showSearch); }}>✉️ Написать</button>
               <button onClick={() => { setShowMenu(false); setShowCreate(true); }}>➕ Создать группу</button>

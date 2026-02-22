@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Sidebar from './Sidebar';
 import ChatRoom from './ChatRoom';
 import TaskPanel from './TaskPanel';
 import TaskNotificationPopup from './TaskNotificationPopup';
 import ReplyNotificationPopup from './ReplyNotificationPopup';
+import MessageNotificationPopup from './MessageNotificationPopup';
 import SecurityCodeModal from './SecurityCodeModal';
 import IncomingCallModal from './IncomingCallModal';
 import CallScreen from './CallScreen';
@@ -16,7 +17,7 @@ const WS_URL = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${win
 
 export default function Chat({ token, username, avatarUrl, onAvatarChange, onLogout, joinRoomId, onShowNews }) {
   const [rooms, setRooms] = useState([]);
-  const [activeRoomId, setActiveRoomId] = useState('general');
+  const [activeRoomId, setActiveRoomId] = useState(null);
   const [messagesByRoom, setMessagesByRoom] = useState({});
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
@@ -26,6 +27,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   const [showTasks, setShowTasks] = useState(false);
   const [taskNotification, setTaskNotification] = useState(null);
   const [replyNotification, setReplyNotification] = useState(null);
+  const [messageNotification, setMessageNotification] = useState(null);
   const [typingUsers, setTypingUsers] = useState({});
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [e2eReady, setE2eReady] = useState(false);
@@ -33,9 +35,10 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   const [securityCodePeer, setSecurityCodePeer] = useState(null);
   const [e2eUnavailable, setE2eUnavailable] = useState(false);
   const [avatarMap, setAvatarMap] = useState({});
+  const [callSecurityCode, setCallSecurityCode] = useState(null);
   const wsRef = useRef(null);
   const loadedRooms = useRef(new Set());
-  const activeRoomIdRef = useRef('general');
+  const activeRoomIdRef = useRef(null);
   const typingTimeouts = useRef({});
   const typingThrottle = useRef(null);
   const reconnectTimer = useRef(null);
@@ -45,9 +48,15 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   const documentVisible = useRef(true);
   const notifSound = useRef(null);
   const pendingSent = useRef([]); // queue for restoring own encrypted message content
+  const roomsRef = useRef([]); // always-current rooms for ws.onmessage closure
 
   // WebRTC calls hook
   const webrtc = useWebRTC({ wsRef, username, token });
+
+  // Keep refs up-to-date so ws.onmessage closure always accesses latest values (Bug 1 fix)
+  const webrtcRef = useRef(webrtc);
+  useEffect(() => { webrtcRef.current = webrtc; });
+  useEffect(() => { roomsRef.current = rooms; }, [rooms]);
 
   // Create notification sound
   useEffect(() => {
@@ -125,7 +134,6 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
 
   useEffect(() => {
     fetchRooms();
-    loadRoomHistory('general');
     fetchContacts();
     unmounted.current = false;
 
@@ -276,12 +284,12 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
         return;
       }
 
-      // Handle WebRTC call signaling
-      if (msg.type === 'CALL_OFFER') { webrtc.handleOffer(msg); return; }
-      if (msg.type === 'CALL_ANSWER') { webrtc.handleAnswer(msg); return; }
-      if (msg.type === 'ICE_CANDIDATE') { webrtc.handleIceCandidate(msg); return; }
+      // Handle WebRTC call signaling (use refs to avoid stale closure — Bug 1 fix)
+      if (msg.type === 'CALL_OFFER') { webrtcRef.current.handleOffer(msg); return; }
+      if (msg.type === 'CALL_ANSWER') { webrtcRef.current.handleAnswer(msg); return; }
+      if (msg.type === 'ICE_CANDIDATE') { webrtcRef.current.handleIceCandidate(msg); return; }
       if (msg.type === 'CALL_REJECT' || msg.type === 'CALL_END' || msg.type === 'CALL_BUSY') {
-        webrtc.handleCallEnd(msg);
+        webrtcRef.current.handleCallEnd(msg);
         return;
       }
 
@@ -306,7 +314,8 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
         return;
       }
 
-      const roomId = msg.roomId || 'general';
+      const roomId = msg.roomId;
+      if (!roomId) return; // ignore messages without room
 
       // Decrypt E2E message if encrypted
       if (msg.encrypted && msg.sender !== username) {
@@ -336,7 +345,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
 
       // Restore own encrypted message from pending queue & persist locally
       if (msg.encrypted && msg.sender === username) {
-        const idx = pendingSent.current.findIndex(p => p.roomId === (msg.roomId || 'general'));
+        const idx = pendingSent.current.findIndex(p => p.roomId === msg.roomId);
         if (idx !== -1) {
           const pending = pendingSent.current[idx];
           msg.content = pending.content;
@@ -360,14 +369,26 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
         fetchRooms();
       }
 
-      // Browser push notification for new messages
+      // Browser push notification + in-app toast for new messages
       if ((msg.type === 'CHAT' || msg.type === 'PRIVATE') && msg.sender !== username) {
-        const roomObj = rooms.find(r => r.id === roomId);
+        const roomObj = roomsRef.current.find(r => r.id === roomId);
         const roomName = roomObj ? (roomObj.type === 'PRIVATE'
           ? roomObj.name.split(' & ').find(n => n !== username) || roomObj.name
           : roomObj.name) : 'Чат';
         const body = msg.content || (msg.fileUrl ? '📎 Файл' : 'Новое сообщение');
         showBrowserNotification(`${msg.sender} — ${roomName}`, body, roomId);
+
+        // In-app toast notification (Bug 4 fix)
+        if (roomId !== activeRoomIdRef.current || document.hidden) {
+          setMessageNotification({
+            sender: msg.sender,
+            roomName,
+            content: body,
+            roomId,
+            avatarUrl: msg.sender ? (roomsRef.current._avatarMap || {})[msg.sender] : '',
+          });
+        }
+
         // Play sound if not active tab or not current room
         if (document.hidden || roomId !== activeRoomIdRef.current) {
           try { notifSound.current?.(); } catch (e) {}
@@ -714,7 +735,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           return copy;
         });
         loadedRooms.current.delete(roomId);
-        if (activeRoomId === roomId) setActiveRoomId('general');
+        if (activeRoomId === roomId) setActiveRoomId(null);
         fetchRooms();
       }
     } catch (err) {
@@ -735,7 +756,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
 
   const activeRoom = rooms.find((r) => r.id === activeRoomId);
   const activeMessages = messagesByRoom[activeRoomId] || [];
-  const roomName = activeRoom ? activeRoom.name : 'Общий чат';
+  const roomName = activeRoom ? activeRoom.name : 'Выберите чат';
 
   const getPeerUsername = (room) => {
     if (!room || room.type !== 'PRIVATE') return null;
@@ -767,6 +788,17 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
       setE2eUnavailable(true);
     }
   };
+
+  // Compute security code when call becomes active (Bug 5)
+  useEffect(() => {
+    if (webrtc.callState === 'active' && webrtc.callPeer && e2eReady) {
+      e2eManager.getSecurityCode(webrtc.callPeer, token)
+        .then(code => setCallSecurityCode(code || null))
+        .catch(() => setCallSecurityCode(null));
+    } else if (webrtc.callState === 'idle') {
+      setCallSecurityCode(null);
+    }
+  }, [webrtc.callState, webrtc.callPeer, e2eReady, token]);
 
   return (
     <div className="chat-container">
@@ -852,6 +884,16 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           }}
         />
       )}
+      {messageNotification && (
+        <MessageNotificationPopup
+          notification={messageNotification}
+          onClose={() => setMessageNotification(null)}
+          onGoToRoom={(roomId) => {
+            setMessageNotification(null);
+            if (roomId) selectRoom(roomId);
+          }}
+        />
+      )}
       {webrtc.callState === 'incoming' && (
         <IncomingCallModal
           caller={webrtc.callPeer}
@@ -875,6 +917,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           onEndCall={webrtc.endCall}
           onToggleMute={webrtc.toggleMute}
           onToggleVideo={webrtc.toggleVideo}
+          securityCode={callSecurityCode}
         />
       )}
     </div>

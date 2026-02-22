@@ -58,15 +58,9 @@ class ChatWebSocketHandlerTest {
         when(jwtService.isTokenValid("valid-token")).thenReturn(true);
         when(jwtService.extractUsername("valid-token")).thenReturn("alice");
 
-        RoomDto generalRoom = createRoom("general", RoomType.GENERAL);
-        when(roomService.joinRoom("general", "alice")).thenReturn(generalRoom);
-        when(roomService.getRoomById("general")).thenReturn(generalRoom);
-
         handler.afterConnectionEstablished(session);
 
         verify(chatService).addUser("alice");
-        verify(roomService).joinRoom("general", "alice");
-        verify(chatService).send(eq("general"), any(MessageDto.class));
     }
 
     @Test
@@ -658,24 +652,13 @@ class ChatWebSocketHandlerTest {
         when(jwtService.isTokenValid("valid-token")).thenReturn(true);
         when(jwtService.extractUsername("valid-token")).thenReturn("alice");
 
-        RoomDto generalRoom = createRoom("general", RoomType.GENERAL);
-        when(roomService.joinRoom("general", "alice")).thenReturn(generalRoom);
-        when(roomService.getRoomById("general")).thenReturn(generalRoom);
-
         handler.afterConnectionEstablished(session);
         reset(chatService);
-
-        // Reconnect roomService mock for disconnect broadcast
-        when(roomService.getRoomById("general")).thenReturn(generalRoom);
 
         // Then disconnect
         handler.afterConnectionClosed(session, CloseStatus.NORMAL);
 
         verify(chatService).removeUser("alice");
-        verify(chatService).send(eq("general"), argThat(msg ->
-                msg.getType() == MessageType.LEAVE &&
-                "alice".equals(msg.getSender())
-        ));
     }
 
     // === Helpers ===
@@ -935,5 +918,115 @@ class ChatWebSocketHandlerTest {
             String payload = ((TextMessage) msg).getPayload();
             return payload.contains("\"callType\":\"video\"");
         }));
+    }
+
+    // === GROUP_KEY RELAY TESTS ===
+
+    @Test
+    @DisplayName("GROUP_KEY - relays encrypted group key to target user")
+    void groupKey_relaysToTarget() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+        WebSocketSession bobSession = connectUser("s2", "bob", "token-b");
+
+        // Alice sends GROUP_KEY to Bob (distributing group encryption key)
+        MessageDto groupKeyMsg = new MessageDto();
+        groupKeyMsg.setType(MessageType.GROUP_KEY);
+        Map<String, String> extra = new HashMap<>();
+        extra.put("target", "bob");
+        extra.put("roomId", "group-room-1");
+        groupKeyMsg.setExtra(extra);
+        // E2E encrypted payload (group key encrypted with pairwise Double Ratchet)
+        groupKeyMsg.setEncryptedContent("base64-encrypted-group-key");
+        groupKeyMsg.setIv("base64-iv");
+        groupKeyMsg.setRatchetKey("base64-rk");
+
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(groupKeyMsg)));
+
+        // Bob should receive the GROUP_KEY
+        verify(bobSession).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"type\":\"GROUP_KEY\"")
+                    && payload.contains("\"sender\":\"alice\"")
+                    && payload.contains("\"roomId\":\"group-room-1\"");
+        }));
+
+        // Alice should NOT receive the GROUP_KEY
+        verify(aliceSession, never()).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"type\":\"GROUP_KEY\"");
+        }));
+    }
+
+    @Test
+    @DisplayName("GROUP_KEY - target offline does not crash")
+    void groupKey_targetOffline_noCrash() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+        // Bob is NOT connected
+
+        MessageDto groupKeyMsg = new MessageDto();
+        groupKeyMsg.setType(MessageType.GROUP_KEY);
+        Map<String, String> extra = new HashMap<>();
+        extra.put("target", "bob");
+        extra.put("roomId", "group-room-2");
+        groupKeyMsg.setExtra(extra);
+
+        // Should not throw
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(groupKeyMsg)));
+    }
+
+    @Test
+    @DisplayName("GROUP_KEY - preserves E2E encryption fields during relay")
+    void groupKey_preservesE2eFields() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+        WebSocketSession bobSession = connectUser("s2", "bob", "token-b");
+
+        MessageDto groupKeyMsg = new MessageDto();
+        groupKeyMsg.setType(MessageType.GROUP_KEY);
+        Map<String, String> extra = new HashMap<>();
+        extra.put("target", "bob");
+        extra.put("roomId", "group-room-3");
+        groupKeyMsg.setExtra(extra);
+        groupKeyMsg.setEncryptedContent("enc-payload");
+        groupKeyMsg.setIv("iv-data");
+        groupKeyMsg.setRatchetKey("rk-data");
+        groupKeyMsg.setMessageNumber(5);
+        groupKeyMsg.setPreviousChainLength(2);
+        groupKeyMsg.setEphemeralKey("ek-data");
+        groupKeyMsg.setSenderIdentityKey("sik-data");
+
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(groupKeyMsg)));
+
+        verify(bobSession).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"encryptedContent\":\"enc-payload\"")
+                    && payload.contains("\"iv\":\"iv-data\"")
+                    && payload.contains("\"ratchetKey\":\"rk-data\"");
+        }));
+    }
+
+    @Test
+    @DisplayName("GROUP_KEY - missing extra field is handled gracefully")
+    void groupKey_noExtra_ignored() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+
+        MessageDto groupKeyMsg = new MessageDto();
+        groupKeyMsg.setType(MessageType.GROUP_KEY);
+        // No extra → should not crash
+
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(groupKeyMsg)));
+        // No exception is success
+    }
+
+    @Test
+    @DisplayName("GROUP_KEY - missing target in extra is handled gracefully")
+    void groupKey_noTarget_ignored() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+
+        MessageDto groupKeyMsg = new MessageDto();
+        groupKeyMsg.setType(MessageType.GROUP_KEY);
+        groupKeyMsg.setExtra(new HashMap<>()); // extra exists but no "target"
+
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(groupKeyMsg)));
+        // No exception is success
     }
 }

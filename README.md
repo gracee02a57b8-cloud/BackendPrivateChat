@@ -1,10 +1,10 @@
 # 🐱 BarsikChat
 
-Защищённый мессенджер с **E2E-шифрованием (Signal Protocol)**, комнатами, личными сообщениями, файлами, новостной лентой и панелью администратора.
+Защищённый мессенджер с **полным E2E-шифрованием (Signal Protocol)**, аудио/видеозвонками, групповым шифрованием, комнатами, файлами, голосовыми и видео-кружками, новостной лентой и панелью администратора.
 
 ![Java 21](https://img.shields.io/badge/Java-21-orange) ![Spring Boot 3.3.5](https://img.shields.io/badge/Spring%20Boot-3.3.5-green) ![React 19](https://img.shields.io/badge/React-19-blue) ![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16-336791) ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED)
 
-> **214 backend-тестов · 108 frontend-тестов · 25 test-файлов**
+> **258 backend-тестов · 327 frontend-тестов · 39 test-файлов · 585 тестов суммарно**
 
 ---
 
@@ -20,15 +20,32 @@
 | Симметричный шифр | **AES-256-GCM** (AEAD, 12-byte IV) |
 | KDF | HKDF-SHA-256 |
 | Шифрование файлов | AES-256-GCM (отдельный ключ на файл) |
-| Хранение ключей | IndexedDB (клиентская сторона) |
+| Шифрование голосовых | AES-256-GCM (отдельный ключ + шифрование waveform) |
+| Шифрование видео-кружков | AES-256-GCM (ключи для видео + thumbnail) |
+| Группы (E2E) | Shared **AES-256-GCM** key per room, распределение через pairwise Double Ratchet |
+| Медиа-потоки (WebRTC) | **AES-128-GCM** per-frame через Insertable Streams API |
+| Сигналинг (WebRTC) | SDP/ICE шифруются через Double Ratchet |
+| Хранение ключей | IndexedDB v3 (клиентская сторона) |
 | Верификация | Safety Number (24-значный код) |
 
 - Сервер **не видит** содержимое зашифрованных сообщений (`content: null`)
 - E2E включается **автоматически** во всех личных чатах
+- E2E группы — автоматическое распределение ключей при входе в комнату
+- E2E звонки — сквозное шифрование аудио/видео фреймов (Insertable Streams)
+- E2E сигналинг — SDP/ICE-кандидаты шифруются Double Ratchet
 - 20 One-Time Pre-Keys с автоматическим пополнением
 - Верификация собственного ключа на сервере перед генерацией кода безопасности
 - Retry-логика загрузки ключей (до 3 попыток с backoff)
 - Автоматическая регенерация Signed Pre-Key при отсутствии
+- Кэш расшифрованных собственных сообщений (IndexedDB, 30-дневный TTL)
+
+### TURN-сервер (WebRTC NAT Traversal)
+
+- Выделенный **coturn** сервер на отдельном VPS
+- **HMAC-SHA1** ephemeral credentials (TURN REST API)
+- Credentials TTL: 24 часа, авто-обновление каждый час
+- TURN over TLS (TCP 443 fallback)
+- STUN + TURN (UDP 3478 + TCP 443)
 
 ### Транспортная безопасность
 
@@ -58,6 +75,7 @@
 ### 💬 Чат
 - Real-time WebSocket-чат
 - 🔐 E2E-шифрование в личных чатах (Signal Protocol)
+- 🔐 E2E-шифрование в групповых чатах (shared AES-256-GCM key)
 - 🏠 Комнаты: общий чат, приватные, групповые
 - 🔗 Приглашения по ссылке
 - ✏️ Редактирование и удаление сообщений
@@ -65,13 +83,24 @@
 - @ Упоминания пользователей
 - ⏰ Отложенные сообщения
 - 📊 Статусы доставки / прочтения
-- 🟢 Индикатор онлайн
+- 🟢 Индикатор онлайн / last seen
 - ⌨️ Индикатор набора текста
 - 🔔 Push-уведомления (браузерные)
 
+### 📞 Звонки (WebRTC)
+- 🎤 Аудиозвонки (1-на-1)
+- 📹 Видеозвонки (1-на-1)
+- 🔐 E2E-шифрование медиа-потоков (AES-128-GCM, Insertable Streams)
+- 🔐 E2E-шифрование сигналинга (SDP/ICE через Double Ratchet)
+- STUN + TURN (NAT traversal, HMAC ephemeral credentials)
+- UI: входящий звонок, таймер, mute, камера вкл/выкл
+
 ### 📎 Файлы и медиа
 - Файлы до 100 МБ (с E2E-шифрованием)
+- 🎤 Голосовые сообщения (с E2E-шифрованием + waveform)
+- 🎥 Видео-кружки (с E2E-шифрованием видео + thumbnail)
 - 😊 Emoji Picker (160 эмодзи)
+- 👤 Аватары пользователей
 
 ### 📰 Новостная лента
 - Публикации с изображениями
@@ -101,16 +130,18 @@
 
 ```
 ├── backend/                     # Spring Boot 3.3.5 (Java 21)
-│   ├── controller/              # 9 контроллеров (REST + WebSocket)
+│   ├── controller/              # 11 контроллеров (REST + WebSocket)
 │   │   ├── AdminController          # GET /api/admin/stats
 │   │   ├── AuthController           # Регистрация / логин
+│   │   ├── AvatarController         # Загрузка / получение аватаров
 │   │   ├── ChatController           # REST-эндпоинты чата
-│   │   ├── ChatWebSocketHandler     # WebSocket real-time
+│   │   ├── ChatWebSocketHandler     # WebSocket real-time (чат + звонки + GROUP_KEY)
 │   │   ├── FileController           # Загрузка файлов
 │   │   ├── KeyBundleController      # E2E ключи (X3DH, 7 endpoints)
 │   │   ├── NewsController           # Новостная лента
 │   │   ├── RoomController           # Управление комнатами
-│   │   └── TaskController           # Задачи
+│   │   ├── TaskController           # Задачи
+│   │   └── WebRtcController         # ICE-конфигурация (TURN HMAC credentials)
 │   ├── service/                 # 8 сервисов
 │   │   ├── AdminService             # Агрегация статистики
 │   │   ├── ChatService              # Сообщения + онлайн-трекинг
@@ -121,8 +152,8 @@
 │   │   ├── SchedulerService         # Отложенные сообщения
 │   │   └── TaskService              # Задачи
 │   ├── entity/                  # 8 JPA-сущностей
-│   │   ├── UserEntity               # Пользователь (username, password, role)
-│   │   ├── MessageEntity            # Сообщение (E2E-поля, ответы, упоминания)
+│   │   ├── UserEntity               # Пользователь (username, password, role, avatarUrl)
+│   │   ├── MessageEntity            # Сообщение (E2E + groupEncrypted + voice + video)
 │   │   ├── RoomEntity               # Комната (GENERAL / PRIVATE / ROOM)
 │   │   ├── KeyBundleEntity          # Ключевой бандл (X3DH)
 │   │   ├── OneTimePreKeyEntity      # Одноразовые пре-ключи
@@ -132,30 +163,43 @@
 │   ├── config/                  # Конфигурации
 │   │   ├── SecurityConfig           # JWT-фильтр, CORS, rate-limit, RBAC
 │   │   ├── WebSocketConfig          # WebSocket handshake
+│   │   ├── WebConfig                # Static resources
 │   │   └── AdminUserInitializer     # Создание admin-пользователя
 │   └── resources/
-│       ├── application.yml
-│       └── db/migration/        # Flyway (V1–V5)
+│       ├── application.yml          # Конфиг (TURN secret, JWT, DB)
+│       └── db/migration/        # Flyway (V1–V10)
 ├── frontend/                    # React 19.2 + Vite 7.3
 │   ├── src/
-│   │   ├── components/          # 16 React-компонентов
+│   │   ├── components/          # 22 React-компонента
 │   │   │   ├── AdminPanel           # Дашборд администратора
-│   │   │   ├── Chat                 # Оркестратор чата + WebSocket
+│   │   │   ├── CallScreen           # UI активного звонка
+│   │   │   ├── Chat                 # Оркестратор чата + WebSocket + GroupE2E
 │   │   │   ├── ChatRoom             # Лента сообщений + ввод
+│   │   │   ├── IncomingCallModal    # Модал входящего звонка
 │   │   │   ├── Sidebar              # Боковая панель + табы
 │   │   │   ├── Login                # Форма входа / регистрации
+│   │   │   ├── ProfileModal         # Профиль + аватар
 │   │   │   ├── SecurityCodeModal    # Код безопасности E2E
+│   │   │   ├── VoiceRecorder        # Запись голосовых сообщений
+│   │   │   ├── VoiceMessage         # Воспроизведение голосовых
+│   │   │   ├── VideoCircleRecorder  # Запись видео-кружков
+│   │   │   ├── VideoCircleMessage   # Воспроизведение видео-кружков
 │   │   │   ├── EmojiPicker          # Выбор эмодзи
 │   │   │   ├── NewsBoard / NewsCard # Новостная лента
 │   │   │   ├── TaskPanel            # Канбан-доска
 │   │   │   └── ...                  # CreateRoom, JoinRoom, UserSearch, ...
-│   │   └── crypto/              # 6 модулей E2E-шифрования
-│   │       ├── X3DH.js              # Key Agreement
-│   │       ├── DoubleRatchet.js     # Forward Secrecy
-│   │       ├── E2EManager.js        # Оркестратор (верификация ключей)
-│   │       ├── KeyManager.js        # Управление ключами (retry, sync)
-│   │       ├── CryptoStore.js       # IndexedDB хранилище
-│   │       └── utils.js             # Web Crypto API утилиты
+│   │   ├── crypto/              # 8 модулей E2E-шифрования
+│   │   │   ├── X3DH.js              # Key Agreement
+│   │   │   ├── DoubleRatchet.js     # Forward Secrecy
+│   │   │   ├── E2EManager.js        # Оркестратор (верификация ключей + файлы)
+│   │   │   ├── KeyManager.js        # Управление ключами (retry, sync)
+│   │   │   ├── CryptoStore.js       # IndexedDB v3 (ключи + sentMessages + groupKeys)
+│   │   │   ├── CallCrypto.js        # E2E медиа-фреймов (AES-128-GCM, Insertable Streams)
+│   │   │   ├── GroupCrypto.js       # E2E групповых чатов (shared AES-256-GCM per room)
+│   │   │   └── utils.js             # Web Crypto API утилиты
+│   │   └── hooks/               # 2 React-хука
+│   │       ├── useWebRTC.js         # WebRTC звонки + E2E сигналинг + E2E медиа
+│   │       └── useDecryptedUrl.js   # Расшифровка файлов для отображения
 │   ├── Dockerfile               # Multi-stage → nginx:alpine
 │   ├── nginx.conf               # Reverse proxy (HTTP)
 │   └── nginx-ssl.conf           # Reverse proxy (HTTPS + TLS)
@@ -259,6 +303,7 @@ docker compose down -v
 | `DDL_AUTO` | `validate` | Hibernate DDL (`update` / `validate`) |
 | `HIKARI_MAX_POOL` | `10` | Макс. соединений в пуле |
 | `LOG_LEVEL` | `INFO` | Уровень логирования |
+| `TURN_SECRET` | *(обязательно для звонков)* | HMAC-секрет для coturn (TURN REST API) |
 
 ### Production (HTTPS)
 
@@ -280,6 +325,11 @@ docker compose down -v
 | `V3__add_encryption_fields.sql` | Поля шифрования в messages (9 колонок) |
 | `V4__add_reply_and_mentions.sql` | Ответы (reply_to) + упоминания (mentions JSON) |
 | `V5__add_user_role.sql` | Колонка role в app_users (USER / ADMIN) |
+| `V6__add_last_seen.sql` | Last seen timestamp |
+| `V7__add_voice_fields.sql` | Голосовые сообщения (duration, waveform) |
+| `V8__add_video_circle_fields.sql` | Видео-кружки (thumbnailUrl, duration) |
+| `V9__add_avatar_url.sql` | Аватары пользователей |
+| `V10__add_group_encrypted.sql` | Флаг groupEncrypted для групповых E2E |
 
 ---
 
@@ -346,6 +396,17 @@ docker compose down -v
 | PUT | `/{id}` | Обновить задачу |
 | DELETE | `/{id}` | Удалить задачу |
 
+### WebRTC (`/api/webrtc`)
+| Метод | Путь | Описание |
+|---|---|---|
+| GET | `/ice-config` | ICE-конфигурация (STUN + TURN с HMAC credentials) |
+
+### Аватары
+| Метод | Путь | Описание |
+|---|---|---|
+| POST | `/api/avatar/upload` | Загрузить аватар |
+| GET | `/api/uploads/avatars/{filename}` | Получить аватар |
+
 ### WebSocket-сообщения (JSON)
 
 | Тип | Описание |
@@ -360,33 +421,43 @@ docker compose down -v
 | `STATUS_UPDATE` | Обновление статуса доставки |
 | `REPLY_NOTIFICATION` | Уведомление об ответе |
 | `MENTION_NOTIFICATION` | Уведомление об упоминании |
+| `VOICE` | Голосовое сообщение (с E2E) |
+| `VIDEO_CIRCLE` | Видео-кружок (с E2E) |
+| `AVATAR_UPDATE` | Обновление аватара |
+| `CALL_OFFER` | SDP-оффер звонка (E2E-шифрование сигналинга) |
+| `CALL_ANSWER` | SDP-ответ на звонок (E2E-шифрование сигналинга) |
+| `CALL_REJECT` / `CALL_END` / `CALL_BUSY` | Управление звонком |
+| `ICE_CANDIDATE` | ICE-кандидат (E2E-шифрование) |
+| `GROUP_KEY` | Распределение группового ключа (E2E через Double Ratchet) |
 | `TASK_CREATED` / `TASK_COMPLETED` / `TASK_OVERDUE` | Задачи |
 
 ---
 
 ## 🧪 Тесты
 
-### Backend — 214 тестов
+### Backend — 258 тестов
 
 | Категория | Класс | Тестов |
 |---|---|---|
 | **Контроллеры** | AdminControllerTest | 2 |
 | | AuthControllerTest | 10 |
-| | ChatWebSocketHandlerTest | 21 |
+| | ChatWebSocketHandlerTest | 39 |
 | | FileControllerTest | 12 |
 | | KeyBundleControllerTest | 14 |
 | | NewsControllerTest | 5 |
 | | RoomControllerTest | 17 |
 | | TaskControllerTest | 13 |
+| | WebRtcControllerTest | 3 |
 | **Сервисы** | AdminServiceTest | 4 |
-| | ChatServiceTest | 21 |
+| | ChatServiceTest | 26 |
 | | JwtServiceTest | 9 |
 | | KeyBundleServiceTest | 21 |
+| | LastSeenTest | 8 |
 | | NewsServiceTest | 7 |
 | | RoomServiceTest | 13 |
 | | SchedulerServiceTest | 6 |
 | | TaskServiceTest | 9 |
-| **E2E / Поля** | E2EFieldPropagationTest | 8 |
+| **E2E / Поля** | E2EFieldPropagationTest | 18 |
 | **Интеграционные** | IntegrationTest (H2) | 6 |
 | | SecurityIntegrationTest (H2) | 16 |
 
@@ -394,16 +465,31 @@ docker compose down -v
 cd backend && mvn test
 ```
 
-### Frontend — 108 тестов
+### Frontend — 327 тестов
 
 | Файл | Тестов | Описание |
 |---|---|---|
+| **Криптография** | | |
 | utils.test.js | 36 | Криптографические утилиты (ECDH, ECDSA, AES-GCM, HKDF) |
 | SecurityCodeDiagnostic.test.js | 30 | Диагностика кодов безопасности (A–J сценарии) |
-| SecurityCodeModal.test.jsx | 16 | UI-компонент кода безопасности |
+| CallCrypto.test.js | 20 | E2E медиа-фреймов (AES-128-GCM, Insertable Streams) |
+| GroupCrypto.test.js | 22 | E2E групповых чатов (shared AES-256-GCM) |
+| CryptoStoreV3.test.js | 15 | IndexedDB v3 (sentMessages + groupKeys) |
 | DoubleRatchet.test.js | 11 | Double Ratchet протокол |
 | E2ESecurityCode.test.js | 9 | Генерация и верификация Safety Number |
 | X3DH.test.js | 6 | Extended Triple Diffie-Hellman |
+| **Компоненты** | | |
+| VideoCircleMessage.test.jsx | 27 | Видео-кружки — воспроизведение |
+| VoiceMessage.test.jsx | 26 | Голосовые сообщения — воспроизведение |
+| SidebarLogic.test.js | 26 | Логика боковой панели |
+| VideoCircleRecorder.test.jsx | 21 | Видео-кружки — запись |
+| CallScreen.test.jsx | 18 | UI активного звонка |
+| SecurityCodeModal.test.jsx | 16 | UI кода безопасности |
+| VoiceRecorder.test.jsx | 14 | Голосовые — запись |
+| IncomingCallModal.test.jsx | 10 | Модал входящего звонка |
+| DeleteModal.test.js | 9 | Модал удаления сообщений |
+| **Хуки** | | |
+| useDecryptedUrl.test.js | 11 | Расшифровка файлов (fetch → decrypt → blob) |
 
 ```bash
 cd frontend && npx vitest run
@@ -418,21 +504,24 @@ cd frontend && npx vitest run
 - Spring Security + JWT (HMAC-SHA256) + RBAC
 - Spring WebSocket (TextWebSocketHandler)
 - Spring Data JPA + Hibernate
-- PostgreSQL 16 + Flyway (5 миграций)
+- PostgreSQL 16 + Flyway (10 миграций)
 - BCrypt (password hashing)
 - JJWT 0.11.5
+- HMAC-SHA1 (TURN ephemeral credentials)
 
 ### Frontend
 - **React 19.2** + **Vite 7.3**
 - **Vitest 4.0** + Testing Library
 - Web Crypto API (ECDH, ECDSA, AES-GCM, HKDF, HMAC)
-- IndexedDB (хранение ключей E2E)
+- WebRTC (RTCPeerConnection, Insertable Streams)
+- IndexedDB v3 (хранение ключей E2E + sentMessages + groupKeys)
 - CSS (адаптивный дизайн, тёмная тема)
 
 ### Инфраструктура
 - **Docker** + Docker Compose (4 сервиса)
 - **nginx** (reverse proxy + TLS termination)
 - **Let's Encrypt** (certbot, автообновление)
+- **coturn** (TURN-сервер на отдельном VPS, HMAC-SHA1 auth)
 - Flyway (миграции БД)
 - GitHub (CI-ready)
 
@@ -444,11 +533,15 @@ cd frontend && npx vitest run
 |---|---|---|
 | Протокол E2E | ✅ Signal (X3DH + Double Ratchet) | ⚠️ MTProto 2.0 (кастомный) |
 | E2E по умолчанию | ✅ Авто в личных | ❌ Ручной запуск |
+| E2E группы | ✅ Shared AES-256-GCM key | ❌ Нет |
+| E2E звонки (медиа) | ✅ AES-128-GCM per-frame | ✅ Есть |
+| E2E звонки (сигналинг) | ✅ Double Ratchet | ⚠️ MTProto |
 | Forward Secrecy | ✅ Per-message | ⚠️ Per-session |
 | Шифр | ✅ AES-256-GCM (AEAD) | ⚠️ AES-256-IGE |
 | TLS | ✅ 1.2/1.3 стандарт | Кастомный транспорт |
 | Сервер видит сообщения | ❌ Нет | ✅ Cloud Chats |
 | Верификация ключей | ✅ Safety Number | ✅ Fingerprint |
+| TURN credentials | ✅ HMAC ephemeral (24h TTL) | Проприетарный |
 | Ролевая модель | ✅ USER / ADMIN | ✅ Многоуровневая |
 
 ---

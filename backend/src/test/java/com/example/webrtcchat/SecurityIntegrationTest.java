@@ -333,7 +333,7 @@ class SecurityIntegrationTest {
     void historyWithLargeSize() throws Exception {
         mockMvc.perform(get("/api/rooms/general/history?page=0&size=9999")
                         .header("Authorization", "Bearer " + tokenAlice))
-                .andExpect(status().isOk());
+                .andExpect(status().isNotFound());
     }
 
     // === Helper ===

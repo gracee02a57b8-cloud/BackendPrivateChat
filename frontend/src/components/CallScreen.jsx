@@ -36,6 +36,7 @@ export default function CallScreen({
   onEndCall,
   onToggleMute,
   onToggleVideo,
+  securityCode,
 }) {
   const isVideo = callType === 'video';
 
@@ -110,6 +111,15 @@ export default function CallScreen({
 
       {/* Hidden audio element – plays remote audio for audio-only calls */}
       <audio ref={remoteAudioEl} autoPlay playsInline />
+
+      {/* Security code (Bug 5) */}
+      {securityCode && callState === 'active' && (
+        <div className="call-security-code">
+          <span className="call-security-icon">🔒</span>
+          <span className="call-security-label">Код безопасности</span>
+          <span className="call-security-digits">{securityCode}</span>
+        </div>
+      )}
 
       {/* Controls bar */}
       <div className="call-controls">

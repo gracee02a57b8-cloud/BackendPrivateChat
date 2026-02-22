@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -38,7 +37,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
     private final Map<String, WebSocketSession> userSessions = new ConcurrentHashMap<>();
-    private final Set<String> announcedUsers = ConcurrentHashMap.newKeySet();
     private final ChatService chatService;
     private final JwtService jwtService;
     private final RoomService roomService;
@@ -81,20 +79,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         sessions.put(session.getId(), session);
         userSessions.put(username, session);
         chatService.addUser(username);
-        roomService.joinRoom("general", username);
-
-        // Only announce JOIN once — skip on reconnections / session replacement
-        if (announcedUsers.add(username)) {
-            MessageDto joinMsg = new MessageDto();
-            joinMsg.setId(UUID.randomUUID().toString());
-            joinMsg.setSender(username);
-            joinMsg.setContent(username + " присоединился к чату");
-            joinMsg.setTimestamp(now());
-            joinMsg.setType(MessageType.JOIN);
-            joinMsg.setRoomId("general");
-            chatService.send("general", joinMsg);
-            broadcastToRoom("general", joinMsg);
-        }
 
         log.info("User '{}' connected. Online: {}", username, chatService.getOnlineUsers().size());
     }
@@ -183,7 +167,10 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         incoming.setStatus("SENT");
 
         String roomId = incoming.getRoomId();
-        if (roomId == null) roomId = "general";
+        if (roomId == null || roomId.isEmpty()) {
+            log.warn("User '{}' sent message without roomId", username);
+            return;
+        }
         incoming.setRoomId(roomId);
 
         // Room membership check (C9)
@@ -269,7 +256,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     private void handleScheduled(String username, MessageDto incoming) {
         String roomId = incoming.getRoomId();
-        if (roomId == null) roomId = "general";
+        if (roomId == null || roomId.isEmpty()) return;
         if (!isUserInRoom(username, roomId)) return;
         String scheduledAt = incoming.getScheduledAt();
         if (scheduledAt == null) return;
@@ -432,17 +419,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 userSessions.remove(username);
                 chatService.removeUser(username);
                 chatService.updateLastSeen(username);
-                announcedUsers.remove(username);
-
-                MessageDto leaveMsg = new MessageDto();
-                leaveMsg.setId(UUID.randomUUID().toString());
-                leaveMsg.setSender(username);
-                leaveMsg.setContent(username + " покинул чат");
-                leaveMsg.setTimestamp(now());
-                leaveMsg.setType(MessageType.LEAVE);
-                leaveMsg.setRoomId("general");
-                chatService.send("general", leaveMsg);
-                broadcastToRoom("general", leaveMsg);
 
                 log.info("User '{}' disconnected. Online: {}", username, chatService.getOnlineUsers().size());
             }
