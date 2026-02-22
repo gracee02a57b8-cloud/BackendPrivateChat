@@ -108,4 +108,25 @@ describe('CallScreen', () => {
     fireEvent.click(screen.getByTitle('Выключить камеру'));
     expect(onToggleVideo).toHaveBeenCalledOnce();
   });
+
+  it('audio call renders hidden <audio> element for remote playback', () => {
+    const { container } = render(<CallScreen {...defaultProps} callType="audio" />);
+    const audioEl = container.querySelector('audio');
+    expect(audioEl).toBeTruthy();
+    expect(audioEl.autoplay).toBe(true);
+  });
+
+  it('audio call assigns remoteVideoRef to audio element', () => {
+    const remoteVideoRef = { current: null };
+    render(<CallScreen {...defaultProps} callType="audio" remoteVideoRef={remoteVideoRef} />);
+    expect(remoteVideoRef.current).toBeTruthy();
+    expect(remoteVideoRef.current.tagName).toBe('AUDIO');
+  });
+
+  it('video call assigns remoteVideoRef to video element', () => {
+    const remoteVideoRef = { current: null };
+    render(<CallScreen {...defaultProps} callType="video" remoteVideoRef={remoteVideoRef} />);
+    expect(remoteVideoRef.current).toBeTruthy();
+    expect(remoteVideoRef.current.tagName).toBe('VIDEO');
+  });
 });

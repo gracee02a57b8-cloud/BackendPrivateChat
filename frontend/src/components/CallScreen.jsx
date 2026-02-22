@@ -42,11 +42,15 @@ export default function CallScreen({
   // Attach ref to video elements
   const localVidEl = useRef(null);
   const remoteVidEl = useRef(null);
+  const remoteAudioEl = useRef(null);
 
   useEffect(() => {
     if (localVideoRef) localVideoRef.current = localVidEl.current;
-    if (remoteVideoRef) remoteVideoRef.current = remoteVidEl.current;
-  }, [localVideoRef, remoteVideoRef]);
+    if (remoteVideoRef) {
+      // For video calls → use <video>; for audio calls → use hidden <audio>
+      remoteVideoRef.current = isVideo ? remoteVidEl.current : remoteAudioEl.current;
+    }
+  }, [localVideoRef, remoteVideoRef, isVideo]);
 
   const statusLabel =
     callState === 'outgoing' ? 'Вызываем...' :
@@ -103,6 +107,9 @@ export default function CallScreen({
           muted
         />
       )}
+
+      {/* Hidden audio element – plays remote audio for audio-only calls */}
+      <audio ref={remoteAudioEl} autoPlay playsInline />
 
       {/* Controls bar */}
       <div className="call-controls">

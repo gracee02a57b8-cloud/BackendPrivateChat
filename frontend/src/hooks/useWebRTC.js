@@ -150,6 +150,13 @@ export default function useWebRTC({ wsRef, username, token }) {
       remoteStreamRef.current = e.streams[0] || new MediaStream([e.track]);
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = remoteStreamRef.current;
+      } else {
+        // Fallback for audio-only calls if CallScreen hasn't mounted yet
+        const audio = document.createElement('audio');
+        audio.srcObject = remoteStreamRef.current;
+        audio.autoplay = true;
+        audio.play().catch(() => {});
+        remoteVideoRef.current = audio;
       }
     };
 
