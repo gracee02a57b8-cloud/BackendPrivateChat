@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import NewsCard from './NewsCard';
+import { showToast } from './Toast';
+import ConfirmModal from './ConfirmModal';
 
 export default function NewsBoard({ token, username, onBack }) {
   const [newsList, setNewsList] = useState([]);
@@ -27,7 +29,7 @@ export default function NewsBoard({ token, username, onBack }) {
     const file = e.target.files[0];
     if (!file) return;
     if (file.size > 20 * 1024 * 1024) {
-      alert('Файл слишком большой (макс. 20МБ)');
+      showToast('Файл слишком большой (макс. 20МБ)', 'error');
       return;
     }
     setImageFile(file);
@@ -79,8 +81,15 @@ export default function NewsBoard({ token, username, onBack }) {
     }
   };
 
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+
   const handleDelete = async (id) => {
-    if (!confirm('Удалить эту новость?')) return;
+    setDeleteConfirm(id);
+  };
+
+  const confirmDelete = async () => {
+    const id = deleteConfirm;
+    setDeleteConfirm(null);
     try {
       const res = await fetch(`/api/news/${id}`, {
         method: 'DELETE',
@@ -147,6 +156,16 @@ export default function NewsBoard({ token, username, onBack }) {
           <NewsCard key={news.id} news={news} username={username} onDelete={handleDelete} token={token} />
         ))}
       </div>
+
+      {deleteConfirm && (
+        <ConfirmModal
+          message="Удалить эту новость?"
+          icon="🗑"
+          confirmLabel="Удалить"
+          onConfirm={confirmDelete}
+          onCancel={() => setDeleteConfirm(null)}
+        />
+      )}
     </div>
   );
 }

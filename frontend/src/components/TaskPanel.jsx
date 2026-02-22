@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import ConfirmModal from './ConfirmModal';
 
 const STATUS_LABELS = {
   OPEN: '🔴 Открыта',
@@ -24,6 +25,7 @@ export default function TaskPanel({ token, username, onClose }) {
   const [userSuggestions, setUserSuggestions] = useState([]);
   const [taskFile, setTaskFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [deleteTaskConfirm, setDeleteTaskConfirm] = useState(null);
 
   // Get current Moscow time as datetime-local string
   const getMskNow = () => {
@@ -131,7 +133,12 @@ export default function TaskPanel({ token, username, onClose }) {
   };
 
   const deleteTask = async (taskId) => {
-    if (!confirm('Удалить задачу?')) return;
+    setDeleteTaskConfirm(taskId);
+  };
+
+  const confirmDeleteTask = async () => {
+    const taskId = deleteTaskConfirm;
+    setDeleteTaskConfirm(null);
     try {
       await fetch(`/api/tasks/${taskId}`, {
         method: 'DELETE',
@@ -283,6 +290,16 @@ export default function TaskPanel({ token, username, onClose }) {
           </div>
         ))}
       </div>
+
+      {deleteTaskConfirm && (
+        <ConfirmModal
+          message="Удалить задачу?"
+          icon="🗑"
+          confirmLabel="Удалить"
+          onConfirm={confirmDeleteTask}
+          onCancel={() => setDeleteTaskConfirm(null)}
+        />
+      )}
     </div>
   );
 }

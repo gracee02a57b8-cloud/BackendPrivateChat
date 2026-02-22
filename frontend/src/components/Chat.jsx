@@ -8,6 +8,7 @@ import MessageNotificationPopup from './MessageNotificationPopup';
 import SecurityCodeModal from './SecurityCodeModal';
 import IncomingCallModal from './IncomingCallModal';
 import CallScreen from './CallScreen';
+import ToastContainer from './Toast';
 import useWebRTC from '../hooks/useWebRTC';
 import useMediaPermissions from '../hooks/useMediaPermissions';
 import e2eManager from '../crypto/E2EManager';
@@ -806,8 +807,22 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
 
   return (
     <div className="chat-container">
+      {/* Skip navigation */}
+      <a href="#chat-main" className="skip-nav">Перейти к чату</a>
+
+      {/* Connection lost banner */}
+      {!connected && (
+        <div className="connection-banner" role="alert">
+          <span className="connection-banner-icon">⚠️</span>
+          <span className="connection-banner-text">Нет соединения с сервером. Переподключение...</span>
+        </div>
+      )}
+
+      {/* Toast container */}
+      <ToastContainer />
+
       {/* Mobile hamburger */}
-      <button className="mobile-hamburger" onClick={() => setSidebarOpen(true)}>☰</button>
+      <button className="mobile-hamburger" onClick={() => setSidebarOpen(true)} aria-label="Открыть меню">☰</button>
       <Sidebar
         rooms={rooms}
         activeRoomId={activeRoomId}
@@ -836,6 +851,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
       {showTasks ? (
         <TaskPanel token={token} username={username} onClose={() => setShowTasks(false)} />
       ) : (
+        <main id="chat-main">
         <ChatRoom
           messages={activeMessages}
           onSendMessage={sendMessage}
@@ -861,6 +877,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           }}
           callState={webrtc.callState}
         />
+        </main>
       )}
       {taskNotification && (
         <TaskNotificationPopup

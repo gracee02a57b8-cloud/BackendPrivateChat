@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { copyToClipboard } from '../utils/clipboard';
 
 /**
@@ -7,6 +7,7 @@ import { copyToClipboard } from '../utils/clipboard';
  */
 export default function SecurityCodeModal({ securityCode, peerUsername, onClose, unavailable }) {
   const [copied, setCopied] = useState(false);
+  const modalRef = useRef(null);
 
   useEffect(() => {
     if (copied) {
@@ -14,6 +15,29 @@ export default function SecurityCodeModal({ securityCode, peerUsername, onClose,
       return () => clearTimeout(t);
     }
   }, [copied]);
+
+  // Focus trap + keyboard handling
+  useEffect(() => {
+    const modal = modalRef.current;
+    if (!modal) return;
+    const focusable = modal.querySelectorAll('button, [tabindex]:not([tabindex="-1"])');
+    if (focusable.length) focusable[0].focus();
+
+    const handleKey = (e) => {
+      if (e.key === 'Escape') { onClose(); return; }
+      if (e.key === 'Tab' && focusable.length > 0) {
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault(); last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault(); first.focus();
+        }
+      }
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [onClose]);
 
   const handleCopy = () => {
     copyToClipboard(securityCode || '');
@@ -23,8 +47,8 @@ export default function SecurityCodeModal({ securityCode, peerUsername, onClose,
   if (!securityCode && !unavailable) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal security-code-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label="Код безопасности">
+      <div className="modal security-code-modal" onClick={(e) => e.stopPropagation()} ref={modalRef}>
         <div className="security-code-header">
           <span className="security-icon">{unavailable ? '🔓' : '🔐'}</span>
           <h3>{unavailable ? 'E2E шифрование' : 'Код безопасности'}</h3>

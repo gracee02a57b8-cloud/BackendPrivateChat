@@ -212,10 +212,10 @@ export default function Sidebar({
           </div>
         </div>
         <div className="sb-chat-actions">
-          <span className="sb-share-btn" onClick={(e) => copyShareLink(e, room.id)} title="Поделиться">
+          <span className="sb-share-btn" onClick={(e) => copyShareLink(e, room.id)} title="Поделиться" role="button" aria-label="Поделиться ссылкой">
             {shareCopied === room.id ? '✅' : '📤'}
           </span>
-          <span className="sb-delete-btn" onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ id: room.id, name: displayName }); }} title="Удалить">
+          <span className="sb-delete-btn" onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ id: room.id, name: displayName }); }} title="Удалить" role="button" aria-label="Удалить чат">
             🗑
           </span>
         </div>
@@ -243,10 +243,10 @@ export default function Sidebar({
           </div>
         </div>
         <div className="sb-header-right">
-          <button className="sb-icon-btn" onClick={() => setShowContacts(!showContacts)} title="Контакты">👥</button>
-          <button className="sb-icon-btn" onClick={onShowNews} title="Новости">📰</button>
-          <button className="sb-icon-btn" onClick={onShowTasks} title="Задачи">📋</button>
-          <button className="sb-menu-btn" onClick={() => setShowMenu(!showMenu)}>⋮</button>
+          <button className="sb-icon-btn" onClick={() => setShowContacts(!showContacts)} title="Контакты" aria-label="Контакты">👥</button>
+          <button className="sb-icon-btn" onClick={onShowNews} title="Новости" aria-label="Новости">📰</button>
+          <button className="sb-icon-btn" onClick={onShowTasks} title="Задачи" aria-label="Задачи">📋</button>
+          <button className="sb-menu-btn" onClick={() => setShowMenu(!showMenu)} aria-label="Меню" title="Меню">⋮</button>
           {showMenu && (
             <div className="sb-menu-dropdown" ref={menuRef}>
               <button onClick={() => { setShowMenu(false); setShowProfile(true); }}>👤 Профиль</button>

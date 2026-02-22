@@ -47,6 +47,7 @@ export default function EmojiPicker({ onSelect, onClose }) {
               className={`emoji-cat-btn ${activeCategory === cat ? 'active' : ''}`}
               onClick={() => setActiveCategory(cat)}
               title={cat}
+              aria-label={`Категория: ${cat}`}
             >
               {EMOJI_DATA[cat][0]}
             </button>
@@ -60,6 +61,9 @@ export default function EmojiPicker({ onSelect, onClose }) {
             className="emoji-item"
             onClick={() => onSelect(emoji)}
             role="button"
+            aria-label={`Эмодзи ${emoji}`}
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(emoji); } }}
           >
             {emoji}
           </span>

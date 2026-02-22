@@ -8,6 +8,7 @@ import VideoCircleMessage from './VideoCircleMessage';
 import e2eManager from '../crypto/E2EManager';
 import useDecryptedUrl from '../hooks/useDecryptedUrl';
 import { copyToClipboard } from '../utils/clipboard';
+import { showToast } from './Toast';
 
 function formatFileSize(bytes) {
   if (bytes < 1024) return bytes + ' Б';
@@ -296,7 +297,7 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
     const file = e.dataTransfer.files[0];
     if (file) {
       if (file.size > 100 * 1024 * 1024) {
-        alert('Файл слишком большой (макс. 100 МБ)');
+        showToast('Файл слишком большой (макс. 100 МБ)', 'error');
         return;
       }
       uploadFile(file);
@@ -307,7 +308,7 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
     const file = e.target.files[0];
     if (!file) return;
     if (file.size > 100 * 1024 * 1024) {
-      alert('Файл слишком большой (макс. 100 МБ)');
+      showToast('Файл слишком большой (макс. 100 МБ)', 'error');
       e.target.value = '';
       return;
     }
@@ -324,7 +325,7 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
         const file = item.getAsFile();
         if (file) {
           if (file.size > 100 * 1024 * 1024) {
-            alert('Файл слишком большой (макс. 100 МБ)');
+            showToast('Файл слишком большой (макс. 100 МБ)', 'error');
             return;
           }
           uploadFile(file);
@@ -380,14 +381,14 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
         onSendMessage(input.trim() || '', fileData);
         setInput('');
       } else {
-        alert('Ошибка загрузки файла');
+        showToast('Ошибка загрузки файла', 'error');
       }
     };
 
     xhr.onerror = () => {
       setUploading(false);
       setUploadProgress(null);
-      alert('Ошибка загрузки файла');
+      showToast('Ошибка загрузки файла', 'error');
     };
 
     xhr.send(formData);
