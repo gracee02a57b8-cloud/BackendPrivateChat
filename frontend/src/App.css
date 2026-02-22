@@ -4358,3 +4358,290 @@
 .delete-modal-confirm:hover {
   background: #c0392b;
 }
+
+/* ============================================
+   VOICE RECORDER — Telegram-style recording bar
+   ============================================ */
+.voice-recorder {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  background: rgba(30, 30, 40, 0.95);
+  border-radius: 18px;
+  min-height: 48px;
+  animation: voiceRecSlideIn 0.2s ease-out;
+}
+
+@keyframes voiceRecSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.voice-cancel-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: #aaa;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.voice-cancel-btn:hover {
+  background: rgba(231, 76, 60, 0.25);
+  color: #e74c3c;
+}
+
+.voice-rec-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.voice-rec-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #e74c3c;
+  animation: voicePulse 1s ease-in-out infinite;
+}
+
+@keyframes voicePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.4; transform: scale(0.85); }
+}
+
+.voice-rec-timer {
+  font-size: 15px;
+  font-weight: 600;
+  color: #e0e0e0;
+  font-variant-numeric: tabular-nums;
+  min-width: 36px;
+}
+
+.voice-rec-waveform {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  height: 32px;
+  overflow: hidden;
+}
+
+.voice-rec-bar {
+  width: 3px;
+  min-height: 3px;
+  border-radius: 1.5px;
+  background: #4ecca3;
+  transition: height 0.08s ease;
+}
+
+.voice-send-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: #4ecca3;
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.voice-send-btn:hover {
+  background: #3ab892;
+  transform: scale(1.05);
+}
+
+/* Voice Recorder — error state */
+.voice-error {
+  justify-content: space-between;
+}
+.voice-error-text {
+  color: #e74c3c;
+  font-size: 13px;
+  flex: 1;
+  text-align: center;
+}
+
+/* Voice Recorder — uploading state */
+.voice-uploading {
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 16px;
+}
+.voice-upload-bar {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.voice-upload-fill {
+  height: 100%;
+  background: #4ecca3;
+  border-radius: 2px;
+  transition: width 0.15s;
+}
+.voice-upload-text {
+  font-size: 12px;
+  color: #aaa;
+  text-align: center;
+}
+
+/* Mic button in form-actions (Telegram: replaces send when no text) */
+.mic-btn {
+  font-size: 18px;
+  transition: all 0.2s;
+}
+.mic-btn:hover:not(:disabled) {
+  transform: scale(1.15);
+}
+
+/* ============================================
+   VOICE MESSAGE — Telegram-style playback bubble
+   ============================================ */
+.voice-msg {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 4px 4px;
+  min-width: 220px;
+  max-width: 320px;
+}
+
+.voice-play-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: #4ecca3;
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.voice-play-btn:hover {
+  background: #3ab892;
+  transform: scale(1.05);
+}
+.voice-play-btn.playing {
+  background: #3b82f6;
+}
+.voice-play-btn.playing:hover {
+  background: #2563eb;
+}
+
+.voice-msg-own .voice-play-btn {
+  background: rgba(255, 255, 255, 0.2);
+}
+.voice-msg-own .voice-play-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+.voice-msg-own .voice-play-btn.playing {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.voice-msg-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.voice-waveform {
+  display: flex;
+  align-items: center;
+  gap: 1.5px;
+  height: 32px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.voice-bar {
+  width: 3px;
+  min-height: 3px;
+  border-radius: 1.5px;
+  background: rgba(255, 255, 255, 0.25);
+  transition: background 0.1s;
+}
+
+.voice-bar-filled {
+  background: #4ecca3;
+}
+
+.voice-msg-own .voice-bar {
+  background: rgba(255, 255, 255, 0.3);
+}
+.voice-msg-own .voice-bar-filled {
+  background: #fff;
+}
+
+.voice-msg-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.voice-msg-time {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  font-variant-numeric: tabular-nums;
+}
+
+.voice-speed-btn {
+  font-size: 11px;
+  font-weight: 700;
+  color: #4ecca3;
+  background: rgba(78, 204, 163, 0.12);
+  border: none;
+  border-radius: 10px;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.voice-speed-btn:hover {
+  background: rgba(78, 204, 163, 0.25);
+}
+
+.voice-msg-own .voice-msg-time {
+  color: rgba(255, 255, 255, 0.6);
+}
+.voice-msg-own .voice-speed-btn {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.15);
+}
+.voice-msg-own .voice-speed-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* ============================================
+   VOICE — Responsive adjustments
+   ============================================ */
+@media (max-width: 768px) {
+  .voice-msg {
+    max-width: 260px;
+    min-width: 180px;
+  }
+  .voice-play-btn {
+    width: 36px;
+    height: 36px;
+  }
+  .voice-rec-waveform {
+    max-width: 120px;
+  }
+}

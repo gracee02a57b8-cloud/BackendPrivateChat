@@ -427,6 +427,12 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
       msg.fileName = fileData.fileName;
       msg.fileSize = fileData.fileSize;
       msg.fileType = fileData.fileType;
+      // Voice message fields
+      if (fileData.duration != null) {
+        msg.type = 'VOICE';
+        msg.duration = fileData.duration;
+        msg.waveform = fileData.waveform;
+      }
     }
     if (replyData) {
       msg.replyToId = replyData.replyToId;

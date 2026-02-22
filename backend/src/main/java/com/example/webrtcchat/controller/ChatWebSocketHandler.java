@@ -156,7 +156,10 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         // Regular CHAT message
         incoming.setSender(username);
         incoming.setTimestamp(now());
-        incoming.setType(MessageType.CHAT);
+        // Preserve VOICE type from frontend, otherwise set CHAT
+        if (incoming.getType() != MessageType.VOICE) {
+            incoming.setType(MessageType.CHAT);
+        }
         incoming.setId(UUID.randomUUID().toString());
         incoming.setStatus("SENT");
 

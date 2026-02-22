@@ -84,6 +84,12 @@ public class MessageEntity {
     @Column(columnDefinition = "TEXT")
     private String mentions;
 
+    @Column
+    private Integer duration;
+
+    @Column(columnDefinition = "TEXT")
+    private String waveform;
+
     @Column(name = "seq_id", insertable = false, updatable = false)
     private Long seqId;
 
@@ -169,4 +175,10 @@ public class MessageEntity {
 
     public String getMentions() { return mentions; }
     public void setMentions(String mentions) { this.mentions = mentions; }
+
+    public Integer getDuration() { return duration; }
+    public void setDuration(Integer duration) { this.duration = duration; }
+
+    public String getWaveform() { return waveform; }
+    public void setWaveform(String waveform) { this.waveform = waveform; }
 }

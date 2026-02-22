@@ -188,6 +188,9 @@ public class ChatService {
         e.setReplyToSender(dto.getReplyToSender());
         e.setReplyToContent(dto.getReplyToContent());
         e.setMentions(dto.getMentions());
+        // Voice fields
+        e.setDuration(dto.getDuration());
+        e.setWaveform(dto.getWaveform());
         return e;
     }
 
@@ -221,6 +224,9 @@ public class ChatService {
         dto.setReplyToSender(e.getReplyToSender());
         dto.setReplyToContent(e.getReplyToContent());
         dto.setMentions(e.getMentions());
+        // Voice fields
+        dto.setDuration(e.getDuration());
+        dto.setWaveform(e.getWaveform());
         return dto;
     }
 }

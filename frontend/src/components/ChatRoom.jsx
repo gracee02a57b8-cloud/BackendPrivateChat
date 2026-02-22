@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import EmojiPicker from './EmojiPicker';
 import MentionDropdown from './MentionDropdown';
+import VoiceRecorder from './VoiceRecorder';
+import VoiceMessage from './VoiceMessage';
 import { copyToClipboard } from '../utils/clipboard';
 
 function formatFileSize(bytes) {
@@ -93,6 +95,7 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
   const [pinnedMsgId, setPinnedMsgId] = useState(null);
   const [forwardTarget, setForwardTarget] = useState(null);
   const [reactions, setReactions] = useState({});
+  const [isRecording, setIsRecording] = useState(false);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const inputRef = useRef(null);
@@ -549,6 +552,20 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
 
   const renderAttachment = (msg) => {
     if (!msg.fileUrl) return null;
+
+    // Voice message
+    const isVoice = msg.type === 'VOICE' || (msg.duration != null && msg.fileType?.startsWith('audio/'));
+    if (isVoice) {
+      return (
+        <VoiceMessage
+          fileUrl={msg.fileUrl}
+          duration={msg.duration}
+          waveformData={msg.waveform}
+          isOwn={msg.sender === username}
+        />
+      );
+    }
+
     const isImage = msg.fileType && msg.fileType.startsWith('image/');
     if (isImage) {
       return (
@@ -731,7 +748,7 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
                           <span className="msg-meta">
                             {msg.edited && <span className="edited-badge">ред. </span>}
                             {msg.timestamp}
-                            {isOwn && msg.type === 'CHAT' && (
+                            {isOwn && (msg.type === 'CHAT' || msg.type === 'VOICE') && (
                               <span className={`msg-check ${msg.status === 'READ' ? 'read' : ''}`}>
                                 {msg.status === 'READ' ? ' ✓✓' : msg.status === 'DELIVERED' ? ' ✓✓' : ' ✓'}
                               </span>
@@ -746,7 +763,7 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
                         <span className="msg-meta standalone">
                           {msg.edited && <span className="edited-badge">ред. </span>}
                           {msg.timestamp}
-                          {isOwn && msg.type === 'CHAT' && (
+                          {isOwn && (msg.type === 'CHAT' || msg.type === 'VOICE') && (
                             <span className={`msg-check ${msg.status === 'READ' ? 'read' : ''}`}>
                               {msg.status === 'READ' ? ' ✓✓' : msg.status === 'DELIVERED' ? ' ✓✓' : ' ✓'}
                             </span>
@@ -888,6 +905,17 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
       )}
 
       <form className="message-form" onSubmit={handleSubmit}>
+        {isRecording ? (
+          <VoiceRecorder
+            token={token}
+            onSend={(voiceData) => {
+              setIsRecording(false);
+              onSendMessage('', voiceData);
+            }}
+            onCancel={() => setIsRecording(false)}
+          />
+        ) : (
+        <>
         <div className="input-wrapper">
           <button
             type="button"
@@ -953,10 +981,25 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
           >
             ⏰
           </button>
-          <button type="submit" className="action-btn send-btn" disabled={!connected || (!input.trim() && !uploading)}>
-            {editingMsg ? '✏️' : showSchedule && scheduleDate ? '⏰' : '➤'}
-          </button>
+          {/* Show mic button when no text, send button when text exists — Telegram style */}
+          {!input.trim() && !editingMsg && !showSchedule ? (
+            <button
+              type="button"
+              className="action-btn mic-btn"
+              onClick={() => setIsRecording(true)}
+              disabled={!connected}
+              title="Голосовое сообщение"
+            >
+              🎤
+            </button>
+          ) : (
+            <button type="submit" className="action-btn send-btn" disabled={!connected || (!input.trim() && !uploading)}>
+              {editingMsg ? '✏️' : showSchedule && scheduleDate ? '⏰' : '➤'}
+            </button>
+          )}
         </div>
+        </>
+        )}
       </form>
 
       {/* Delete confirmation modal */}

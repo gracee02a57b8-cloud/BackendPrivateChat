@@ -29,6 +29,10 @@ public class MessageDto {
     // Mentions (JSON array of usernames)
     private String mentions;
 
+    // Voice message fields
+    private Integer duration;
+    private String waveform;
+
     // E2E encryption fields
     private boolean encrypted;
     private String encryptedContent;
@@ -129,4 +133,10 @@ public class MessageDto {
 
     public String getMentions() { return mentions; }
     public void setMentions(String mentions) { this.mentions = mentions; }
+
+    public Integer getDuration() { return duration; }
+    public void setDuration(Integer duration) { this.duration = duration; }
+
+    public String getWaveform() { return waveform; }
+    public void setWaveform(String waveform) { this.waveform = waveform; }
 }
