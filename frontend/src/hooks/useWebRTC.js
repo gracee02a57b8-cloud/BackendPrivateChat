@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import e2eManager from '../crypto/E2EManager';
+import { CallCrypto, supportsInsertableStreams } from '../crypto/CallCrypto';
 
 /**
  * useWebRTC – manages RTCPeerConnection, media streams and call state.
@@ -31,6 +32,7 @@ export default function useWebRTC({ wsRef, username, token }) {
   const callStartedAt = useRef(null);
   const pendingCandidates = useRef([]);
   const ringtoneRef = useRef(null);
+  const callCryptoRef = useRef(null);  // E2E media frame encryption
 
   // ──── helpers ────
 
@@ -162,6 +164,12 @@ export default function useWebRTC({ wsRef, username, token }) {
     callStartedAt.current = null;
     pendingCandidates.current = [];
 
+    // Destroy E2E media encryption
+    if (callCryptoRef.current) {
+      callCryptoRef.current.destroy();
+      callCryptoRef.current = null;
+    }
+
     if (pcRef.current) {
       pcRef.current.ontrack = null;
       pcRef.current.onicecandidate = null;
@@ -184,7 +192,10 @@ export default function useWebRTC({ wsRef, username, token }) {
   /** Build RTCPeerConnection with event handlers */
   const createPC = useCallback(async (target) => {
     const config = await fetchIceConfig();
-    const pc = new RTCPeerConnection(config);
+    const pc = new RTCPeerConnection({
+      ...config,
+      ...(supportsInsertableStreams() && { encodedInsertableStreams: true }),
+    });
     pcRef.current = pc;
 
     pc.onicecandidate = async (e) => {
@@ -206,6 +217,10 @@ export default function useWebRTC({ wsRef, username, token }) {
         audio.autoplay = true;
         audio.play().catch(() => {});
         remoteVideoRef.current = audio;
+      }
+      // E2E media decryption on incoming tracks
+      if (callCryptoRef.current) {
+        callCryptoRef.current.setupReceiverDecryption(e.receiver);
       }
     };
 
@@ -248,8 +263,19 @@ export default function useWebRTC({ wsRef, username, token }) {
         localVideoRef.current.srcObject = stream;
       }
 
+      // E2E media: generate per-call AES key
+      let mediaKey = null;
+      if (supportsInsertableStreams()) {
+        const cc = new CallCrypto();
+        mediaKey = await cc.generateKey();
+        callCryptoRef.current = cc;
+      }
+
       const pc = await createPC(target);
-      stream.getTracks().forEach(t => pc.addTrack(t, stream));
+      stream.getTracks().forEach(t => {
+        const sender = pc.addTrack(t, stream);
+        if (callCryptoRef.current) callCryptoRef.current.setupSenderEncryption(sender);
+      });
 
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
@@ -257,6 +283,7 @@ export default function useWebRTC({ wsRef, username, token }) {
       await sendSignal('CALL_OFFER', target, {
         callType: type,
         sdp: JSON.stringify(offer),
+        ...(mediaKey && { mediaKey }),
       });
     } catch (err) {
       console.error('[WebRTC] startCall error:', err);
@@ -281,15 +308,15 @@ export default function useWebRTC({ wsRef, username, token }) {
     setCallType(type);
     startRingtone();
 
-    // Store offer SDP in ref for when user accepts
-    pcRef.current = { _pendingOffer: extra.sdp, _from: from, _type: type };
+    // Store offer SDP and peer's media key in ref for when user accepts
+    pcRef.current = { _pendingOffer: extra.sdp, _from: from, _type: type, _peerMediaKey: extra.mediaKey };
   }, [callState, sendSignal, startRingtone, decryptExtra]);
 
   /** Accept an incoming call */
   const acceptCall = useCallback(async () => {
     if (callState !== 'incoming' || !pcRef.current?._pendingOffer) return;
 
-    const { _pendingOffer: sdpStr, _from: from, _type: type } = pcRef.current;
+    const { _pendingOffer: sdpStr, _from: from, _type: type, _peerMediaKey: peerMediaKey } = pcRef.current;
     pcRef.current = null;
 
     setCallState('connecting');
@@ -305,8 +332,20 @@ export default function useWebRTC({ wsRef, username, token }) {
         localVideoRef.current.srcObject = stream;
       }
 
+      // E2E media: generate key + set peer's key for decryption
+      let mediaKey = null;
+      if (supportsInsertableStreams()) {
+        const cc = new CallCrypto();
+        mediaKey = await cc.generateKey();
+        if (peerMediaKey) await cc.setDecryptKey(peerMediaKey);
+        callCryptoRef.current = cc;
+      }
+
       const pc = await createPC(from);
-      stream.getTracks().forEach(t => pc.addTrack(t, stream));
+      stream.getTracks().forEach(t => {
+        const sender = pc.addTrack(t, stream);
+        if (callCryptoRef.current) callCryptoRef.current.setupSenderEncryption(sender);
+      });
 
       const offer = JSON.parse(sdpStr);
       await pc.setRemoteDescription(new RTCSessionDescription(offer));
@@ -322,6 +361,7 @@ export default function useWebRTC({ wsRef, username, token }) {
 
       await sendSignal('CALL_ANSWER', from, {
         sdp: JSON.stringify(answer),
+        ...(mediaKey && { mediaKey }),
       });
     } catch (err) {
       console.error('[WebRTC] acceptCall error:', err);
@@ -350,6 +390,15 @@ export default function useWebRTC({ wsRef, username, token }) {
   const handleAnswer = useCallback(async (msg) => {
     const extra = await decryptExtra(msg);
     if (!extra.sdp || !pcRef.current || typeof pcRef.current.setRemoteDescription !== 'function') return;
+
+    // E2E media: set peer's key for decryption (or disable encryption if peer doesn't support)
+    if (callCryptoRef.current) {
+      if (extra.mediaKey) {
+        await callCryptoRef.current.setDecryptKey(extra.mediaKey);
+      } else {
+        callCryptoRef.current.disableEncryption();
+      }
+    }
 
     try {
       const answer = JSON.parse(extra.sdp);
@@ -412,6 +461,10 @@ export default function useWebRTC({ wsRef, username, token }) {
     return () => {
       if (pcRef.current) {
         if (typeof pcRef.current.close === 'function') pcRef.current.close();
+      }
+      if (callCryptoRef.current) {
+        callCryptoRef.current.destroy();
+        callCryptoRef.current = null;
       }
       stopLocalMedia();
       stopRingtone();
