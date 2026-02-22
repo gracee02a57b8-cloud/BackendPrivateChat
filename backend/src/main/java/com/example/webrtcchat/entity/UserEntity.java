@@ -16,6 +16,9 @@ public class UserEntity {
     @Column(length = 200)
     private String password;
 
+    @Column(nullable = false, length = 20)
+    private String role = "USER";
+
     private String createdAt;
 
     public UserEntity() {}
@@ -37,4 +40,7 @@ public class UserEntity {
 
     public String getCreatedAt() { return createdAt; }
     public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
+
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
 }

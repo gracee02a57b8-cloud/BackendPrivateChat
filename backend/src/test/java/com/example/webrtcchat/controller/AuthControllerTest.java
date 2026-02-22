@@ -53,7 +53,7 @@ class AuthControllerTest {
         when(userRepository.existsByUsername("newuser")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("$2a$encoded");
         when(userRepository.save(any(UserEntity.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(jwtService.generateToken("newuser")).thenReturn("jwt-token-123");
+        when(jwtService.generateToken("newuser", "USER")).thenReturn("jwt-token-123");
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -63,7 +63,8 @@ class AuthControllerTest {
                         ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").value("jwt-token-123"))
-                .andExpect(jsonPath("$.username").value("newuser"));
+                .andExpect(jsonPath("$.username").value("newuser"))
+                .andExpect(jsonPath("$.role").value("USER"));
 
         verify(userRepository).save(any(UserEntity.class));
     }
@@ -130,7 +131,7 @@ class AuthControllerTest {
         UserEntity user = new UserEntity("alice", "$2a$encoded", "2026-01-01 12:00:00");
         when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("correctpass", "$2a$encoded")).thenReturn(true);
-        when(jwtService.generateToken("alice")).thenReturn("jwt-token-alice");
+        when(jwtService.generateToken("alice", "USER")).thenReturn("jwt-token-alice");
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -140,7 +141,8 @@ class AuthControllerTest {
                         ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").value("jwt-token-alice"))
-                .andExpect(jsonPath("$.username").value("alice"));
+                .andExpect(jsonPath("$.username").value("alice"))
+                .andExpect(jsonPath("$.role").value("USER"));
     }
 
     @Test

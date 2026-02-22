@@ -9,7 +9,7 @@ import e2eManager from '../crypto/E2EManager';
 
 const WS_URL = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
 
-export default function Chat({ token, username, onLogout, joinRoomId, onShowNews }) {
+export default function Chat({ token, username, onLogout, joinRoomId, onShowNews, onShowAdmin, role }) {
   const [rooms, setRooms] = useState([]);
   const [activeRoomId, setActiveRoomId] = useState('general');
   const [messagesByRoom, setMessagesByRoom] = useState({});
@@ -626,8 +626,10 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
         onJoinRoom={joinRoom}
         onDeleteRoom={deleteRoom}
         onShowNews={onShowNews}
+        onShowAdmin={onShowAdmin}
         onShowTasks={() => setShowTasks(true)}
         token={token}
+        role={role}
         unreadCounts={unreadCounts}
         messagesByRoom={messagesByRoom}
         sidebarOpen={sidebarOpen}

@@ -52,8 +52,8 @@ public class AuthController {
         );
         userRepository.save(user);
 
-        String token = jwtService.generateToken(username);
-        return ResponseEntity.ok(new AuthResponse(token, username));
+        String token = jwtService.generateToken(username, user.getRole());
+        return ResponseEntity.ok(new AuthResponse(token, username, user.getRole()));
     }
 
     @PostMapping("/login")
@@ -76,7 +76,7 @@ public class AuthController {
             return ResponseEntity.status(401).body(Map.of("error", "Неверные учетные данные"));
         }
 
-        String token = jwtService.generateToken(username);
-        return ResponseEntity.ok(new AuthResponse(token, username));
+        String token = jwtService.generateToken(username, user.getRole());
+        return ResponseEntity.ok(new AuthResponse(token, username, user.getRole()));
     }
 }
