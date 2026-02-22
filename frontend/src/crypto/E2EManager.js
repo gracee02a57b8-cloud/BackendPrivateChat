@@ -104,7 +104,6 @@ class E2EManager {
         ratchetKey: header.dh,
         messageNumber: header.n,
         previousChainLength: header.pn,
-        // content is NOT nulled — plaintext stored on server for history
       };
 
       // Include X3DH info in initial message

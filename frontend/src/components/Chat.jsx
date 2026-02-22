@@ -298,21 +298,19 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
 
       // Decrypt E2E message if encrypted
       if (msg.encrypted && msg.sender !== username) {
-        const fallbackContent = msg.content; // plaintext from server
         try {
           const result = await e2eManager.decrypt(msg.sender, msg);
           if (result.error) {
-            // Decrypt failed — use server-stored plaintext as fallback
-            msg.content = fallbackContent || '🔒 Не удалось расшифровать';
-            if (!fallbackContent) msg._decryptError = true;
+            msg.content = '🔒 Не удалось расшифровать';
+            msg._decryptError = true;
           } else {
             msg.content = result.text;
             if (result.fileKey) msg._fileKey = result.fileKey;
           }
         } catch (err) {
           console.error('[E2E] Decrypt error:', err);
-          msg.content = fallbackContent || '🔒 Не удалось расшифровать';
-          if (!fallbackContent) msg._decryptError = true;
+          msg.content = '🔒 Не удалось расшифровать';
+          msg._decryptError = true;
         }
       }
 
@@ -397,19 +395,41 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
       .catch(console.error);
   };
 
-  const loadRoomHistory = (roomId) => {
+  const loadRoomHistory = async (roomId) => {
     if (loadedRooms.current.has(roomId)) return;
     loadedRooms.current.add(roomId);
-    fetch(`/api/rooms/${roomId}/history`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => { if (!res.ok) throw new Error(res.status); return res.json(); })
-      .then((data) => {
-        if (data.length > 0) {
-          setMessagesByRoom((prev) => ({ ...prev, [roomId]: data }));
+    try {
+      const res = await fetch(`/api/rooms/${roomId}/history`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(res.status);
+      const data = await res.json();
+      if (data.length > 0) {
+        // Decrypt E2E messages in history
+        if (e2eManager.isReady()) {
+          for (const msg of data) {
+            if (msg.encrypted && msg.sender !== username) {
+              try {
+                const result = await e2eManager.decrypt(msg.sender, msg);
+                if (result.error) {
+                  msg.content = '🔒 Не удалось расшифровать';
+                  msg._decryptError = true;
+                } else {
+                  msg.content = result.text;
+                  if (result.fileKey) msg._fileKey = result.fileKey;
+                }
+              } catch {
+                msg.content = '🔒 Не удалось расшифровать';
+                msg._decryptError = true;
+              }
+            }
+          }
         }
-      })
-      .catch(console.error);
+        setMessagesByRoom((prev) => ({ ...prev, [roomId]: data }));
+      }
+    } catch (err) {
+      console.error('[Chat] loadRoomHistory error:', err);
+    }
   };
 
   const fetchUsers = () => {
@@ -493,6 +513,9 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           if (peerHasE2E) {
             const encrypted = await e2eManager.encrypt(peerUser, content || '', token);
             Object.assign(msg, encrypted);
+            // Strip plaintext — server must never see the real content
+            msg.content = '🔒';
+            if (msg.replyToContent) msg.replyToContent = '🔒';
           }
         } catch (err) {
           console.warn('[E2E] Encrypt failed, sending plaintext:', err);
