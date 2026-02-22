@@ -34,15 +34,19 @@ export default function useWebRTC({ wsRef, username, token }) {
 
   // ──── helpers ────
 
-  /** Fetch ICE servers config from backend */
+  /** Fetch ICE servers config from backend (ephemeral TURN credentials, cached 1h) */
   const fetchIceConfig = useCallback(async () => {
-    if (iceConfigRef.current) return iceConfigRef.current;
+    // Refresh HMAC credentials every hour (they have 24h TTL)
+    if (iceConfigRef.current && Date.now() - iceConfigRef.current._ts < 3600_000) {
+      return iceConfigRef.current;
+    }
     try {
       const res = await fetch('/api/webrtc/ice-config', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error(res.status);
       const data = await res.json();
+      data._ts = Date.now();
       iceConfigRef.current = data;
       return data;
     } catch (err) {

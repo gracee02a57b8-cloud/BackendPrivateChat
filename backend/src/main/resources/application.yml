@@ -46,8 +46,7 @@ webrtc:
     url: ${STUN_URL:stun:109.196.102.241:3478}
   turn:
     url: ${TURN_URL:turn:109.196.102.241:3478}
-    username: ${TURN_USERNAME:barsikchat}
-    credential: ${TURN_CREDENTIAL:BarsikTurn2025Secure!}
+    secret: ${TURN_SECRET:POwIxndGB65efgJUqTtS3ZNR2z8pQWCoYlDa1FMXibrhLK4v}
 
 logging:
   level:

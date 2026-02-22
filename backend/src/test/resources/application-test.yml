@@ -36,8 +36,7 @@ webrtc:
     url: stun:stun.l.google.com:19302
   turn:
     url: turn:test-turn.example.com:3478
-    username: testuser
-    credential: testpass
+    secret: test-turn-secret-for-hmac-auth-min32!
 
 logging:
   level:
