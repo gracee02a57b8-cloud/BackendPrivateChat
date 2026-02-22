@@ -194,6 +194,7 @@ public class ChatService {
         e.setScheduledAt(dto.getScheduledAt());
         // E2E encryption fields
         e.setEncrypted(dto.isEncrypted());
+        e.setGroupEncrypted(dto.isGroupEncrypted());
         e.setEncryptedContent(dto.getEncryptedContent());
         e.setIv(dto.getIv());
         e.setRatchetKey(dto.getRatchetKey());
@@ -232,6 +233,7 @@ public class ChatService {
         dto.setScheduledAt(e.getScheduledAt());
         // E2E encryption fields
         dto.setEncrypted(e.isEncrypted());
+        dto.setGroupEncrypted(e.isGroupEncrypted());
         dto.setEncryptedContent(e.getEncryptedContent());
         dto.setIv(e.getIv());
         dto.setRatchetKey(e.getRatchetKey());

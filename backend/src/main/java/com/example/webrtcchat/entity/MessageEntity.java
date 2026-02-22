@@ -48,6 +48,9 @@ public class MessageEntity {
     @Column(nullable = false)
     private boolean encrypted;
 
+    @Column(name = "group_encrypted", nullable = false)
+    private boolean groupEncrypted;
+
     @Column(name = "encrypted_content", columnDefinition = "TEXT")
     private String encryptedContent;
 
@@ -140,6 +143,9 @@ public class MessageEntity {
 
     public boolean isEncrypted() { return encrypted; }
     public void setEncrypted(boolean encrypted) { this.encrypted = encrypted; }
+
+    public boolean isGroupEncrypted() { return groupEncrypted; }
+    public void setGroupEncrypted(boolean groupEncrypted) { this.groupEncrypted = groupEncrypted; }
 
     public String getEncryptedContent() { return encryptedContent; }
     public void setEncryptedContent(String encryptedContent) { this.encryptedContent = encryptedContent; }

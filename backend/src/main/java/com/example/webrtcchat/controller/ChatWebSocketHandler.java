@@ -141,13 +141,14 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
-        // Handle WebRTC call signaling (relay to target user)
+        // Handle WebRTC call signaling + E2E group key relay (relay to target user)
         if (incoming.getType() == MessageType.CALL_OFFER
                 || incoming.getType() == MessageType.CALL_ANSWER
                 || incoming.getType() == MessageType.CALL_REJECT
                 || incoming.getType() == MessageType.CALL_END
                 || incoming.getType() == MessageType.CALL_BUSY
-                || incoming.getType() == MessageType.ICE_CANDIDATE) {
+                || incoming.getType() == MessageType.ICE_CANDIDATE
+                || incoming.getType() == MessageType.GROUP_KEY) {
             handleCallSignaling(username, incoming);
             return;
         }

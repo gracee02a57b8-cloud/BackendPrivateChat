@@ -10,6 +10,7 @@ import CallScreen from './CallScreen';
 import useWebRTC from '../hooks/useWebRTC';
 import e2eManager from '../crypto/E2EManager';
 import cryptoStore from '../crypto/CryptoStore';
+import groupCrypto from '../crypto/GroupCrypto';
 
 const WS_URL = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
 
@@ -284,6 +285,15 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
         return;
       }
 
+      // Handle GROUP_KEY — E2E group key distribution
+      if (msg.type === 'GROUP_KEY') {
+        const extra = msg.extra || {};
+        if (extra.roomId && msg.sender) {
+          await groupCrypto.receiveKey(msg.sender, extra.roomId, msg);
+        }
+        return;
+      }
+
       // Handle AVATAR_UPDATE — update avatarMap for all users in real time
       if (msg.type === 'AVATAR_UPDATE') {
         setAvatarMap(prev => ({ ...prev, [msg.sender]: msg.content || '' }));
@@ -301,7 +311,14 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
       // Decrypt E2E message if encrypted
       if (msg.encrypted && msg.sender !== username) {
         try {
-          const result = await e2eManager.decrypt(msg.sender, msg);
+          let result;
+          if (msg.groupEncrypted) {
+            // Group E2E — decrypt with shared room key
+            result = await groupCrypto.decrypt(roomId, msg.encryptedContent, msg.iv);
+          } else {
+            // Private E2E — decrypt with Double Ratchet
+            result = await e2eManager.decrypt(msg.sender, msg);
+          }
           if (result.error) {
             msg.content = '🔒 Не удалось расшифровать';
             msg._decryptError = true;
@@ -428,22 +445,26 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
         for (const msg of data) {
           if (!msg.encrypted) continue;
           if (msg.sender !== username) {
-            // Peer messages — decrypt via Double Ratchet
-            if (e2eManager.isReady()) {
-              try {
-                const result = await e2eManager.decrypt(msg.sender, msg);
-                if (result.error) {
-                  msg.content = '🔒 Не удалось расшифровать';
-                  msg._decryptError = true;
-                } else {
-                  msg.content = result.text;
-                  if (result.fileKey) msg._fileKey = result.fileKey;
-                  if (result.thumbnailKey) msg._thumbnailKey = result.thumbnailKey;
-                }
-              } catch {
+            try {
+              let result;
+              if (msg.groupEncrypted) {
+                // Group E2E — decrypt with shared room key
+                result = await groupCrypto.decrypt(roomId, msg.encryptedContent, msg.iv);
+              } else if (e2eManager.isReady()) {
+                // Private E2E — decrypt via Double Ratchet
+                result = await e2eManager.decrypt(msg.sender, msg);
+              }
+              if (!result || result.error) {
                 msg.content = '🔒 Не удалось расшифровать';
                 msg._decryptError = true;
+              } else {
+                msg.content = result.text;
+                if (result.fileKey) msg._fileKey = result.fileKey;
+                if (result.thumbnailKey) msg._thumbnailKey = result.thumbnailKey;
               }
+            } catch {
+              msg.content = '🔒 Не удалось расшифровать';
+              msg._decryptError = true;
             }
           } else {
             // Own messages — restore from local IndexedDB cache
@@ -562,6 +583,32 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
         } catch (err) {
           console.warn('[E2E] Encrypt failed, sending plaintext:', err);
         }
+      }
+    }
+
+    // E2E encrypt for group rooms
+    if (room?.type === 'ROOM' && e2eReady) {
+      try {
+        // Generate group key if we don't have one yet, and distribute
+        if (!(await groupCrypto.hasGroupKey(activeRoomId))) {
+          await groupCrypto.generateGroupKey(activeRoomId);
+          await groupCrypto.distributeKey(wsRef.current, activeRoomId, room.members || [], username, token);
+        }
+        const payload = fileData?.fileKey
+          ? JSON.stringify({ text: content || '', fileKey: fileData.fileKey, ...(fileData.thumbnailKey ? { thumbnailKey: fileData.thumbnailKey } : {}) })
+          : (content || '');
+        const encrypted = await groupCrypto.encrypt(activeRoomId, payload);
+        Object.assign(msg, encrypted);
+        msg.content = '\ud83d\udd12';
+        if (msg.replyToContent) msg.replyToContent = '\ud83d\udd12';
+        pendingSent.current.push({
+          roomId: activeRoomId,
+          content: content || '',
+          fileKey: fileData?.fileKey || null,
+          thumbnailKey: fileData?.thumbnailKey || null,
+        });
+      } catch (err) {
+        console.warn('[GroupE2E] Encrypt failed, sending plaintext:', err);
       }
     }
 
@@ -697,6 +744,8 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   };
 
   const isPrivateE2E = activeRoom?.type === 'PRIVATE' && e2eReady;
+  const isGroupE2E = activeRoom?.type === 'ROOM' && e2eReady;
+  const isE2E = isPrivateE2E || isGroupE2E;
 
   const showSecurityCode = async () => {
     const peer = getPeerUsername(activeRoom);
@@ -767,7 +816,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           allUsers={allUsers}
           typingUsers={activeTypingUsers}
           onTyping={sendTyping}
-          isE2E={isPrivateE2E}
+          isE2E={isE2E}
           onShowSecurityCode={showSecurityCode}
           avatarMap={avatarMap}
           onStartCall={(type) => {

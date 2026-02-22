@@ -26,5 +26,8 @@ public enum MessageType {
     CALL_REJECT,
     CALL_END,
     CALL_BUSY,
-    ICE_CANDIDATE
+    ICE_CANDIDATE,
+
+    // E2E group key distribution (relay to target user)
+    GROUP_KEY
 }

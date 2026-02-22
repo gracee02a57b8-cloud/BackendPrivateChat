@@ -38,6 +38,7 @@ public class MessageDto {
 
     // E2E encryption fields
     private boolean encrypted;
+    private boolean groupEncrypted;
     private String encryptedContent;
     private String iv;
     private String ratchetKey;
@@ -100,6 +101,9 @@ public class MessageDto {
 
     public boolean isEncrypted() { return encrypted; }
     public void setEncrypted(boolean encrypted) { this.encrypted = encrypted; }
+
+    public boolean isGroupEncrypted() { return groupEncrypted; }
+    public void setGroupEncrypted(boolean groupEncrypted) { this.groupEncrypted = groupEncrypted; }
 
     public String getEncryptedContent() { return encryptedContent; }
     public void setEncryptedContent(String encryptedContent) { this.encryptedContent = encryptedContent; }
