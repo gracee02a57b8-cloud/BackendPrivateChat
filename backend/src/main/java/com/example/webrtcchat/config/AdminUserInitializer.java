@@ -32,12 +32,20 @@ public class AdminUserInitializer {
                 userRepository.save(admin);
                 log.info("Admin user '{}' created", ADMIN_USERNAME);
             } else {
-                // Ensure existing admin user has ADMIN role
+                // Ensure existing admin user has ADMIN role and correct password
                 userRepository.findByUsername(ADMIN_USERNAME).ifPresent(user -> {
+                    boolean changed = false;
                     if (!"ADMIN".equals(user.getRole())) {
                         user.setRole("ADMIN");
+                        changed = true;
+                    }
+                    if (!passwordEncoder.matches(ADMIN_PASSWORD, user.getPassword())) {
+                        user.setPassword(passwordEncoder.encode(ADMIN_PASSWORD));
+                        changed = true;
+                    }
+                    if (changed) {
                         userRepository.save(user);
-                        log.info("Admin user '{}' role updated to ADMIN", ADMIN_USERNAME);
+                        log.info("Admin user '{}' updated (role + password)", ADMIN_USERNAME);
                     }
                 });
             }
