@@ -3,6 +3,8 @@ import EmojiPicker from './EmojiPicker';
 import MentionDropdown from './MentionDropdown';
 import VoiceRecorder from './VoiceRecorder';
 import VoiceMessage from './VoiceMessage';
+import VideoCircleRecorder from './VideoCircleRecorder';
+import VideoCircleMessage from './VideoCircleMessage';
 import { copyToClipboard } from '../utils/clipboard';
 
 function formatFileSize(bytes) {
@@ -96,6 +98,7 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
   const [forwardTarget, setForwardTarget] = useState(null);
   const [reactions, setReactions] = useState({});
   const [isRecording, setIsRecording] = useState(false);
+  const [isRecordingVideo, setIsRecordingVideo] = useState(false);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const inputRef = useRef(null);
@@ -553,6 +556,18 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
   const renderAttachment = (msg) => {
     if (!msg.fileUrl) return null;
 
+    // Video circle message
+    if (msg.type === 'VIDEO_CIRCLE') {
+      return (
+        <VideoCircleMessage
+          fileUrl={msg.fileUrl}
+          duration={msg.duration}
+          thumbnailUrl={msg.thumbnailUrl}
+          isOwn={msg.sender === username}
+        />
+      );
+    }
+
     // Voice message
     const isVoice = msg.type === 'VOICE' || (msg.duration != null && msg.fileType?.startsWith('audio/'));
     if (isVoice) {
@@ -748,7 +763,7 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
                           <span className="msg-meta">
                             {msg.edited && <span className="edited-badge">ред. </span>}
                             {msg.timestamp}
-                            {isOwn && (msg.type === 'CHAT' || msg.type === 'VOICE') && (
+                            {isOwn && (msg.type === 'CHAT' || msg.type === 'VOICE' || msg.type === 'VIDEO_CIRCLE') && (
                               <span className={`msg-check ${msg.status === 'READ' ? 'read' : ''}`}>
                                 {msg.status === 'READ' ? ' ✓✓' : msg.status === 'DELIVERED' ? ' ✓✓' : ' ✓'}
                               </span>
@@ -763,7 +778,7 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
                         <span className="msg-meta standalone">
                           {msg.edited && <span className="edited-badge">ред. </span>}
                           {msg.timestamp}
-                          {isOwn && (msg.type === 'CHAT' || msg.type === 'VOICE') && (
+                          {isOwn && (msg.type === 'CHAT' || msg.type === 'VOICE' || msg.type === 'VIDEO_CIRCLE') && (
                             <span className={`msg-check ${msg.status === 'READ' ? 'read' : ''}`}>
                               {msg.status === 'READ' ? ' ✓✓' : msg.status === 'DELIVERED' ? ' ✓✓' : ' ✓'}
                             </span>
@@ -914,6 +929,15 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
             }}
             onCancel={() => setIsRecording(false)}
           />
+        ) : isRecordingVideo ? (
+          <VideoCircleRecorder
+            token={token}
+            onSend={(videoData) => {
+              setIsRecordingVideo(false);
+              onSendMessage('', videoData);
+            }}
+            onCancel={() => setIsRecordingVideo(false)}
+          />
         ) : (
         <>
         <div className="input-wrapper">
@@ -981,8 +1005,9 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
           >
             ⏰
           </button>
-          {/* Show mic button when no text, send button when text exists — Telegram style */}
+          {/* Show mic + video buttons when no text, send button when text exists — Telegram style */}
           {!input.trim() && !editingMsg && !showSchedule ? (
+            <>
             <button
               type="button"
               className="action-btn mic-btn"
@@ -992,6 +1017,16 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
             >
               🎤
             </button>
+            <button
+              type="button"
+              className="action-btn video-circle-btn"
+              onClick={() => setIsRecordingVideo(true)}
+              disabled={!connected}
+              title="Видеокружок"
+            >
+              📹
+            </button>
+            </>
           ) : (
             <button type="submit" className="action-btn send-btn" disabled={!connected || (!input.trim() && !uploading)}>
               {editingMsg ? '✏️' : showSchedule && scheduleDate ? '⏰' : '➤'}

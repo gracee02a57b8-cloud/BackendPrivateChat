@@ -33,6 +33,9 @@ public class MessageDto {
     private Integer duration;
     private String waveform;
 
+    // Video circle fields
+    private String thumbnailUrl;
+
     // E2E encryption fields
     private boolean encrypted;
     private String encryptedContent;
@@ -139,4 +142,7 @@ public class MessageDto {
 
     public String getWaveform() { return waveform; }
     public void setWaveform(String waveform) { this.waveform = waveform; }
+
+    public String getThumbnailUrl() { return thumbnailUrl; }
+    public void setThumbnailUrl(String thumbnailUrl) { this.thumbnailUrl = thumbnailUrl; }
 }

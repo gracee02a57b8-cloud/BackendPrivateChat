@@ -96,7 +96,10 @@ public class ChatService {
     @Transactional
     public Map<String, List<String>> markMessagesAsRead(String roomId, String reader) {
         List<MessageEntity> unread = messageRepository
-                .findByRoomIdAndTypeAndSenderNotAndStatusNot(roomId, MessageType.CHAT, reader, "READ");
+                .findByRoomIdAndTypeInAndSenderNotAndStatusNot(
+                        roomId,
+                        List.of(MessageType.CHAT, MessageType.VOICE, MessageType.VIDEO_CIRCLE),
+                        reader, "READ");
 
         Map<String, List<String>> senderToMsgIds = new HashMap<>();
         for (MessageEntity msg : unread) {
@@ -191,6 +194,8 @@ public class ChatService {
         // Voice fields
         e.setDuration(dto.getDuration());
         e.setWaveform(dto.getWaveform());
+        // Video circle fields
+        e.setThumbnailUrl(dto.getThumbnailUrl());
         return e;
     }
 
@@ -227,6 +232,8 @@ public class ChatService {
         // Voice fields
         dto.setDuration(e.getDuration());
         dto.setWaveform(e.getWaveform());
+        // Video circle fields
+        dto.setThumbnailUrl(e.getThumbnailUrl());
         return dto;
     }
 }

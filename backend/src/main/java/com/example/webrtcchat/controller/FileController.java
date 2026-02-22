@@ -139,7 +139,8 @@ public class FileController {
                     .contentType(MediaType.parseMediaType(contentType))
                     .header(HttpHeaders.CACHE_CONTROL, "max-age=86400");
 
-            if (Boolean.TRUE.equals(download) || !contentType.startsWith("image/")) {
+            boolean inline = contentType.startsWith("image/") || contentType.startsWith("video/") || contentType.startsWith("audio/");
+            if (Boolean.TRUE.equals(download) || !inline) {
                 builder = builder.header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"" + filename + "\"");
             }

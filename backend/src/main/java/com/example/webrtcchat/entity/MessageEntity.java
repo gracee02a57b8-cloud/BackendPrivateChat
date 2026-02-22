@@ -90,6 +90,9 @@ public class MessageEntity {
     @Column(columnDefinition = "TEXT")
     private String waveform;
 
+    @Column(name = "thumbnail_url", length = 500)
+    private String thumbnailUrl;
+
     @Column(name = "seq_id", insertable = false, updatable = false)
     private Long seqId;
 
@@ -181,4 +184,7 @@ public class MessageEntity {
 
     public String getWaveform() { return waveform; }
     public void setWaveform(String waveform) { this.waveform = waveform; }
+
+    public String getThumbnailUrl() { return thumbnailUrl; }
+    public void setThumbnailUrl(String thumbnailUrl) { this.thumbnailUrl = thumbnailUrl; }
 }

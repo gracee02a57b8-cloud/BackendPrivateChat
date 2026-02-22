@@ -16,5 +16,6 @@ public enum MessageType {
     TYPING,
     REPLY_NOTIFICATION,
     MENTION_NOTIFICATION,
-    VOICE
+    VOICE,
+    VIDEO_CIRCLE
 }

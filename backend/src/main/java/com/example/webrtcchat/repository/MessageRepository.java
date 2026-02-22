@@ -22,6 +22,9 @@ public interface MessageRepository extends JpaRepository<MessageEntity, String> 
     List<MessageEntity> findByRoomIdAndTypeAndSenderNotAndStatusNot(
             String roomId, MessageType type, String sender, String status);
 
+    List<MessageEntity> findByRoomIdAndTypeInAndSenderNotAndStatusNot(
+            String roomId, java.util.Collection<MessageType> types, String sender, String status);
+
     @Transactional
     void deleteByRoomId(String roomId);
 }

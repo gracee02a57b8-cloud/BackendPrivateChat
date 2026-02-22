@@ -428,10 +428,16 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
       msg.fileSize = fileData.fileSize;
       msg.fileType = fileData.fileType;
       // Voice message fields
-      if (fileData.duration != null) {
+      if (fileData.duration != null && !fileData.isVideoCircle) {
         msg.type = 'VOICE';
         msg.duration = fileData.duration;
         msg.waveform = fileData.waveform;
+      }
+      // Video circle fields
+      if (fileData.isVideoCircle) {
+        msg.type = 'VIDEO_CIRCLE';
+        msg.duration = fileData.duration;
+        msg.thumbnailUrl = fileData.thumbnailUrl;
       }
     }
     if (replyData) {
