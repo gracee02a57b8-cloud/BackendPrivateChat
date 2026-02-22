@@ -141,6 +141,17 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
+        // Handle WebRTC call signaling (relay to target user)
+        if (incoming.getType() == MessageType.CALL_OFFER
+                || incoming.getType() == MessageType.CALL_ANSWER
+                || incoming.getType() == MessageType.CALL_REJECT
+                || incoming.getType() == MessageType.CALL_END
+                || incoming.getType() == MessageType.CALL_BUSY
+                || incoming.getType() == MessageType.ICE_CANDIDATE) {
+            handleCallSignaling(username, incoming);
+            return;
+        }
+
         // Handle EDIT
         if (incoming.getType() == MessageType.EDIT) {
             handleEdit(username, incoming);
@@ -366,6 +377,46 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
         // Send to all online users (including sender, to confirm)
         userSessions.forEach((user, s) -> sendSafe(s, json));
+    }
+
+    /**
+     * Handle WebRTC call signaling: relay messages directly to the target user.
+     * Target username is taken from extra.target field.
+     * For CALL_OFFER: check if target is online, otherwise send CALL_END back.
+     */
+    private void handleCallSignaling(String username, MessageDto incoming) {
+        Map<String, String> extra = incoming.getExtra();
+        if (extra == null) return;
+        String target = extra.get("target");
+        if (target == null || target.isEmpty()) return;
+
+        // Set sender and timestamp
+        incoming.setSender(username);
+        incoming.setTimestamp(now());
+
+        WebSocketSession targetSession = userSessions.get(target);
+
+        // If CALL_OFFER and target is offline → send CALL_END back to caller
+        if (incoming.getType() == MessageType.CALL_OFFER && (targetSession == null || !targetSession.isOpen())) {
+            MessageDto unavailable = new MessageDto();
+            unavailable.setType(MessageType.CALL_END);
+            unavailable.setSender(target);
+            unavailable.setTimestamp(now());
+            Map<String, String> endExtra = new HashMap<>();
+            endExtra.put("reason", "unavailable");
+            endExtra.put("target", username);
+            unavailable.setExtra(endExtra);
+            WebSocketSession callerSession = userSessions.get(username);
+            if (callerSession != null) {
+                sendSafe(callerSession, serialize(unavailable));
+            }
+            return;
+        }
+
+        // Relay message to target user
+        if (targetSession != null && targetSession.isOpen()) {
+            sendSafe(targetSession, serialize(incoming));
+        }
     }
 
     @Override

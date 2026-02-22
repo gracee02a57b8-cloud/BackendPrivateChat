@@ -18,5 +18,13 @@ public enum MessageType {
     MENTION_NOTIFICATION,
     VOICE,
     VIDEO_CIRCLE,
-    AVATAR_UPDATE
+    AVATAR_UPDATE,
+
+    // WebRTC call signaling
+    CALL_OFFER,
+    CALL_ANSWER,
+    CALL_REJECT,
+    CALL_END,
+    CALL_BUSY,
+    ICE_CANDIDATE
 }

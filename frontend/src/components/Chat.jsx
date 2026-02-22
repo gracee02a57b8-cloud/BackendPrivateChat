@@ -5,6 +5,9 @@ import TaskPanel from './TaskPanel';
 import TaskNotificationPopup from './TaskNotificationPopup';
 import ReplyNotificationPopup from './ReplyNotificationPopup';
 import SecurityCodeModal from './SecurityCodeModal';
+import IncomingCallModal from './IncomingCallModal';
+import CallScreen from './CallScreen';
+import useWebRTC from '../hooks/useWebRTC';
 import e2eManager from '../crypto/E2EManager';
 
 const WS_URL = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
@@ -39,6 +42,9 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   const unmounted = useRef(false);
   const documentVisible = useRef(true);
   const notifSound = useRef(null);
+
+  // WebRTC calls hook
+  const webrtc = useWebRTC({ wsRef, username, token });
 
   // Create notification sound
   useEffect(() => {
@@ -264,6 +270,15 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
       // Handle REPLY / MENTION notifications — show popup
       if (msg.type === 'REPLY_NOTIFICATION' || msg.type === 'MENTION_NOTIFICATION') {
         setReplyNotification(msg);
+        return;
+      }
+
+      // Handle WebRTC call signaling
+      if (msg.type === 'CALL_OFFER') { webrtc.handleOffer(msg); return; }
+      if (msg.type === 'CALL_ANSWER') { webrtc.handleAnswer(msg); return; }
+      if (msg.type === 'ICE_CANDIDATE') { webrtc.handleIceCandidate(msg); return; }
+      if (msg.type === 'CALL_REJECT' || msg.type === 'CALL_END' || msg.type === 'CALL_BUSY') {
+        webrtc.handleCallEnd(msg);
         return;
       }
 
@@ -690,6 +705,11 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           isE2E={isPrivateE2E}
           onShowSecurityCode={showSecurityCode}
           avatarMap={avatarMap}
+          onStartCall={(type) => {
+            const peer = getPeerUsername(activeRoom);
+            if (peer) webrtc.startCall(peer, type);
+          }}
+          callState={webrtc.callState}
         />
       )}
       {taskNotification && (
@@ -716,6 +736,31 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
               selectRoom(notif.roomId);
             }
           }}
+        />
+      )}
+      {webrtc.callState === 'incoming' && (
+        <IncomingCallModal
+          caller={webrtc.callPeer}
+          callType={webrtc.callType}
+          avatarUrl={avatarMap[webrtc.callPeer] || ''}
+          onAccept={webrtc.acceptCall}
+          onReject={webrtc.rejectCall}
+        />
+      )}
+      {(webrtc.callState === 'outgoing' || webrtc.callState === 'connecting' || webrtc.callState === 'active') && (
+        <CallScreen
+          callState={webrtc.callState}
+          callPeer={webrtc.callPeer}
+          callType={webrtc.callType}
+          callDuration={webrtc.callDuration}
+          isMuted={webrtc.isMuted}
+          isVideoOff={webrtc.isVideoOff}
+          avatarUrl={avatarMap[webrtc.callPeer] || ''}
+          localVideoRef={webrtc.localVideoRef}
+          remoteVideoRef={webrtc.remoteVideoRef}
+          onEndCall={webrtc.endCall}
+          onToggleMute={webrtc.toggleMute}
+          onToggleVideo={webrtc.toggleVideo}
         />
       )}
     </div>

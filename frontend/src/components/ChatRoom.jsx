@@ -77,7 +77,7 @@ function formatLastSeenHeader(ts) {
   return `был(а) ${d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}`;
 }
 
-export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDeleteMessage, onScheduleMessage, scheduledMessages, roomName, username, connected, token, activeRoom, onlineUsers, allUsers = [], typingUsers = [], onTyping, isE2E, onShowSecurityCode, avatarMap = {} }) {
+export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDeleteMessage, onScheduleMessage, scheduledMessages, roomName, username, connected, token, activeRoom, onlineUsers, allUsers = [], typingUsers = [], onTyping, isE2E, onShowSecurityCode, avatarMap = {}, onStartCall, callState }) {
   const [input, setInput] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
@@ -646,6 +646,26 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
           })()}
         </div>
         <div className="chat-header-actions">
+          {activeRoom?.type === 'PRIVATE' && onStartCall && (
+            <>
+              <button
+                className="call-header-btn"
+                onClick={() => onStartCall('audio')}
+                disabled={callState !== 'idle' && callState !== undefined}
+                title="Аудиозвонок"
+              >
+                📞
+              </button>
+              <button
+                className="call-header-btn"
+                onClick={() => onStartCall('video')}
+                disabled={callState !== 'idle' && callState !== undefined}
+                title="Видеозвонок"
+              >
+                📹
+              </button>
+            </>
+          )}
           {isE2E && (
             <button className="e2e-badge" onClick={onShowSecurityCode} title="Сквозное шифрование — нажмите для проверки">
               🔒 E2E

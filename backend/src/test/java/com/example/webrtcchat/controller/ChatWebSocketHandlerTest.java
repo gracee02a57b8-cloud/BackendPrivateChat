@@ -701,4 +701,239 @@ class ChatWebSocketHandlerTest {
         room.setMembers(new CopyOnWriteArraySet<>(Set.of("alice", "bob")));
         return room;
     }
+
+    // ──── Helper: connect two users so both are in userSessions ────
+
+    private WebSocketSession connectUser(String sessionId, String username, String token) throws Exception {
+        WebSocketSession s = mock(WebSocketSession.class);
+        Map<String, Object> attrs = new HashMap<>();
+        when(s.getId()).thenReturn(sessionId);
+        when(s.getAttributes()).thenReturn(attrs);
+        when(s.getUri()).thenReturn(new URI("ws://localhost/ws/chat?token=" + token));
+        when(s.isOpen()).thenReturn(true);
+        when(jwtService.isTokenValid(token)).thenReturn(true);
+        when(jwtService.extractUsername(token)).thenReturn(username);
+
+        RoomDto generalRoom = createRoom("general", RoomType.GENERAL);
+        when(roomService.joinRoom("general", username)).thenReturn(generalRoom);
+        when(roomService.getRoomById("general")).thenReturn(generalRoom);
+
+        handler.afterConnectionEstablished(s);
+        return s;
+    }
+
+    // === CALL SIGNALING TESTS ===
+
+    @Test
+    @DisplayName("CALL_OFFER - relays offer to target user")
+    void callOffer_relaysToTarget() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+        WebSocketSession bobSession = connectUser("s2", "bob", "token-b");
+
+        // Alice sends CALL_OFFER to Bob
+        MessageDto offer = new MessageDto();
+        offer.setType(MessageType.CALL_OFFER);
+        Map<String, String> extra = new HashMap<>();
+        extra.put("target", "bob");
+        extra.put("callType", "audio");
+        extra.put("sdp", "{\"type\":\"offer\",\"sdp\":\"v=0...\"}");
+        offer.setExtra(extra);
+
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(offer)));
+
+        // Bob should receive the offer
+        verify(bobSession).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"type\":\"CALL_OFFER\"")
+                    && payload.contains("\"sender\":\"alice\"")
+                    && payload.contains("\"sdp\"");
+        }));
+
+        // Alice should NOT receive the offer
+        verify(aliceSession, never()).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"type\":\"CALL_OFFER\"");
+        }));
+    }
+
+    @Test
+    @DisplayName("CALL_OFFER - returns CALL_END when target is offline")
+    void callOffer_targetOffline_sendsEnd() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+        // Bob is NOT connected
+
+        MessageDto offer = new MessageDto();
+        offer.setType(MessageType.CALL_OFFER);
+        Map<String, String> extra = new HashMap<>();
+        extra.put("target", "bob");
+        extra.put("callType", "video");
+        extra.put("sdp", "{\"type\":\"offer\"}");
+        offer.setExtra(extra);
+
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(offer)));
+
+        // Alice should receive CALL_END with reason "unavailable"
+        verify(aliceSession).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"type\":\"CALL_END\"")
+                    && payload.contains("\"reason\":\"unavailable\"");
+        }));
+    }
+
+    @Test
+    @DisplayName("CALL_ANSWER - relays answer to caller")
+    void callAnswer_relaysToCaller() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+        WebSocketSession bobSession = connectUser("s2", "bob", "token-b");
+
+        // Bob sends CALL_ANSWER to Alice
+        MessageDto answer = new MessageDto();
+        answer.setType(MessageType.CALL_ANSWER);
+        Map<String, String> extra = new HashMap<>();
+        extra.put("target", "alice");
+        extra.put("sdp", "{\"type\":\"answer\",\"sdp\":\"v=0...\"}");
+        answer.setExtra(extra);
+
+        handler.handleTextMessage(bobSession, new TextMessage(objectMapper.writeValueAsString(answer)));
+
+        // Alice should receive the answer
+        verify(aliceSession).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"type\":\"CALL_ANSWER\"")
+                    && payload.contains("\"sender\":\"bob\"");
+        }));
+    }
+
+    @Test
+    @DisplayName("ICE_CANDIDATE - relays candidate to target")
+    void iceCandidate_relaysToTarget() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+        WebSocketSession bobSession = connectUser("s2", "bob", "token-b");
+
+        MessageDto ice = new MessageDto();
+        ice.setType(MessageType.ICE_CANDIDATE);
+        Map<String, String> extra = new HashMap<>();
+        extra.put("target", "bob");
+        extra.put("candidate", "{\"candidate\":\"candidate:...\"}");
+        ice.setExtra(extra);
+
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(ice)));
+
+        verify(bobSession).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"type\":\"ICE_CANDIDATE\"")
+                    && payload.contains("\"candidate\"");
+        }));
+    }
+
+    @Test
+    @DisplayName("CALL_REJECT - relays reject to caller")
+    void callReject_relaysToCaller() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+        WebSocketSession bobSession = connectUser("s2", "bob", "token-b");
+
+        MessageDto reject = new MessageDto();
+        reject.setType(MessageType.CALL_REJECT);
+        Map<String, String> extra = new HashMap<>();
+        extra.put("target", "alice");
+        reject.setExtra(extra);
+
+        handler.handleTextMessage(bobSession, new TextMessage(objectMapper.writeValueAsString(reject)));
+
+        verify(aliceSession).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"type\":\"CALL_REJECT\"")
+                    && payload.contains("\"sender\":\"bob\"");
+        }));
+    }
+
+    @Test
+    @DisplayName("CALL_END - relays end to peer")
+    void callEnd_relaysToPeer() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+        WebSocketSession bobSession = connectUser("s2", "bob", "token-b");
+
+        MessageDto end = new MessageDto();
+        end.setType(MessageType.CALL_END);
+        Map<String, String> extra = new HashMap<>();
+        extra.put("target", "bob");
+        extra.put("reason", "hangup");
+        end.setExtra(extra);
+
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(end)));
+
+        verify(bobSession).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"type\":\"CALL_END\"")
+                    && payload.contains("\"reason\":\"hangup\"");
+        }));
+    }
+
+    @Test
+    @DisplayName("CALL_BUSY - relays busy to caller")
+    void callBusy_relaysToCaller() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+        WebSocketSession bobSession = connectUser("s2", "bob", "token-b");
+
+        MessageDto busy = new MessageDto();
+        busy.setType(MessageType.CALL_BUSY);
+        Map<String, String> extra = new HashMap<>();
+        extra.put("target", "alice");
+        busy.setExtra(extra);
+
+        handler.handleTextMessage(bobSession, new TextMessage(objectMapper.writeValueAsString(busy)));
+
+        verify(aliceSession).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"type\":\"CALL_BUSY\"");
+        }));
+    }
+
+    @Test
+    @DisplayName("Call signaling - missing extra field is ignored")
+    void callSignaling_noExtra_ignored() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+
+        MessageDto offer = new MessageDto();
+        offer.setType(MessageType.CALL_OFFER);
+        // No extra → should not crash
+
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(offer)));
+        // No exception is success
+    }
+
+    @Test
+    @DisplayName("Call signaling - missing target in extra is ignored")
+    void callSignaling_noTarget_ignored() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+
+        MessageDto offer = new MessageDto();
+        offer.setType(MessageType.CALL_OFFER);
+        offer.setExtra(new HashMap<>());  // extra exists but no "target"
+
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(offer)));
+        // No exception is success
+    }
+
+    @Test
+    @DisplayName("CALL_OFFER with video callType - relays correctly")
+    void callOffer_video_relaysCorrectly() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+        WebSocketSession bobSession = connectUser("s2", "bob", "token-b");
+
+        MessageDto offer = new MessageDto();
+        offer.setType(MessageType.CALL_OFFER);
+        Map<String, String> extra = new HashMap<>();
+        extra.put("target", "bob");
+        extra.put("callType", "video");
+        extra.put("sdp", "{\"type\":\"offer\"}");
+        offer.setExtra(extra);
+
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(offer)));
+
+        verify(bobSession).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"callType\":\"video\"");
+        }));
+    }
 }
