@@ -287,6 +287,30 @@
   display: none;
 }
 
+/* ===== Sidebar Close Button (mobile back arrow) ===== */
+.sb-close-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: #8a9bb0;
+  font-size: 1.1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  padding: 0;
+  line-height: 1;
+}
+
+.sb-close-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #eee;
+}
+
 /* ===== Sidebar Header ===== */
 .sb-header {
   display: flex;
@@ -3274,16 +3298,53 @@
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.5);
-    z-index: -1;
+    z-index: calc(var(--z-sidebar, 1000) - 1);
+    animation: fadeIn 0.2s ease;
+  }
+
+  .sb-close-btn {
+    display: flex;
+  }
+
+  /* Prevent body scroll when sidebar is open */
+  .chat-container.sidebar-active {
+    overflow: hidden;
+  }
+
+  /* Chat main fills viewport on mobile */
+  .chat-main {
+    min-width: 0;
+    width: 100%;
   }
 
   /* --- Chat header --- */
   .chat-header {
-    padding-left: 3.5rem !important;
+    padding-left: 3.2rem !important;
+  }
+
+  /* When sidebar is open, hamburger is hidden — no extra padding needed */
+  .sidebar-active .chat-header {
+    padding-left: 1rem !important;
   }
 
   .chat-header h3 {
     font-size: 1rem;
+  }
+
+  /* Header actions compact on mobile */
+  .chat-header-actions {
+    gap: 0.3rem;
+  }
+
+  .call-header-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+
+  .copy-link-btn {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
   }
 
   /* --- Messages --- */
@@ -3506,7 +3567,11 @@
 
   /* --- Chat --- */
   .chat-header {
-    padding: 0.6rem 0.8rem 0.6rem 3.2rem !important;
+    padding: 0.6rem 0.8rem 0.6rem 3rem !important;
+  }
+
+  .sidebar-active .chat-header {
+    padding-left: 0.8rem !important;
   }
 
   .chat-header h3 {
@@ -3514,8 +3579,8 @@
   }
 
   .copy-link-btn {
-    font-size: 0.8rem;
-    padding: 0.3rem 0.5rem;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.4rem;
   }
 
   /* --- Messages --- */

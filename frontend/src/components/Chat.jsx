@@ -849,7 +849,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   }, [webrtc.callState, webrtc.callPeer, e2eReady, token]);
 
   return (
-    <div className="chat-container">
+    <div className={`chat-container${sidebarOpen ? ' sidebar-active' : ''}`}>
       {/* Skip navigation */}
       <a href="#chat-main" className="skip-nav">Перейти к чату</a>
 
@@ -864,8 +864,16 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
       {/* Toast container */}
       <ToastContainer />
 
-      {/* Mobile hamburger */}
-      <button className="mobile-hamburger" onClick={() => setSidebarOpen(true)} aria-label="Открыть меню">☰</button>
+      {/* Mobile hamburger — hidden when sidebar is open */}
+      {!sidebarOpen && (
+        <button className="mobile-hamburger" onClick={() => setSidebarOpen(true)} aria-label="Открыть меню">☰</button>
+      )}
+
+      {/* Mobile sidebar overlay — must be OUTSIDE sidebar to avoid transform stacking context */}
+      {sidebarOpen && (
+        <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
+      )}
+
       <Sidebar
         rooms={rooms}
         activeRoomId={activeRoomId}

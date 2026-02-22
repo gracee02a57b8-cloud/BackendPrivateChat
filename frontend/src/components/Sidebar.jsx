@@ -225,11 +225,10 @@ export default function Sidebar({
 
   return (
     <div className={`chat-sidebar${sidebarOpen ? ' open' : ''}`}>
-      {sidebarOpen && <div className="sidebar-overlay" onClick={onCloseSidebar} />}
-
       {/* ── Header: Avatar + Name + Status + Quick actions ── */}
       <div className="sb-header">
         <div className="sb-header-left">
+          <button className="sb-close-btn" onClick={onCloseSidebar} aria-label="Закрыть меню">←</button>
           <div className="sb-user-avatar" style={{ background: avatarUrl ? 'transparent' : getAvatarColor(username) }} onClick={() => setShowProfile(true)} title="Открыть профиль">
             {avatarUrl
               ? <img src={avatarUrl} alt="" className="sb-avatar-img" />
