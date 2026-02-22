@@ -9,6 +9,7 @@ import SecurityCodeModal from './SecurityCodeModal';
 import IncomingCallModal from './IncomingCallModal';
 import CallScreen from './CallScreen';
 import useWebRTC from '../hooks/useWebRTC';
+import useMediaPermissions from '../hooks/useMediaPermissions';
 import e2eManager from '../crypto/E2EManager';
 import cryptoStore from '../crypto/CryptoStore';
 import groupCrypto from '../crypto/GroupCrypto';
@@ -52,6 +53,9 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
 
   // WebRTC calls hook
   const webrtc = useWebRTC({ wsRef, username, token });
+
+  // Media permissions (camera + mic) — request once on login
+  const mediaPerm = useMediaPermissions();
 
   // Keep refs up-to-date so ws.onmessage closure always accesses latest values (Bug 1 fix)
   const webrtcRef = useRef(webrtc);
@@ -893,6 +897,33 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
             if (roomId) selectRoom(roomId);
           }}
         />
+      )}
+      {mediaPerm.showBanner && (
+        <div className="media-perm-banner">
+          <div className="media-perm-content">
+            {mediaPerm.permissionsDenied ? (
+              <>
+                <span className="media-perm-icon">🚫</span>
+                <span className="media-perm-text">
+                  Доступ к камере/микрофону заблокирован. Разрешите в настройках браузера
+                  (🔒 в адресной строке → Разрешения).
+                </span>
+                <button className="media-perm-dismiss" onClick={mediaPerm.dismissBanner}>✕</button>
+              </>
+            ) : (
+              <>
+                <span className="media-perm-icon">📹</span>
+                <span className="media-perm-text">
+                  Разрешите доступ к камере и микрофону, чтобы звонки работали без задержек.
+                </span>
+                <button className="media-perm-btn" onClick={mediaPerm.requestPermissions}>
+                  Разрешить
+                </button>
+                <button className="media-perm-dismiss" onClick={mediaPerm.dismissBanner}>✕</button>
+              </>
+            )}
+          </div>
+        </div>
       )}
       {webrtc.callState === 'incoming' && (
         <IncomingCallModal
