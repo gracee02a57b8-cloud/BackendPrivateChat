@@ -4,7 +4,7 @@
  */
 
 const DB_NAME = 'barsik-e2e';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 class CryptoStore {
   constructor() {
@@ -36,6 +36,10 @@ class CryptoStore {
         if (!db.objectStoreNames.contains('skippedKeys')) {
           const store = db.createObjectStore('skippedKeys', { keyPath: 'id' });
           store.createIndex('createdAt', 'createdAt');
+        }
+        // V2: local cache of own sent encrypted message content + fileKeys
+        if (!db.objectStoreNames.contains('sentMessages')) {
+          db.createObjectStore('sentMessages', { keyPath: 'id' });
         }
       };
 
@@ -142,8 +146,25 @@ class CryptoStore {
     }
   }
 
+  // === Sent Messages local cache (for own encrypted messages) ===
+  saveSentContent(msgId, content, fileKey, thumbnailKey) {
+    return this.put('sentMessages', { id: msgId, content, fileKey, thumbnailKey, savedAt: Date.now() });
+  }
+
+  getSentContent(msgId) {
+    return this.get('sentMessages', msgId);
+  }
+
+  async cleanOldSentMessages() {
+    const all = await this.getAll('sentMessages');
+    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000; // 30 days
+    for (const m of all) {
+      if (m.savedAt < cutoff) await this.delete('sentMessages', m.id);
+    }
+  }
+
   async clearAll() {
-    for (const store of ['identityKeys', 'signedPreKeys', 'oneTimePreKeys', 'sessions', 'trustedKeys', 'skippedKeys']) {
+    for (const store of ['identityKeys', 'signedPreKeys', 'oneTimePreKeys', 'sessions', 'trustedKeys', 'skippedKeys', 'sentMessages']) {
       await this.clear(store);
     }
   }

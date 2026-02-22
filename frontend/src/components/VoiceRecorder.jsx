@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import e2eManager from '../crypto/E2EManager';
 
 /**
  * VoiceRecorder — Telegram-style voice message recorder.
@@ -6,7 +7,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
  * States: idle → recording → uploading
  * UI: replaces input area with red dot + timer + waveform + cancel/send
  */
-export default function VoiceRecorder({ onSend, onCancel, token }) {
+export default function VoiceRecorder({ onSend, onCancel, token, isE2E }) {
   const [recording, setRecording] = useState(false);
   const [duration, setDuration] = useState(0);
   const [waveform, setWaveform] = useState([]);
@@ -155,13 +156,26 @@ export default function VoiceRecorder({ onSend, onCancel, token }) {
       // Compress waveform to 48 samples for storage
       const compressed = compressWaveform(finalWaveform, 48);
 
+      // Encrypt audio if E2E room
+      let uploadBlob = blob;
+      let fileKey = null;
+      if (isE2E) {
+        try {
+          const result = await e2eManager.encryptFile(blob);
+          uploadBlob = result.encryptedBlob;
+          fileKey = result.fileKey;
+        } catch (err) {
+          console.warn('[E2E] Voice encrypt failed:', err);
+        }
+      }
+
       // Upload
       setUploading(true);
       setUploadProgress(0);
 
       try {
         const ext = mimeType.includes('mp4') ? 'm4a' : 'webm';
-        const file = new File([blob], `voice_${Date.now()}.${ext}`, { type: mimeType });
+        const file = new File([uploadBlob], `voice_${Date.now()}.${ext}`, { type: uploadBlob.type || mimeType });
         
         const formData = new FormData();
         formData.append('file', file);
@@ -181,14 +195,16 @@ export default function VoiceRecorder({ onSend, onCancel, token }) {
           setUploadProgress(0);
           if (xhr.status === 200) {
             const data = JSON.parse(xhr.responseText);
-            onSend({
+            const voiceData = {
               fileUrl: data.url,
               fileName: data.originalName,
               fileSize: data.size,
               fileType: data.contentType,
               duration: finalDuration,
               waveform: JSON.stringify(compressed),
-            });
+            };
+            if (fileKey) voiceData.fileKey = fileKey;
+            onSend(voiceData);
           } else {
             setError('Ошибка загрузки голосового сообщения');
           }

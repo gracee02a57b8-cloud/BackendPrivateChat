@@ -91,7 +91,7 @@ class E2EManager {
 
       // Encrypt payload
       const payload = fileData
-        ? JSON.stringify({ text: plaintext || '', fileKey: fileData.fileKey })
+        ? JSON.stringify({ text: plaintext || '', ...fileData })
         : plaintext || '';
 
       const { header, ciphertext, iv, state } = await ratchetEncrypt(session, payload);

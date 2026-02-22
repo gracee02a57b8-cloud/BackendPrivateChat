@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import useDecryptedUrl from '../hooks/useDecryptedUrl';
 
 /**
  * VideoCircleMessage — Telegram-style circular video message player.
@@ -6,7 +7,9 @@ import { useState, useRef, useEffect, useCallback } from 'react';
  * Circular <video> with progress ring, play/pause on tap,
  * mute/unmute, duration overlay, thumbnail poster.
  */
-export default function VideoCircleMessage({ fileUrl, duration, thumbnailUrl, isOwn }) {
+export default function VideoCircleMessage({ fileUrl, duration, thumbnailUrl, isOwn, fileKey, thumbnailKey }) {
+  const videoUrl = useDecryptedUrl(fileUrl, fileKey, 'video/webm');
+  const posterUrl = useDecryptedUrl(thumbnailUrl, thumbnailKey, 'image/jpeg');
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(true);
   const [progress, setProgress] = useState(0); // 0..1
@@ -110,8 +113,8 @@ export default function VideoCircleMessage({ fileUrl, duration, thumbnailUrl, is
           <video
             ref={videoRef}
             className="vc-video"
-            src={fileUrl}
-            poster={thumbnailUrl || undefined}
+            src={videoUrl}
+            poster={posterUrl || undefined}
             preload="metadata"
             muted={muted}
             playsInline

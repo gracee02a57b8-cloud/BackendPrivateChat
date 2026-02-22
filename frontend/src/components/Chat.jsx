@@ -9,6 +9,7 @@ import IncomingCallModal from './IncomingCallModal';
 import CallScreen from './CallScreen';
 import useWebRTC from '../hooks/useWebRTC';
 import e2eManager from '../crypto/E2EManager';
+import cryptoStore from '../crypto/CryptoStore';
 
 const WS_URL = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
 
@@ -42,6 +43,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   const unmounted = useRef(false);
   const documentVisible = useRef(true);
   const notifSound = useRef(null);
+  const pendingSent = useRef([]); // queue for restoring own encrypted message content
 
   // WebRTC calls hook
   const webrtc = useWebRTC({ wsRef, username, token });
@@ -306,11 +308,28 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           } else {
             msg.content = result.text;
             if (result.fileKey) msg._fileKey = result.fileKey;
+            if (result.thumbnailKey) msg._thumbnailKey = result.thumbnailKey;
           }
         } catch (err) {
           console.error('[E2E] Decrypt error:', err);
           msg.content = '🔒 Не удалось расшифровать';
           msg._decryptError = true;
+        }
+      }
+
+      // Restore own encrypted message from pending queue & persist locally
+      if (msg.encrypted && msg.sender === username) {
+        const idx = pendingSent.current.findIndex(p => p.roomId === (msg.roomId || 'general'));
+        if (idx !== -1) {
+          const pending = pendingSent.current[idx];
+          msg.content = pending.content;
+          msg._fileKey = pending.fileKey;
+          msg._thumbnailKey = pending.thumbnailKey;
+          pendingSent.current.splice(idx, 1);
+          // Persist to IndexedDB so history reload works
+          if (msg.id) {
+            cryptoStore.saveSentContent(msg.id, pending.content, pending.fileKey, pending.thumbnailKey).catch(() => {});
+          }
         }
       }
 
@@ -405,10 +424,12 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
       if (!res.ok) throw new Error(res.status);
       const data = await res.json();
       if (data.length > 0) {
-        // Decrypt E2E messages in history
-        if (e2eManager.isReady()) {
-          for (const msg of data) {
-            if (msg.encrypted && msg.sender !== username) {
+        // Decrypt / restore E2E messages in history
+        for (const msg of data) {
+          if (!msg.encrypted) continue;
+          if (msg.sender !== username) {
+            // Peer messages — decrypt via Double Ratchet
+            if (e2eManager.isReady()) {
               try {
                 const result = await e2eManager.decrypt(msg.sender, msg);
                 if (result.error) {
@@ -417,12 +438,23 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
                 } else {
                   msg.content = result.text;
                   if (result.fileKey) msg._fileKey = result.fileKey;
+                  if (result.thumbnailKey) msg._thumbnailKey = result.thumbnailKey;
                 }
               } catch {
                 msg.content = '🔒 Не удалось расшифровать';
                 msg._decryptError = true;
               }
             }
+          } else {
+            // Own messages — restore from local IndexedDB cache
+            try {
+              const cached = await cryptoStore.getSentContent(msg.id);
+              if (cached) {
+                msg.content = cached.content;
+                msg._fileKey = cached.fileKey;
+                msg._thumbnailKey = cached.thumbnailKey;
+              }
+            } catch { /* ignore */ }
           }
         }
         setMessagesByRoom((prev) => ({ ...prev, [roomId]: data }));
@@ -511,11 +543,21 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
         try {
           const peerHasE2E = await e2eManager.peerHasE2E(token, peerUser);
           if (peerHasE2E) {
-            const encrypted = await e2eManager.encrypt(peerUser, content || '', token);
+            const fileE2E = fileData?.fileKey
+              ? { fileKey: fileData.fileKey, ...(fileData.thumbnailKey ? { thumbnailKey: fileData.thumbnailKey } : {}) }
+              : undefined;
+            const encrypted = await e2eManager.encrypt(peerUser, content || '', token, fileE2E);
             Object.assign(msg, encrypted);
             // Strip plaintext — server must never see the real content
-            msg.content = '🔒';
-            if (msg.replyToContent) msg.replyToContent = '🔒';
+            msg.content = '\ud83d\udd12';
+            if (msg.replyToContent) msg.replyToContent = '\ud83d\udd12';
+            // Queue for restoring own message when server echoes it back
+            pendingSent.current.push({
+              roomId: activeRoomId,
+              content: content || '',
+              fileKey: fileData?.fileKey || null,
+              thumbnailKey: fileData?.thumbnailKey || null,
+            });
           }
         } catch (err) {
           console.warn('[E2E] Encrypt failed, sending plaintext:', err);

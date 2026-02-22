@@ -5,6 +5,8 @@ import VoiceRecorder from './VoiceRecorder';
 import VoiceMessage from './VoiceMessage';
 import VideoCircleRecorder from './VideoCircleRecorder';
 import VideoCircleMessage from './VideoCircleMessage';
+import e2eManager from '../crypto/E2EManager';
+import useDecryptedUrl from '../hooks/useDecryptedUrl';
 import { copyToClipboard } from '../utils/clipboard';
 
 function formatFileSize(bytes) {
@@ -18,6 +20,43 @@ const AVATAR_COLORS = [
   '#e94560', '#4ecca3', '#f0a500', '#a855f7',
   '#3b82f6', '#ec4899', '#14b8a6', '#f97316',
 ];
+
+/** Small wrapper for images that may need E2E decryption */
+function DecryptedImage({ fileUrl, fileKey, fileName, fileSize, formatFileSize }) {
+  const url = useDecryptedUrl(fileUrl, fileKey, 'image/jpeg');
+  return (
+    <div className="file-attachment image-attachment">
+      {url ? (
+        <a href={url} target="_blank" rel="noopener noreferrer">
+          <img src={url} alt={fileName || 'image'} />
+        </a>
+      ) : (
+        <div style={{ padding: 16, opacity: 0.5 }}>🔓 Расшифровка...</div>
+      )}
+      <div className="file-info">
+        <span className="file-name">{fileName}</span>
+        <span className="file-size">{formatFileSize(fileSize)}</span>
+      </div>
+    </div>
+  );
+}
+
+/** Wrapper for file downloads that may need E2E decryption */
+function DecryptedFile({ fileUrl, fileKey, fileName, fileSize, formatFileSize }) {
+  const url = useDecryptedUrl(fileUrl, fileKey, 'application/octet-stream');
+  return (
+    <div className="file-attachment">
+      <a href={url ? `${url}${fileKey ? '' : '?download=true'}` : '#'} className="file-download" download={fileName}>
+        <span className="file-icon">📎</span>
+        <div className="file-info">
+          <span className="file-name">{fileName}</span>
+          <span className="file-size">{formatFileSize(fileSize)}</span>
+        </div>
+        <span className="download-icon">{url ? '⬇️' : '🔓'}</span>
+      </a>
+    </div>
+  );
+}
 
 function getAvatarColor(name) {
   let hash = 0;
@@ -295,12 +334,26 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
     }
   };
 
-  const uploadFile = (file) => {
+  const uploadFile = async (file) => {
     setUploading(true);
     setUploadProgress(0);
 
+    let uploadBlob = file;
+    let fileKey = null;
+
+    // Encrypt file for E2E private rooms
+    if (isE2E) {
+      try {
+        const result = await e2eManager.encryptFile(file);
+        uploadBlob = result.encryptedBlob;
+        fileKey = result.fileKey;
+      } catch (err) {
+        console.warn('[E2E] File encrypt failed, uploading plaintext:', err);
+      }
+    }
+
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', uploadBlob, file.name);
 
     const xhr = new XMLHttpRequest();
     xhr.open('POST', '/api/upload/file');
@@ -317,12 +370,14 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
       setUploadProgress(null);
       if (xhr.status === 200) {
         const data = JSON.parse(xhr.responseText);
-        onSendMessage(input.trim() || '', {
+        const fileData = {
           fileUrl: data.url,
           fileName: data.originalName,
           fileSize: data.size,
           fileType: data.contentType,
-        });
+        };
+        if (fileKey) fileData.fileKey = fileKey;
+        onSendMessage(input.trim() || '', fileData);
         setInput('');
       } else {
         alert('Ошибка загрузки файла');
@@ -564,6 +619,8 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
           duration={msg.duration}
           thumbnailUrl={msg.thumbnailUrl}
           isOwn={msg.sender === username}
+          fileKey={msg._fileKey}
+          thumbnailKey={msg._thumbnailKey}
         />
       );
     }
@@ -577,12 +634,16 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
           duration={msg.duration}
           waveformData={msg.waveform}
           isOwn={msg.sender === username}
+          fileKey={msg._fileKey}
         />
       );
     }
 
     const isImage = msg.fileType && msg.fileType.startsWith('image/');
     if (isImage) {
+      if (msg._fileKey) {
+        return <DecryptedImage fileUrl={msg.fileUrl} fileKey={msg._fileKey} fileName={msg.fileName} fileSize={msg.fileSize} formatFileSize={formatFileSize} />;
+      }
       return (
         <div className="file-attachment image-attachment">
           <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer">
@@ -594,6 +655,9 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
           </div>
         </div>
       );
+    }
+    if (msg._fileKey) {
+      return <DecryptedFile fileUrl={msg.fileUrl} fileKey={msg._fileKey} fileName={msg.fileName} fileSize={msg.fileSize} formatFileSize={formatFileSize} />;
     }
     return (
       <div className="file-attachment">
@@ -945,6 +1009,7 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
         {isRecording ? (
           <VoiceRecorder
             token={token}
+            isE2E={isE2E}
             onSend={(voiceData) => {
               setIsRecording(false);
               onSendMessage('', voiceData);
@@ -954,6 +1019,7 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
         ) : isRecordingVideo ? (
           <VideoCircleRecorder
             token={token}
+            isE2E={isE2E}
             onSend={(videoData) => {
               setIsRecordingVideo(false);
               onSendMessage('', videoData);
