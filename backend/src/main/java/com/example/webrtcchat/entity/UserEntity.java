@@ -19,6 +19,9 @@ public class UserEntity {
     @Column(nullable = false, length = 20)
     private String role = "USER";
 
+    @Column(name = "last_seen", length = 30)
+    private String lastSeen;
+
     private String createdAt;
 
     public UserEntity() {}
@@ -43,4 +46,7 @@ public class UserEntity {
 
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
+
+    public String getLastSeen() { return lastSeen; }
+    public void setLastSeen(String lastSeen) { this.lastSeen = lastSeen; }
 }

@@ -649,6 +649,7 @@ export default function Chat({ token, username, onLogout, joinRoomId, onShowNews
           token={token}
           activeRoom={activeRoom}
           onlineUsers={onlineUsers}
+          allUsers={allUsers}
           typingUsers={activeTypingUsers}
           onTyping={sendTyping}
           isE2E={isPrivateE2E}

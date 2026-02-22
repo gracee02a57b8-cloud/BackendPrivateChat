@@ -352,6 +352,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             if (current != null && current.getId().equals(session.getId())) {
                 userSessions.remove(username);
                 chatService.removeUser(username);
+                chatService.updateLastSeen(username);
                 announcedUsers.remove(username);
 
                 MessageDto leaveMsg = new MessageDto();

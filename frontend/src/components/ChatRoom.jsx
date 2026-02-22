@@ -49,7 +49,31 @@ function parseTimestamp(ts) {
   return isNaN(d.getTime()) ? null : d.toDateString();
 }
 
-export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDeleteMessage, onScheduleMessage, scheduledMessages, roomName, username, connected, token, activeRoom, onlineUsers, typingUsers = [], onTyping, isE2E, onShowSecurityCode }) {
+function formatLastSeenHeader(ts) {
+  if (!ts) return '● не в сети';
+  const d = new Date(ts.includes?.('T') ? ts : ts.replace(' ', 'T'));
+  if (isNaN(d.getTime())) return '● не в сети';
+  const now = new Date();
+  const diff = now - d;
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  if (diff < 60000) return 'был(а) только что';
+  if (diff < 3600000) return `был(а) ${Math.floor(diff / 60000)} мин. назад`;
+  if (d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) {
+    return `был(а) в ${d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
+  }
+  if (d.getDate() === yesterday.getDate() && d.getMonth() === yesterday.getMonth() && d.getFullYear() === yesterday.getFullYear()) {
+    return `был(а) вчера в ${d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
+  }
+  if (diff < 7 * 86400000) {
+    const days = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+    return `был(а) в ${days[d.getDay()]}`;
+  }
+  return `был(а) ${d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}`;
+}
+
+export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDeleteMessage, onScheduleMessage, scheduledMessages, roomName, username, connected, token, activeRoom, onlineUsers, allUsers = [], typingUsers = [], onTyping, isE2E, onShowSecurityCode }) {
   const [input, setInput] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
@@ -58,6 +82,7 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
   const [contextMenu, setContextMenu] = useState(null);
   const [editingMsg, setEditingMsg] = useState(null);
   const [showSchedule, setShowSchedule] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [scheduleDate, setScheduleDate] = useState('');
   const [dragging, setDragging] = useState(false);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
@@ -500,8 +525,13 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
 
   const handleDeleteMsg = (msg) => {
     setContextMenu(null);
-    if (confirm('Удалить сообщение?')) {
-      onDeleteMessage(msg.id);
+    setDeleteConfirm(msg);
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirm) {
+      onDeleteMessage(deleteConfirm.id);
+      setDeleteConfirm(null);
     }
   };
 
@@ -571,9 +601,14 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
           {activeRoom?.type === 'PRIVATE' && (() => {
             const otherUser = getOtherUserInPM();
             const isOnline = otherUser && onlineUsers?.includes(otherUser);
+            if (isOnline) {
+              return <span className="header-online-status online">● в сети</span>;
+            }
+            const userInfo = allUsers.find(u => u.username === otherUser);
+            const lastSeen = userInfo?.lastSeen;
             return (
-              <span className={`header-online-status ${isOnline ? 'online' : ''}`}>
-                {isOnline ? '● в сети' : '● не в сети'}
+              <span className="header-online-status">
+                {lastSeen ? formatLastSeenHeader(lastSeen) : '● не в сети'}
               </span>
             );
           })()}
@@ -923,6 +958,31 @@ export default function ChatRoom({ messages, onSendMessage, onEditMessage, onDel
           </button>
         </div>
       </form>
+
+      {/* Delete confirmation modal */}
+      {deleteConfirm && (
+        <div className="delete-modal-overlay" onClick={() => setDeleteConfirm(null)}>
+          <div className="delete-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="delete-modal-icon">🗑</div>
+            <h3>Удалить сообщение?</h3>
+            <p className="delete-modal-preview">
+              {deleteConfirm.content
+                ? (deleteConfirm.content.length > 80
+                    ? deleteConfirm.content.slice(0, 80) + '…'
+                    : deleteConfirm.content)
+                : '📎 Файл'}
+            </p>
+            <div className="delete-modal-actions">
+              <button className="delete-modal-cancel" onClick={() => setDeleteConfirm(null)}>
+                Отмена
+              </button>
+              <button className="delete-modal-confirm" onClick={confirmDelete}>
+                Удалить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

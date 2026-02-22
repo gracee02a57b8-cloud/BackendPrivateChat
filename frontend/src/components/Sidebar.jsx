@@ -15,6 +15,31 @@ function getAvatarColor(name) {
 }
 function getInitials(name) { return name.charAt(0).toUpperCase(); }
 
+function formatLastSeen(ts) {
+  if (!ts) return 'Не в сети';
+  const d = new Date(ts.includes?.('T') ? ts : ts.replace(' ', 'T'));
+  if (isNaN(d.getTime())) return 'Не в сети';
+  const now = new Date();
+  const diff = now - d;
+  const oneDay = 86400000;
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  if (diff < 60000) return 'был(а) только что';
+  if (diff < 3600000) return `был(а) ${Math.floor(diff / 60000)} мин. назад`;
+  if (d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) {
+    return `был(а) в ${d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
+  }
+  if (d.getDate() === yesterday.getDate() && d.getMonth() === yesterday.getMonth() && d.getFullYear() === yesterday.getFullYear()) {
+    return `был(а) вчера в ${d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
+  }
+  if (diff < 7 * oneDay) {
+    const days = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+    return `был(а) ${days[d.getDay()]}`;
+  }
+  return `был(а) ${d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}`;
+}
+
 function formatTime(ts) {
   if (!ts) return '';
   const d = new Date(ts.includes?.('T') ? ts : ts.replace(' ', 'T'));
@@ -59,13 +84,15 @@ export default function Sidebar({
   sidebarOpen,
   onCloseSidebar,
 }) {
-  const [activeTab, setActiveTab] = useState('chats');
+  const [chatFilter, setChatFilter] = useState('all');
   const [showSearch, setShowSearch] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
   const [searchFilter, setSearchFilter] = useState('');
   const [showMenu, setShowMenu] = useState(false);
   const [shareCopied, setShareCopied] = useState(null);
+  const [showContacts, setShowContacts] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   const copyShareLink = (e, roomId) => {
     e.stopPropagation();
@@ -76,13 +103,13 @@ export default function Sidebar({
     });
   };
 
-  const generalRooms = rooms.filter((r) => r.type === 'GENERAL');
-  const privateRooms = rooms.filter((r) => r.type === 'PRIVATE');
-  const customRooms = rooms.filter((r) => r.type === 'ROOM');
-
   const getPrivateDisplayName = (room) => {
     const parts = room.name.split(' & ');
     return parts.find((p) => p !== username) || room.name;
+  };
+
+  const getDisplayName = (room) => {
+    return room.type === 'PRIVATE' ? getPrivateDisplayName(room) : room.name;
   };
 
   const getLastMessage = (roomId) => {
@@ -94,16 +121,40 @@ export default function Sidebar({
     return msgs[msgs.length - 1];
   };
 
-  const filterRooms = (list) => {
-    if (!searchFilter.trim()) return list;
-    const q = searchFilter.toLowerCase();
-    return list.filter(r => {
-      const name = r.type === 'PRIVATE' ? getPrivateDisplayName(r) : r.name;
-      return name.toLowerCase().includes(q);
-    });
+  const getLastMessageTime = (roomId) => {
+    const msg = getLastMessage(roomId);
+    if (!msg?.timestamp) return 0;
+    const d = new Date(msg.timestamp.includes?.('T') ? msg.timestamp : msg.timestamp.replace(' ', 'T'));
+    return isNaN(d.getTime()) ? 0 : d.getTime();
   };
 
-  const renderChatItem = (room, displayName) => {
+  // Unified sorted + filtered list
+  const getSortedRooms = () => {
+    let list = [...rooms];
+
+    // Apply filter
+    if (chatFilter === 'private') {
+      list = list.filter(r => r.type === 'PRIVATE');
+    } else if (chatFilter === 'groups') {
+      list = list.filter(r => r.type === 'ROOM' || r.type === 'GENERAL');
+    } else if (chatFilter === 'unread') {
+      list = list.filter(r => (unreadCounts[r.id] || 0) > 0);
+    }
+
+    // Apply search
+    if (searchFilter.trim()) {
+      const q = searchFilter.toLowerCase();
+      list = list.filter(r => getDisplayName(r).toLowerCase().includes(q));
+    }
+
+    // Sort by last message time (newest first), rooms without messages go last
+    list.sort((a, b) => getLastMessageTime(b.id) - getLastMessageTime(a.id));
+
+    return list;
+  };
+
+  const renderChatItem = (room) => {
+    const displayName = getDisplayName(room);
     const lastMsg = getLastMessage(room.id);
     const isOnline = room.type === 'PRIVATE' && onlineUsers.includes(displayName);
     const unread = unreadCounts[room.id] || 0;
@@ -143,7 +194,7 @@ export default function Sidebar({
           <span className="sb-share-btn" onClick={(e) => copyShareLink(e, room.id)} title="Поделиться">
             {shareCopied === room.id ? '✅' : '📤'}
           </span>
-          <span className="sb-delete-btn" onClick={(e) => { e.stopPropagation(); if (confirm('Удалить "' + displayName + '"?')) onDeleteRoom(room.id); }} title="Удалить">
+          <span className="sb-delete-btn" onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ id: room.id, name: displayName }); }} title="Удалить">
             🗑
           </span>
         </div>
@@ -155,7 +206,7 @@ export default function Sidebar({
     <div className={`chat-sidebar${sidebarOpen ? ' open' : ''}`}>
       {sidebarOpen && <div className="sidebar-overlay" onClick={onCloseSidebar} />}
 
-      {/* ── Header: Avatar + Name + Status + Menu ── */}
+      {/* ── Header: Avatar + Name + Status + Quick actions ── */}
       <div className="sb-header">
         <div className="sb-header-left">
           <div className="sb-user-avatar" style={{ background: getAvatarColor(username) }}>
@@ -169,10 +220,14 @@ export default function Sidebar({
           </div>
         </div>
         <div className="sb-header-right">
+          <button className="sb-icon-btn" onClick={() => setShowContacts(!showContacts)} title="Контакты">👥</button>
+          <button className="sb-icon-btn" onClick={onShowNews} title="Новости">📰</button>
+          <button className="sb-icon-btn" onClick={onShowTasks} title="Задачи">📋</button>
           <button className="sb-menu-btn" onClick={() => setShowMenu(!showMenu)}>⋮</button>
           {showMenu && (
             <div className="sb-menu-dropdown">
-              <button onClick={() => { setShowMenu(false); setShowCreate(true); }}>➕ Создать чат</button>
+              <button onClick={() => { setShowMenu(false); setShowSearch(!showSearch); }}>👤 Написать</button>
+              <button onClick={() => { setShowMenu(false); setShowCreate(true); }}>➕ Создать группу</button>
               <button onClick={() => { setShowMenu(false); setShowJoin(true); }}>🔗 Войти по ссылке</button>
               <button onClick={() => { setShowMenu(false); onLogout(); }}>🚪 Выйти</button>
             </div>
@@ -180,32 +235,26 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* ── Tab Bar ── */}
-      <div className="sb-tabs">
-        <button
-          className={`sb-tab${activeTab === 'chats' ? ' active' : ''}`}
-          onClick={() => setActiveTab('chats')}
-        >
-          💬 Чаты
-        </button>
-        <button
-          className={`sb-tab${activeTab === 'contacts' ? ' active' : ''}`}
-          onClick={() => setActiveTab('contacts')}
-        >
-          👥 Контакты
-        </button>
-        <button
-          className={`sb-tab${activeTab === 'news' ? ' active' : ''}`}
-          onClick={() => { setActiveTab('news'); onShowNews(); }}
-        >
-          📰 Новости
-        </button>
-        <button
-          className={`sb-tab${activeTab === 'tasks' ? ' active' : ''}`}
-          onClick={() => { setActiveTab('tasks'); onShowTasks(); }}
-        >
-          📋 Задачи
-        </button>
+      {/* ── Filter Tabs (Telegram-like folders) ── */}
+      <div className="sb-filters">
+        {[
+          { key: 'all', label: 'Все' },
+          { key: 'private', label: 'Личные' },
+          { key: 'groups', label: 'Группы' },
+          { key: 'unread', label: 'Непрочитанные' },
+        ].map(f => (
+          <button
+            key={f.key}
+            className={`sb-filter${chatFilter === f.key ? ' active' : ''}`}
+            onClick={() => setChatFilter(f.key)}
+          >
+            {f.label}
+            {f.key === 'unread' && (() => {
+              const total = Object.values(unreadCounts).reduce((s, v) => s + v, 0);
+              return total > 0 ? <span className="sb-filter-badge">{total}</span> : null;
+            })()}
+          </button>
+        ))}
       </div>
 
       {/* ── Search ── */}
@@ -229,11 +278,12 @@ export default function Sidebar({
         />
       )}
 
-      {/* ── Chat List / Contacts List ── */}
-      {activeTab === 'contacts' ? (
+      {/* ── Chat List / Contacts ── */}
+      {showContacts ? (
         <div className="sb-chat-list">
           <div className="sb-section-header">
-            <span className="sb-section-label">ВСЕ ПОЛЬЗОВАТЕЛИ ({allUsers.filter(u => u.username !== username).length})</span>
+            <span className="sb-section-label">КОНТАКТЫ ({allUsers.filter(u => u.username !== username).length})</span>
+            <button className="sb-section-add" onClick={() => setShowContacts(false)} title="Закрыть">✕</button>
           </div>
           {(() => {
             const contacts = allUsers
@@ -255,7 +305,7 @@ export default function Sidebar({
                   <div
                     key={user.username}
                     className="sb-contact-item"
-                    onClick={() => onStartPrivateChat(user.username)}
+                    onClick={() => { onStartPrivateChat(user.username); setShowContacts(false); }}
                   >
                     <div className="sb-chat-avatar-wrap">
                       <div className="sb-chat-avatar" style={{ background: getAvatarColor(user.username) }}>
@@ -278,7 +328,7 @@ export default function Sidebar({
                   <div
                     key={user.username}
                     className="sb-contact-item"
-                    onClick={() => onStartPrivateChat(user.username)}
+                    onClick={() => { onStartPrivateChat(user.username); setShowContacts(false); }}
                   >
                     <div className="sb-chat-avatar-wrap">
                       <div className="sb-chat-avatar" style={{ background: getAvatarColor(user.username) }}>
@@ -288,7 +338,7 @@ export default function Sidebar({
                     </div>
                     <div className="sb-contact-info">
                       <span className="sb-contact-name">{user.username}</span>
-                      <span className="sb-contact-status offline">Не в сети</span>
+                      <span className="sb-contact-status offline">{user.lastSeen ? formatLastSeen(user.lastSeen) : 'Не в сети'}</span>
                     </div>
                   </div>
                 ))}
@@ -304,26 +354,7 @@ export default function Sidebar({
         </div>
       ) : (
       <div className="sb-chat-list">
-        {/* General rooms */}
-        {filterRooms(generalRooms).map((room) => renderChatItem(room, room.name))}
-
-        {/* Private chats section */}
-        {filterRooms(privateRooms).length > 0 && (
-          <div className="sb-section-header">
-            <span className="sb-section-label">ЛИЧНЫЕ ЧАТЫ</span>
-            <button className="sb-section-add" onClick={() => setShowSearch(!showSearch)} title="Начать чат">+</button>
-          </div>
-        )}
-        {filterRooms(privateRooms).map((room) => renderChatItem(room, getPrivateDisplayName(room)))}
-
-        {/* Custom rooms section */}
-        {filterRooms(customRooms).length > 0 && (
-          <div className="sb-section-header">
-            <span className="sb-section-label">КОМНАТЫ</span>
-            <button className="sb-section-add" onClick={() => setShowCreate(true)} title="Создать комнату">+</button>
-          </div>
-        )}
-        {filterRooms(customRooms).map((room) => renderChatItem(room, room.name))}
+        {getSortedRooms().map((room) => renderChatItem(room))}
 
         {rooms.length === 0 && (
           <div className="sb-empty">
@@ -331,11 +362,44 @@ export default function Sidebar({
             <p>Нет чатов</p>
           </div>
         )}
+
+        {rooms.length > 0 && getSortedRooms().length === 0 && chatFilter === 'unread' && (
+          <div className="sb-empty">
+            <span>✅</span>
+            <p>Все прочитано</p>
+          </div>
+        )}
+
+        {rooms.length > 0 && getSortedRooms().length === 0 && chatFilter !== 'unread' && searchFilter && (
+          <div className="sb-empty">
+            <span>🔍</span>
+            <p>Не найдено</p>
+          </div>
+        )}
       </div>
       )}
 
       {showCreate && <CreateRoom onCreateRoom={onCreateRoom} onClose={() => setShowCreate(false)} />}
       {showJoin && <JoinRoom onJoinRoom={onJoinRoom} onClose={() => setShowJoin(false)} />}
+
+      {/* Delete confirmation modal */}
+      {deleteConfirm && (
+        <div className="delete-modal-overlay" onClick={() => setDeleteConfirm(null)}>
+          <div className="delete-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="delete-modal-icon">🗑</div>
+            <h3>Удалить «{deleteConfirm.name}»?</h3>
+            <p className="delete-modal-preview">Чат и вся история будут удалены</p>
+            <div className="delete-modal-actions">
+              <button className="delete-modal-cancel" onClick={() => setDeleteConfirm(null)}>
+                Отмена
+              </button>
+              <button className="delete-modal-confirm" onClick={() => { onDeleteRoom(deleteConfirm.id); setDeleteConfirm(null); }}>
+                Удалить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

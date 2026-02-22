@@ -119,6 +119,22 @@ public class ChatService {
         onlineUsers.remove(user);
     }
 
+    @Transactional
+    public void updateLastSeen(String username) {
+        userRepository.findByUsername(username).ifPresent(user -> {
+            user.setLastSeen(java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+            userRepository.save(user);
+        });
+    }
+
+    @Transactional(readOnly = true)
+    public String getLastSeen(String username) {
+        return userRepository.findByUsername(username)
+                .map(UserEntity::getLastSeen)
+                .orElse(null);
+    }
+
     public List<String> getOnlineUsers() {
         return List.copyOf(onlineUsers);
     }

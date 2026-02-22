@@ -344,34 +344,71 @@
   background: #3a4654;
 }
 
-/* ===== Tab Bar ===== */
-.sb-tabs {
-  display: flex;
-  border-bottom: 1px solid #232e3c;
-  padding: 0 8px;
-}
-
-.sb-tab {
-  flex: 1;
-  padding: 10px 6px;
+/* ===== Header Icon Buttons ===== */
+.sb-icon-btn {
   background: none;
   border: none;
-  border-bottom: 2px solid transparent;
+  font-size: 1.15rem;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 8px;
+  transition: background 0.15s;
+  line-height: 1;
+}
+
+.sb-icon-btn:hover {
+  background: rgba(255,255,255,0.1);
+}
+
+/* ===== Filter Tabs (Telegram folders) ===== */
+.sb-filters {
+  display: flex;
+  padding: 6px 12px;
+  gap: 4px;
+  border-bottom: 1px solid #232e3c;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.sb-filters::-webkit-scrollbar { display: none; }
+
+.sb-filter {
+  padding: 6px 12px;
+  background: none;
+  border: none;
+  border-radius: 16px;
   color: #6c7883;
   font-size: 0.8rem;
   cursor: pointer;
   transition: all 0.2s;
-  text-align: center;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
-.sb-tab:hover {
+.sb-filter:hover {
   color: #eee;
+  background: rgba(255,255,255,0.06);
 }
 
-.sb-tab.active {
-  color: #6ab3f3;
-  border-bottom-color: #6ab3f3;
+.sb-filter.active {
+  color: #fff;
+  background: #6ab3f3;
+}
+
+.sb-filter-badge {
+  background: #e74c3c;
+  color: #fff;
+  font-size: 0.65rem;
+  padding: 1px 5px;
+  border-radius: 10px;
+  font-weight: 700;
+  min-width: 16px;
+  text-align: center;
+}
+
+.sb-filter.active .sb-filter-badge {
+  background: rgba(255,255,255,0.3);
 }
 
 /* ===== Search ===== */
@@ -4242,4 +4279,82 @@
     bottom: 80px;
     left: 50% !important;
   }
+}
+
+/* ===== Delete Confirmation Modal ===== */
+.delete-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.15s ease;
+}
+
+.delete-modal {
+  background: #1e2c3a;
+  border-radius: 16px;
+  padding: 28px 32px;
+  max-width: 340px;
+  width: 90%;
+  text-align: center;
+  animation: ctxPopIn 0.2s ease;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.delete-modal-icon {
+  font-size: 2.4rem;
+  margin-bottom: 8px;
+}
+
+.delete-modal h3 {
+  color: #eee;
+  font-size: 1.05rem;
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+
+.delete-modal-preview {
+  color: #6c7883;
+  font-size: 0.82rem;
+  margin: 0 0 20px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.delete-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.delete-modal-cancel,
+.delete-modal-confirm {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+
+.delete-modal-cancel {
+  background: rgba(255, 255, 255, 0.08);
+  color: #eee;
+}
+
+.delete-modal-cancel:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.delete-modal-confirm {
+  background: #e74c3c;
+  color: #fff;
+}
+
+.delete-modal-confirm:hover {
+  background: #c0392b;
 }
