@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import e2eManager from '../crypto/E2EManager';
 
 /**
  * useWebRTC – manages RTCPeerConnection, media streams and call state.
@@ -51,15 +52,59 @@ export default function useWebRTC({ wsRef, username, token }) {
     }
   }, [token]);
 
-  /** Send a signaling message over WS */
-  const sendSignal = useCallback((type, target, payload = {}) => {
+  /** Send a signaling message over WS (encrypts SDP/ICE via E2E) */
+  const sendSignal = useCallback(async (type, target, payload = {}) => {
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({
-      type,
-      extra: { target, ...payload },
-    }));
-  }, [wsRef]);
+
+    const extra = { target };
+
+    // Encrypt sensitive signaling data (SDP, ICE candidates) via E2E
+    if (['CALL_OFFER', 'CALL_ANSWER', 'ICE_CANDIDATE'].includes(type) && e2eManager.isReady()) {
+      try {
+        const enc = await e2eManager.encrypt(target, JSON.stringify(payload), token);
+        extra.sig_enc = enc.encryptedContent;
+        extra.sig_iv = enc.iv;
+        extra.sig_rk = enc.ratchetKey;
+        extra.sig_n = String(enc.messageNumber);
+        extra.sig_pn = String(enc.previousChainLength);
+        if (enc.ephemeralKey) extra.sig_ek = enc.ephemeralKey;
+        if (enc.senderIdentityKey) extra.sig_ik = enc.senderIdentityKey;
+        if (enc.oneTimeKeyId != null) extra.sig_otk = String(enc.oneTimeKeyId);
+      } catch (err) {
+        console.warn('[WebRTC] Signal E2E failed, plaintext fallback:', err);
+        Object.assign(extra, payload);
+      }
+    } else {
+      Object.assign(extra, payload);
+    }
+
+    ws.send(JSON.stringify({ type, extra }));
+  }, [wsRef, token]);
+
+  /** Decrypt incoming encrypted signaling payload */
+  const decryptExtra = useCallback(async (msg) => {
+    const extra = msg.extra || {};
+    if (!extra.sig_enc || !e2eManager.isReady()) return extra;
+    try {
+      const enc = {
+        encrypted: true,
+        encryptedContent: extra.sig_enc,
+        iv: extra.sig_iv,
+        ratchetKey: extra.sig_rk,
+        messageNumber: parseInt(extra.sig_n || '0'),
+        previousChainLength: parseInt(extra.sig_pn || '0'),
+      };
+      if (extra.sig_ek) enc.ephemeralKey = extra.sig_ek;
+      if (extra.sig_ik) enc.senderIdentityKey = extra.sig_ik;
+      if (extra.sig_otk != null) enc.oneTimeKeyId = parseInt(extra.sig_otk);
+      const result = await e2eManager.decrypt(msg.sender, enc);
+      if (result.text) return { target: extra.target, ...JSON.parse(result.text) };
+    } catch (err) {
+      console.error('[WebRTC] Signal decrypt failed:', err);
+    }
+    return extra;
+  }, []);
 
   /** Stop all local media tracks */
   const stopLocalMedia = useCallback(() => {
@@ -138,9 +183,9 @@ export default function useWebRTC({ wsRef, username, token }) {
     const pc = new RTCPeerConnection(config);
     pcRef.current = pc;
 
-    pc.onicecandidate = (e) => {
+    pc.onicecandidate = async (e) => {
       if (e.candidate) {
-        sendSignal('ICE_CANDIDATE', target, {
+        await sendSignal('ICE_CANDIDATE', target, {
           candidate: JSON.stringify(e.candidate),
         });
       }
@@ -205,7 +250,7 @@ export default function useWebRTC({ wsRef, username, token }) {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
-      sendSignal('CALL_OFFER', target, {
+      await sendSignal('CALL_OFFER', target, {
         callType: type,
         sdp: JSON.stringify(offer),
       });
@@ -215,10 +260,10 @@ export default function useWebRTC({ wsRef, username, token }) {
     }
   }, [callState, createPC, sendSignal, startRingtone, cleanup]);
 
-  /** Handle incoming CALL_OFFER */
+  /** Handle incoming CALL_OFFER (decrypts E2E signaling) */
   const handleOffer = useCallback(async (msg) => {
+    const extra = await decryptExtra(msg);
     const from = msg.sender;
-    const extra = msg.extra || {};
     const type = extra.callType || 'audio';
 
     // If already in a call → send BUSY
@@ -234,7 +279,7 @@ export default function useWebRTC({ wsRef, username, token }) {
 
     // Store offer SDP in ref for when user accepts
     pcRef.current = { _pendingOffer: extra.sdp, _from: from, _type: type };
-  }, [callState, sendSignal, startRingtone]);
+  }, [callState, sendSignal, startRingtone, decryptExtra]);
 
   /** Accept an incoming call */
   const acceptCall = useCallback(async () => {
@@ -271,12 +316,12 @@ export default function useWebRTC({ wsRef, username, token }) {
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
-      sendSignal('CALL_ANSWER', from, {
+      await sendSignal('CALL_ANSWER', from, {
         sdp: JSON.stringify(answer),
       });
     } catch (err) {
       console.error('[WebRTC] acceptCall error:', err);
-      sendSignal('CALL_END', from, { reason: 'error' });
+      await sendSignal('CALL_END', from, { reason: 'error' });
       cleanup();
     }
   }, [callState, createPC, sendSignal, stopRingtone, cleanup]);
@@ -297,9 +342,9 @@ export default function useWebRTC({ wsRef, username, token }) {
     cleanup();
   }, [callPeer, sendSignal, cleanup]);
 
-  /** Handle CALL_ANSWER from callee */
+  /** Handle CALL_ANSWER from callee (decrypts E2E signaling) */
   const handleAnswer = useCallback(async (msg) => {
-    const extra = msg.extra || {};
+    const extra = await decryptExtra(msg);
     if (!extra.sdp || !pcRef.current || typeof pcRef.current.setRemoteDescription !== 'function') return;
 
     try {
@@ -315,11 +360,11 @@ export default function useWebRTC({ wsRef, username, token }) {
     } catch (err) {
       console.error('[WebRTC] handleAnswer error:', err);
     }
-  }, []);
+  }, [decryptExtra]);
 
-  /** Handle remote ICE_CANDIDATE */
+  /** Handle remote ICE_CANDIDATE (decrypts E2E signaling) */
   const handleIceCandidate = useCallback(async (msg) => {
-    const extra = msg.extra || {};
+    const extra = await decryptExtra(msg);
     if (!extra.candidate) return;
 
     try {
@@ -335,7 +380,7 @@ export default function useWebRTC({ wsRef, username, token }) {
     } catch (err) {
       console.error('[WebRTC] handleIceCandidate error:', err);
     }
-  }, []);
+  }, [decryptExtra]);
 
   /** Handle CALL_REJECT / CALL_END / CALL_BUSY from peer */
   const handleCallEnd = useCallback((msg) => {
