@@ -64,6 +64,18 @@ class ChatWebSocketHandlerTest {
     }
 
     @Test
+    @DisplayName("afterConnectionEstablished - does NOT auto-join general room (Bug 2)")
+    void connect_doesNotJoinGeneral() throws Exception {
+        setupSession("session1", "alice", "valid-token");
+        when(jwtService.isTokenValid("valid-token")).thenReturn(true);
+        when(jwtService.extractUsername("valid-token")).thenReturn("alice");
+
+        handler.afterConnectionEstablished(session);
+
+        verify(roomService, never()).joinRoom(eq("general"), anyString());
+    }
+
+    @Test
     @DisplayName("afterConnectionEstablished - invalid token closes connection")
     void connect_invalidToken() throws Exception {
         when(session.getUri()).thenReturn(new URI("ws://localhost/ws/chat?token=bad-token"));
@@ -697,10 +709,6 @@ class ChatWebSocketHandlerTest {
         when(jwtService.isTokenValid(token)).thenReturn(true);
         when(jwtService.extractUsername(token)).thenReturn(username);
 
-        RoomDto generalRoom = createRoom("general", RoomType.GENERAL);
-        when(roomService.joinRoom("general", username)).thenReturn(generalRoom);
-        when(roomService.getRoomById("general")).thenReturn(generalRoom);
-
         handler.afterConnectionEstablished(s);
         return s;
     }
@@ -917,6 +925,110 @@ class ChatWebSocketHandlerTest {
         verify(bobSession).sendMessage(argThat(msg -> {
             String payload = ((TextMessage) msg).getPayload();
             return payload.contains("\"callType\":\"video\"");
+        }));
+    }
+
+    @Test
+    @DisplayName("CALL_OFFER with large video SDP payload (E2E encrypted) - relays successfully")
+    void callOffer_largeVideoPayload_relaysSuccessfully() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+        WebSocketSession bobSession = connectUser("s2", "bob", "token-b");
+
+        // Simulate a video CALL_OFFER with E2E encrypted SDP (~12KB payload)
+        // This is the exact scenario that failed with default 8KB buffer
+        MessageDto offer = new MessageDto();
+        offer.setType(MessageType.CALL_OFFER);
+        Map<String, String> extra = new HashMap<>();
+        extra.put("target", "bob");
+        // Simulate E2E encrypted signaling fields (base64-encoded, large)
+        extra.put("sig_enc", "A".repeat(8000)); // ~8KB encrypted SDP (video is larger than audio)
+        extra.put("sig_iv", "iv-base64-data");
+        extra.put("sig_rk", "ratchetKey-base64-data");
+        extra.put("sig_n", "42");
+        extra.put("sig_pn", "3");
+        offer.setExtra(extra);
+
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(offer)));
+
+        // Bob should receive the entire large payload intact
+        verify(bobSession).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"type\":\"CALL_OFFER\"")
+                    && payload.contains("\"sender\":\"alice\"")
+                    && payload.contains("\"sig_enc\"")
+                    && payload.length() > 8000; // Must be >8KB to test the fix
+        }));
+    }
+
+    @Test
+    @DisplayName("CALL_ANSWER with large video SDP payload - relays successfully")
+    void callAnswer_largeVideoPayload_relaysSuccessfully() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+        WebSocketSession bobSession = connectUser("s2", "bob", "token-b");
+
+        MessageDto answer = new MessageDto();
+        answer.setType(MessageType.CALL_ANSWER);
+        Map<String, String> extra = new HashMap<>();
+        extra.put("target", "alice");
+        extra.put("sig_enc", "B".repeat(8000));
+        extra.put("sig_iv", "iv-data");
+        extra.put("sig_rk", "rk-data");
+        answer.setExtra(extra);
+
+        handler.handleTextMessage(bobSession, new TextMessage(objectMapper.writeValueAsString(answer)));
+
+        verify(aliceSession).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"type\":\"CALL_ANSWER\"")
+                    && payload.contains("\"sender\":\"bob\"")
+                    && payload.length() > 8000;
+        }));
+    }
+
+    @Test
+    @DisplayName("CALL_OFFER audio vs video - both relay with all extra fields preserved")
+    void callOffer_audioAndVideo_bothPreserveAllFields() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+        WebSocketSession bobSession = connectUser("s2", "bob", "token-b");
+
+        // Audio call offer (small SDP)
+        MessageDto audioOffer = new MessageDto();
+        audioOffer.setType(MessageType.CALL_OFFER);
+        Map<String, String> audioExtra = new HashMap<>();
+        audioExtra.put("target", "bob");
+        audioExtra.put("callType", "audio");
+        audioExtra.put("sdp", "{\"type\":\"offer\",\"sdp\":\"v=0\\r\\no=- audio\"}");
+        audioExtra.put("mediaKey", "audio-media-key-base64");
+        audioOffer.setExtra(audioExtra);
+
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(audioOffer)));
+
+        verify(bobSession).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"callType\":\"audio\"")
+                    && payload.contains("\"mediaKey\":\"audio-media-key-base64\"");
+        }));
+
+        reset(bobSession);
+        when(bobSession.isOpen()).thenReturn(true);
+
+        // Video call offer (large SDP)
+        MessageDto videoOffer = new MessageDto();
+        videoOffer.setType(MessageType.CALL_OFFER);
+        Map<String, String> videoExtra = new HashMap<>();
+        videoExtra.put("target", "bob");
+        videoExtra.put("callType", "video");
+        videoExtra.put("sdp", "{\"type\":\"offer\",\"sdp\":\"v=0\\r\\nm=audio\\r\\nm=video\\r\\n" + "x".repeat(3000) + "\"}");
+        videoExtra.put("mediaKey", "video-media-key-base64");
+        videoOffer.setExtra(videoExtra);
+
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(videoOffer)));
+
+        verify(bobSession).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"callType\":\"video\"")
+                    && payload.contains("\"mediaKey\":\"video-media-key-base64\"")
+                    && payload.contains("m=video");
         }));
     }
 

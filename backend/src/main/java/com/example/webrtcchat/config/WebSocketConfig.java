@@ -1,11 +1,14 @@
 package com.example.webrtcchat.config;
 
 import com.example.webrtcchat.controller.ChatWebSocketHandler;
+import jakarta.websocket.server.ServerContainer;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
+import org.springframework.web.socket.server.standard.ServletServerContainerFactoryBean;
 
 import java.util.Arrays;
 
@@ -28,5 +31,20 @@ public class WebSocketConfig implements WebSocketConfigurer {
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(chatWebSocketHandler, "/ws/chat")
                 .setAllowedOriginPatterns(allowedOrigins);
+    }
+
+    /**
+     * Increase WebSocket text message buffer size to 64 KB.
+     * Default Tomcat limit is 8 KB, which is too small for video call SDP
+     * after E2E encryption + base64 encoding (~10-13 KB for video offers).
+     * Without this, video CALL_OFFERs are silently dropped by the server.
+     */
+    @Bean
+    public ServletServerContainerFactoryBean createWebSocketContainer() {
+        ServletServerContainerFactoryBean container = new ServletServerContainerFactoryBean();
+        container.setMaxTextMessageBufferSize(65536);   // 64 KB
+        container.setMaxBinaryMessageBufferSize(65536); // 64 KB
+        container.setMaxSessionIdleTimeout(300000L);    // 5 min
+        return container;
     }
 }

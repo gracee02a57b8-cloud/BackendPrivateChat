@@ -29,6 +29,14 @@ class RoomServiceTest {
     private RoomService roomService;
 
     @Test
+    @DisplayName("init does NOT create general room (Bug 2)")
+    void init_doesNotCreateGeneralRoom() {
+        roomService.init();
+        verify(roomRepository, never()).save(any(RoomEntity.class));
+        verify(roomRepository, never()).findById("general");
+    }
+
+    @Test
     @DisplayName("getRoomById returns room when found")
     void getRoomById_found() {
         RoomEntity entity = createRoom("room1", "Test Room", RoomType.ROOM, "alice");

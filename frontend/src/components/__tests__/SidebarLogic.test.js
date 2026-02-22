@@ -70,7 +70,7 @@ function getSortedRooms(rooms, chatFilter, searchFilter, unreadCounts, messagesB
   if (chatFilter === 'private') {
     list = list.filter(r => r.type === 'PRIVATE');
   } else if (chatFilter === 'groups') {
-    list = list.filter(r => r.type === 'ROOM' || r.type === 'GENERAL');
+    list = list.filter(r => r.type === 'ROOM');
   } else if (chatFilter === 'unread') {
     list = list.filter(r => (unreadCounts[r.id] || 0) > 0);
   }
@@ -186,10 +186,16 @@ describe('getSortedRooms — Unified sorted chat list', () => {
     expect(result.length).toBe(2);
   });
 
-  it('filters groups (ROOM + GENERAL)', () => {
+  it('filters groups (ROOM only, no GENERAL)', () => {
     const result = getSortedRooms(rooms, 'groups', '', {}, messagesByRoom, 'alice');
-    expect(result.every(r => r.type === 'ROOM' || r.type === 'GENERAL')).toBe(true);
-    expect(result.length).toBe(3);
+    expect(result.every(r => r.type === 'ROOM')).toBe(true);
+    expect(result.length).toBe(2);
+  });
+
+  it('groups filter excludes GENERAL rooms (Bug 2)', () => {
+    const result = getSortedRooms(rooms, 'groups', '', {}, messagesByRoom, 'alice');
+    expect(result.some(r => r.type === 'GENERAL')).toBe(false);
+    expect(result.some(r => r.id === 'general')).toBe(false);
   });
 
   it('filters unread rooms', () => {
@@ -225,10 +231,15 @@ describe('getSortedRooms — Unified sorted chat list', () => {
     expect(result[result.length - 1].id).toBe('room-2');
   });
 
-  it('combines filter + search', () => {
+  it('combines filter + search (general excluded from groups)', () => {
     const result = getSortedRooms(rooms, 'groups', 'gen', {}, messagesByRoom, 'alice');
+    expect(result.length).toBe(0);
+  });
+
+  it('combines filter + search (finds room by name)', () => {
+    const result = getSortedRooms(rooms, 'groups', 'dev', {}, messagesByRoom, 'alice');
     expect(result.length).toBe(1);
-    expect(result[0].id).toBe('general');
+    expect(result[0].id).toBe('room-1');
   });
 });
 

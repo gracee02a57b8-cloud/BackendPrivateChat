@@ -85,7 +85,11 @@ export default function useWebRTC({ wsRef, username, token }) {
       Object.assign(extra, payload);
     }
 
-    ws.send(JSON.stringify({ type, extra }));
+    try {
+      ws.send(JSON.stringify({ type, extra }));
+    } catch (err) {
+      console.error('[WebRTC] ws.send failed:', err);
+    }
   }, [wsRef, token]);
 
   /** Decrypt incoming encrypted signaling payload */
@@ -171,10 +175,12 @@ export default function useWebRTC({ wsRef, username, token }) {
     }
 
     if (pcRef.current) {
-      pcRef.current.ontrack = null;
-      pcRef.current.onicecandidate = null;
-      pcRef.current.onconnectionstatechange = null;
-      pcRef.current.close();
+      if (typeof pcRef.current.close === 'function') {
+        pcRef.current.ontrack = null;
+        pcRef.current.onicecandidate = null;
+        pcRef.current.onconnectionstatechange = null;
+        pcRef.current.close();
+      }
       pcRef.current = null;
     }
 
@@ -287,6 +293,12 @@ export default function useWebRTC({ wsRef, username, token }) {
       });
     } catch (err) {
       console.error('[WebRTC] startCall error:', err);
+      // Provide user feedback for camera/microphone permission issues
+      if (err.name === 'NotAllowedError' || err.name === 'NotFoundError' || err.name === 'NotReadableError') {
+        const isVideo = type === 'video';
+        const deviceName = isVideo ? 'камере' : 'микрофону';
+        alert(`Нет доступа к ${deviceName}. Проверьте разрешения браузера.`);
+      }
       cleanup();
     }
   }, [callState, createPC, sendSignal, startRingtone, cleanup]);
@@ -365,6 +377,11 @@ export default function useWebRTC({ wsRef, username, token }) {
       });
     } catch (err) {
       console.error('[WebRTC] acceptCall error:', err);
+      if (err.name === 'NotAllowedError' || err.name === 'NotFoundError' || err.name === 'NotReadableError') {
+        const isVideo = type === 'video';
+        const deviceName = isVideo ? 'камере' : 'микрофону';
+        alert(`Нет доступа к ${deviceName}. Проверьте разрешения браузера.`);
+      }
       await sendSignal('CALL_END', from, { reason: 'error' });
       cleanup();
     }
