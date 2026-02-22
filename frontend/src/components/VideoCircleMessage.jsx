@@ -92,41 +92,43 @@ export default function VideoCircleMessage({ fileUrl, duration, thumbnailUrl, is
 
   return (
     <div className={`vc-msg ${isOwn ? 'vc-msg-own' : ''}`} onClick={togglePlay} role="button" tabIndex={0}>
-      <div className="vc-circle" style={{ width: SIZE, height: SIZE }}>
-        {/* Progress ring */}
-        <svg className="vc-ring" width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-          <circle cx={SIZE / 2} cy={SIZE / 2} r={RING_R} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="3.5" />
-          {playing && (
-            <circle cx={SIZE / 2} cy={SIZE / 2} r={RING_R} fill="none" stroke="#4ecca3" strokeWidth="3.5"
-              strokeDasharray={circumference}
-              strokeDashoffset={dashOffset}
-              strokeLinecap="round"
-              transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}
-              style={{ transition: 'stroke-dashoffset 0.1s linear' }} />
+      <div className="vc-circle-wrap" style={{ width: SIZE, height: SIZE, position: 'relative' }}>
+        <div className="vc-circle" style={{ width: SIZE, height: SIZE }}>
+          {/* Progress ring */}
+          <svg className="vc-ring" width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
+            <circle cx={SIZE / 2} cy={SIZE / 2} r={RING_R} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="3.5" />
+            {playing && (
+              <circle cx={SIZE / 2} cy={SIZE / 2} r={RING_R} fill="none" stroke="#4ecca3" strokeWidth="3.5"
+                strokeDasharray={circumference}
+                strokeDashoffset={dashOffset}
+                strokeLinecap="round"
+                transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}
+                style={{ transition: 'stroke-dashoffset 0.1s linear' }} />
+            )}
+          </svg>
+
+          <video
+            ref={videoRef}
+            className="vc-video"
+            src={fileUrl}
+            poster={thumbnailUrl || undefined}
+            preload="metadata"
+            muted={muted}
+            playsInline
+            loop={false}
+          />
+
+          {/* Play overlay — show when not playing */}
+          {!playing && (
+            <div className="vc-play-overlay">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="rgba(255,255,255,0.9)">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </div>
           )}
-        </svg>
+        </div>
 
-        <video
-          ref={videoRef}
-          className="vc-video"
-          src={fileUrl}
-          poster={thumbnailUrl || undefined}
-          preload="metadata"
-          muted={muted}
-          playsInline
-          loop={false}
-        />
-
-        {/* Play overlay — show when not playing */}
-        {!playing && (
-          <div className="vc-play-overlay">
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="rgba(255,255,255,0.9)">
-              <path d="M8 5v14l11-7z" />
-            </svg>
-          </div>
-        )}
-
-        {/* Mute toggle */}
+        {/* Mute toggle — positioned OUTSIDE vc-circle to avoid overflow:hidden clipping */}
         {playing && (
           <button className="vc-mute-btn" onClick={toggleMute} type="button" title={muted ? 'Включить звук' : 'Выключить звук'}>
             {muted ? (

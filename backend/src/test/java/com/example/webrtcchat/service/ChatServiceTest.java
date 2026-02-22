@@ -253,8 +253,10 @@ class ChatServiceTest {
         msg2.setStatus("DELIVERED");
         msg2.setType(MessageType.CHAT);
 
-        when(messageRepository.findByRoomIdAndTypeAndSenderNotAndStatusNot(
-                "general", MessageType.CHAT, "bob", "READ"))
+        when(messageRepository.findByRoomIdAndTypeInAndSenderNotAndStatusNot(
+                eq("general"),
+                eq(List.of(MessageType.CHAT, MessageType.VOICE, MessageType.VIDEO_CIRCLE)),
+                eq("bob"), eq("READ")))
                 .thenReturn(List.of(msg1, msg2));
 
         Map<String, List<String>> result = chatService.markMessagesAsRead("general", "bob");
@@ -270,8 +272,8 @@ class ChatServiceTest {
     @Test
     @DisplayName("markMessagesAsRead with no unread returns empty map")
     void markMessagesAsRead_noUnread() {
-        when(messageRepository.findByRoomIdAndTypeAndSenderNotAndStatusNot(
-                anyString(), any(), anyString(), anyString()))
+        when(messageRepository.findByRoomIdAndTypeInAndSenderNotAndStatusNot(
+                anyString(), anyList(), anyString(), anyString()))
                 .thenReturn(List.of());
 
         Map<String, List<String>> result = chatService.markMessagesAsRead("general", "bob");
@@ -312,6 +314,153 @@ class ChatServiceTest {
     }
 
     // === Helpers ===
+
+    // === Voice message tests ===
+
+    @Test
+    @DisplayName("send VOICE message preserves duration and waveform")
+    void send_voiceMessage_preservesDurationAndWaveform() {
+        MessageDto voice = new MessageDto();
+        voice.setId("voice-1");
+        voice.setSender("alice");
+        voice.setContent(null);
+        voice.setTimestamp("2026-01-01 12:00:00");
+        voice.setType(MessageType.VOICE);
+        voice.setStatus("SENT");
+        voice.setFileUrl("/uploads/voice_123.webm");
+        voice.setFileName("voice_123.webm");
+        voice.setFileSize(24576L);
+        voice.setFileType("audio/webm");
+        voice.setDuration(15);
+        voice.setWaveform("[0.1,0.5,0.8,0.3,0.6]");
+
+        chatService.send("room1", voice);
+
+        ArgumentCaptor<MessageEntity> captor = ArgumentCaptor.forClass(MessageEntity.class);
+        verify(messageRepository).save(captor.capture());
+
+        MessageEntity saved = captor.getValue();
+        assertEquals("voice-1", saved.getId());
+        assertEquals(MessageType.VOICE, saved.getType());
+        assertEquals(Integer.valueOf(15), saved.getDuration());
+        assertEquals("[0.1,0.5,0.8,0.3,0.6]", saved.getWaveform());
+        assertEquals("/uploads/voice_123.webm", saved.getFileUrl());
+        assertEquals("audio/webm", saved.getFileType());
+    }
+
+    @Test
+    @DisplayName("send VOICE message with null duration and waveform")
+    void send_voiceMessage_nullDurationAndWaveform() {
+        MessageDto voice = new MessageDto();
+        voice.setId("voice-2");
+        voice.setSender("bob");
+        voice.setTimestamp("2026-01-01 12:00:00");
+        voice.setType(MessageType.VOICE);
+        voice.setStatus("SENT");
+        voice.setDuration(null);
+        voice.setWaveform(null);
+
+        chatService.send("room1", voice);
+
+        ArgumentCaptor<MessageEntity> captor = ArgumentCaptor.forClass(MessageEntity.class);
+        verify(messageRepository).save(captor.capture());
+
+        MessageEntity saved = captor.getValue();
+        assertEquals(MessageType.VOICE, saved.getType());
+        assertNull(saved.getDuration());
+        assertNull(saved.getWaveform());
+    }
+
+    // === Video circle message tests ===
+
+    @Test
+    @DisplayName("send VIDEO_CIRCLE message preserves duration and thumbnailUrl")
+    void send_videoCircleMessage_preservesDurationAndThumbnail() {
+        MessageDto vc = new MessageDto();
+        vc.setId("vc-1");
+        vc.setSender("alice");
+        vc.setContent(null);
+        vc.setTimestamp("2026-01-01 12:00:00");
+        vc.setType(MessageType.VIDEO_CIRCLE);
+        vc.setStatus("SENT");
+        vc.setFileUrl("/uploads/video_circle_123.webm");
+        vc.setFileName("video_circle_123.webm");
+        vc.setFileSize(1_048_576L);
+        vc.setFileType("video/webm");
+        vc.setDuration(25);
+        vc.setThumbnailUrl("/uploads/thumb_123.jpg");
+
+        chatService.send("room1", vc);
+
+        ArgumentCaptor<MessageEntity> captor = ArgumentCaptor.forClass(MessageEntity.class);
+        verify(messageRepository).save(captor.capture());
+
+        MessageEntity saved = captor.getValue();
+        assertEquals("vc-1", saved.getId());
+        assertEquals(MessageType.VIDEO_CIRCLE, saved.getType());
+        assertEquals(Integer.valueOf(25), saved.getDuration());
+        assertEquals("/uploads/thumb_123.jpg", saved.getThumbnailUrl());
+        assertEquals("/uploads/video_circle_123.webm", saved.getFileUrl());
+        assertEquals("video/webm", saved.getFileType());
+    }
+
+    @Test
+    @DisplayName("send VIDEO_CIRCLE with null thumbnailUrl")
+    void send_videoCircleMessage_nullThumbnail() {
+        MessageDto vc = new MessageDto();
+        vc.setId("vc-2");
+        vc.setSender("bob");
+        vc.setTimestamp("2026-01-01 12:00:00");
+        vc.setType(MessageType.VIDEO_CIRCLE);
+        vc.setStatus("SENT");
+        vc.setDuration(10);
+        vc.setThumbnailUrl(null);
+
+        chatService.send("room1", vc);
+
+        ArgumentCaptor<MessageEntity> captor = ArgumentCaptor.forClass(MessageEntity.class);
+        verify(messageRepository).save(captor.capture());
+
+        MessageEntity saved = captor.getValue();
+        assertEquals(MessageType.VIDEO_CIRCLE, saved.getType());
+        assertEquals(Integer.valueOf(10), saved.getDuration());
+        assertNull(saved.getThumbnailUrl());
+    }
+
+    // === markMessagesAsRead includes VOICE and VIDEO_CIRCLE ===
+
+    @Test
+    @DisplayName("markMessagesAsRead marks VOICE and VIDEO_CIRCLE messages as read")
+    void markMessagesAsRead_voiceAndVideoCircle() {
+        MessageEntity voiceMsg = createEntity("m-voice", "alice", null, "2026-01-01 12:00:00");
+        voiceMsg.setRoomId("general");
+        voiceMsg.setStatus("SENT");
+        voiceMsg.setType(MessageType.VOICE);
+        voiceMsg.setDuration(10);
+
+        MessageEntity vcMsg = createEntity("m-vc", "alice", null, "2026-01-01 12:01:00");
+        vcMsg.setRoomId("general");
+        vcMsg.setStatus("DELIVERED");
+        vcMsg.setType(MessageType.VIDEO_CIRCLE);
+        vcMsg.setDuration(20);
+
+        when(messageRepository.findByRoomIdAndTypeInAndSenderNotAndStatusNot(
+                eq("general"),
+                eq(List.of(MessageType.CHAT, MessageType.VOICE, MessageType.VIDEO_CIRCLE)),
+                eq("bob"), eq("READ")))
+                .thenReturn(List.of(voiceMsg, vcMsg));
+
+        Map<String, List<String>> result = chatService.markMessagesAsRead("general", "bob");
+
+        assertEquals(1, result.size());
+        assertTrue(result.containsKey("alice"));
+        assertEquals(2, result.get("alice").size());
+        assertEquals("READ", voiceMsg.getStatus());
+        assertEquals("READ", vcMsg.getStatus());
+        verify(messageRepository).saveAll(List.of(voiceMsg, vcMsg));
+    }
+
+    // === Helpers (original) ===
 
     private MessageEntity createEntity(String id, String sender, String content, String timestamp) {
         MessageEntity e = new MessageEntity();

@@ -324,6 +324,202 @@ class E2EFieldPropagationTest {
         }
     }
 
+    @Nested
+    @DisplayName("Voice Message Fields Round-Trip")
+    class VoiceFieldsRoundTrip {
+
+        @Test
+        @DisplayName("Voice message duration and waveform survive round-trip")
+        void voiceFields_surviveRoundTrip() {
+            String roomId = "voice-room-" + UUID.randomUUID();
+            MessageDto msg = new MessageDto();
+            msg.setId(UUID.randomUUID().toString());
+            msg.setSender("alice");
+            msg.setContent(null);
+            msg.setTimestamp("2026-01-01 12:00:00");
+            msg.setType(MessageType.VOICE);
+            msg.setStatus("SENT");
+            msg.setFileUrl("/uploads/voice_test.webm");
+            msg.setFileName("voice_test.webm");
+            msg.setFileSize(32768L);
+            msg.setFileType("audio/webm");
+            msg.setDuration(42);
+            msg.setWaveform("[0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]");
+
+            chatService.send(roomId, msg);
+            List<MessageDto> history = chatService.getHistory(roomId, 0, 10);
+            assertEquals(1, history.size());
+
+            MessageDto retrieved = history.get(0);
+            assertEquals(MessageType.VOICE, retrieved.getType());
+            assertEquals(Integer.valueOf(42), retrieved.getDuration());
+            assertEquals("[0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]", retrieved.getWaveform());
+            assertEquals("/uploads/voice_test.webm", retrieved.getFileUrl());
+            assertEquals("voice_test.webm", retrieved.getFileName());
+            assertEquals(32768L, retrieved.getFileSize());
+            assertEquals("audio/webm", retrieved.getFileType());
+        }
+
+        @Test
+        @DisplayName("Voice message with null waveform survives round-trip")
+        void voiceNullWaveform_survives() {
+            String roomId = "voice-null-room-" + UUID.randomUUID();
+            MessageDto msg = new MessageDto();
+            msg.setId(UUID.randomUUID().toString());
+            msg.setSender("bob");
+            msg.setTimestamp("2026-01-01 12:00:00");
+            msg.setType(MessageType.VOICE);
+            msg.setStatus("SENT");
+            msg.setDuration(5);
+            msg.setWaveform(null);
+
+            chatService.send(roomId, msg);
+            List<MessageDto> history = chatService.getHistory(roomId, 0, 10);
+            MessageDto retrieved = history.get(0);
+
+            assertEquals(MessageType.VOICE, retrieved.getType());
+            assertEquals(Integer.valueOf(5), retrieved.getDuration());
+            assertNull(retrieved.getWaveform());
+        }
+
+        @Test
+        @DisplayName("Encrypted voice message preserves both E2E and voice fields")
+        void encryptedVoice_allFieldsSurvive() {
+            String roomId = "enc-voice-room-" + UUID.randomUUID();
+            MessageDto msg = new MessageDto();
+            msg.setId(UUID.randomUUID().toString());
+            msg.setSender("alice");
+            msg.setContent("[encrypted]");
+            msg.setTimestamp("2026-01-01 12:00:00");
+            msg.setType(MessageType.VOICE);
+            msg.setStatus("SENT");
+            // E2E fields
+            msg.setEncrypted(true);
+            msg.setEncryptedContent("voice-cipher");
+            msg.setIv("voice-iv");
+            msg.setRatchetKey("voice-ratchet");
+            msg.setMessageNumber(10);
+            msg.setPreviousChainLength(2);
+            // Voice fields
+            msg.setDuration(30);
+            msg.setWaveform("[0.5,0.8,0.3]");
+            msg.setFileUrl("/uploads/enc_voice.webm");
+
+            chatService.send(roomId, msg);
+            List<MessageDto> history = chatService.getHistory(roomId, 0, 10);
+            MessageDto r = history.get(0);
+
+            // Voice fields
+            assertEquals(MessageType.VOICE, r.getType());
+            assertEquals(Integer.valueOf(30), r.getDuration());
+            assertEquals("[0.5,0.8,0.3]", r.getWaveform());
+            assertEquals("/uploads/enc_voice.webm", r.getFileUrl());
+            // E2E fields
+            assertTrue(r.isEncrypted());
+            assertEquals("voice-cipher", r.getEncryptedContent());
+            assertEquals("voice-iv", r.getIv());
+            assertEquals("voice-ratchet", r.getRatchetKey());
+            assertEquals(10, r.getMessageNumber());
+        }
+    }
+
+    @Nested
+    @DisplayName("Video Circle Fields Round-Trip")
+    class VideoCircleFieldsRoundTrip {
+
+        @Test
+        @DisplayName("Video circle duration and thumbnailUrl survive round-trip")
+        void videoCircleFields_surviveRoundTrip() {
+            String roomId = "vc-room-" + UUID.randomUUID();
+            MessageDto msg = new MessageDto();
+            msg.setId(UUID.randomUUID().toString());
+            msg.setSender("alice");
+            msg.setContent(null);
+            msg.setTimestamp("2026-01-01 12:00:00");
+            msg.setType(MessageType.VIDEO_CIRCLE);
+            msg.setStatus("SENT");
+            msg.setFileUrl("/uploads/video_circle_test.webm");
+            msg.setFileName("video_circle_test.webm");
+            msg.setFileSize(2_097_152L);
+            msg.setFileType("video/webm");
+            msg.setDuration(28);
+            msg.setThumbnailUrl("/uploads/thumb_test.jpg");
+
+            chatService.send(roomId, msg);
+            List<MessageDto> history = chatService.getHistory(roomId, 0, 10);
+            assertEquals(1, history.size());
+
+            MessageDto retrieved = history.get(0);
+            assertEquals(MessageType.VIDEO_CIRCLE, retrieved.getType());
+            assertEquals(Integer.valueOf(28), retrieved.getDuration());
+            assertEquals("/uploads/thumb_test.jpg", retrieved.getThumbnailUrl());
+            assertEquals("/uploads/video_circle_test.webm", retrieved.getFileUrl());
+            assertEquals("video_circle_test.webm", retrieved.getFileName());
+            assertEquals(2_097_152L, retrieved.getFileSize());
+            assertEquals("video/webm", retrieved.getFileType());
+        }
+
+        @Test
+        @DisplayName("Video circle with null thumbnailUrl survives round-trip")
+        void videoCircleNullThumbnail_survives() {
+            String roomId = "vc-null-room-" + UUID.randomUUID();
+            MessageDto msg = new MessageDto();
+            msg.setId(UUID.randomUUID().toString());
+            msg.setSender("bob");
+            msg.setTimestamp("2026-01-01 12:00:00");
+            msg.setType(MessageType.VIDEO_CIRCLE);
+            msg.setStatus("SENT");
+            msg.setDuration(10);
+            msg.setThumbnailUrl(null);
+
+            chatService.send(roomId, msg);
+            List<MessageDto> history = chatService.getHistory(roomId, 0, 10);
+            MessageDto retrieved = history.get(0);
+
+            assertEquals(MessageType.VIDEO_CIRCLE, retrieved.getType());
+            assertEquals(Integer.valueOf(10), retrieved.getDuration());
+            assertNull(retrieved.getThumbnailUrl());
+        }
+
+        @Test
+        @DisplayName("Encrypted video circle preserves both E2E and video circle fields")
+        void encryptedVideoCircle_allFieldsSurvive() {
+            String roomId = "enc-vc-room-" + UUID.randomUUID();
+            MessageDto msg = new MessageDto();
+            msg.setId(UUID.randomUUID().toString());
+            msg.setSender("alice");
+            msg.setContent("[encrypted]");
+            msg.setTimestamp("2026-01-01 12:00:00");
+            msg.setType(MessageType.VIDEO_CIRCLE);
+            msg.setStatus("SENT");
+            // E2E fields
+            msg.setEncrypted(true);
+            msg.setEncryptedContent("vc-cipher");
+            msg.setIv("vc-iv");
+            msg.setRatchetKey("vc-ratchet");
+            msg.setMessageNumber(20);
+            msg.setPreviousChainLength(5);
+            // Video circle fields
+            msg.setDuration(15);
+            msg.setThumbnailUrl("/uploads/enc_thumb.jpg");
+            msg.setFileUrl("/uploads/enc_video_circle.webm");
+
+            chatService.send(roomId, msg);
+            List<MessageDto> history = chatService.getHistory(roomId, 0, 10);
+            MessageDto r = history.get(0);
+
+            // Video circle fields
+            assertEquals(MessageType.VIDEO_CIRCLE, r.getType());
+            assertEquals(Integer.valueOf(15), r.getDuration());
+            assertEquals("/uploads/enc_thumb.jpg", r.getThumbnailUrl());
+            assertEquals("/uploads/enc_video_circle.webm", r.getFileUrl());
+            // E2E fields
+            assertTrue(r.isEncrypted());
+            assertEquals("vc-cipher", r.getEncryptedContent());
+            assertEquals("vc-iv", r.getIv());
+        }
+    }
+
     // === Helper ===
 
     private MessageDto buildFullE2eMessage(String roomId) {

@@ -574,6 +574,82 @@ class ChatWebSocketHandlerTest {
 
     // === Disconnect ===
 
+    // === VOICE message type preservation ===
+
+    @Test
+    @DisplayName("handleTextMessage - preserves VOICE type from frontend")
+    void handleMessage_voiceTypePreserved() throws Exception {
+        setupConnectedSession("session1", "alice");
+
+        RoomDto room = createRoom("general", RoomType.GENERAL);
+        when(roomService.getRoomById("general")).thenReturn(room);
+
+        MessageDto incoming = new MessageDto();
+        incoming.setContent(null);
+        incoming.setRoomId("general");
+        incoming.setType(MessageType.VOICE);
+        incoming.setFileUrl("/uploads/voice_123.webm");
+        incoming.setDuration(15);
+        incoming.setWaveform("[0.1,0.5,0.8]");
+
+        handler.handleTextMessage(session, new TextMessage(objectMapper.writeValueAsString(incoming)));
+
+        verify(chatService).send(eq("general"), argThat(msg ->
+                MessageType.VOICE == msg.getType() &&
+                "alice".equals(msg.getSender()) &&
+                Integer.valueOf(15).equals(msg.getDuration()) &&
+                "[0.1,0.5,0.8]".equals(msg.getWaveform())
+        ));
+    }
+
+    // === VIDEO_CIRCLE message type preservation ===
+
+    @Test
+    @DisplayName("handleTextMessage - preserves VIDEO_CIRCLE type from frontend")
+    void handleMessage_videoCircleTypePreserved() throws Exception {
+        setupConnectedSession("session1", "alice");
+
+        RoomDto room = createRoom("general", RoomType.GENERAL);
+        when(roomService.getRoomById("general")).thenReturn(room);
+
+        MessageDto incoming = new MessageDto();
+        incoming.setContent(null);
+        incoming.setRoomId("general");
+        incoming.setType(MessageType.VIDEO_CIRCLE);
+        incoming.setFileUrl("/uploads/video_circle_123.webm");
+        incoming.setDuration(25);
+        incoming.setThumbnailUrl("/uploads/thumb_123.jpg");
+
+        handler.handleTextMessage(session, new TextMessage(objectMapper.writeValueAsString(incoming)));
+
+        verify(chatService).send(eq("general"), argThat(msg ->
+                MessageType.VIDEO_CIRCLE == msg.getType() &&
+                "alice".equals(msg.getSender()) &&
+                Integer.valueOf(25).equals(msg.getDuration()) &&
+                "/uploads/thumb_123.jpg".equals(msg.getThumbnailUrl())
+        ));
+    }
+
+    @Test
+    @DisplayName("handleTextMessage - non-VOICE/VIDEO_CIRCLE type forced to CHAT")
+    void handleMessage_unknownTypeForcedToChat() throws Exception {
+        setupConnectedSession("session1", "alice");
+
+        RoomDto room = createRoom("general", RoomType.GENERAL);
+        when(roomService.getRoomById("general")).thenReturn(room);
+
+        MessageDto incoming = new MessageDto();
+        incoming.setContent("Hello");
+        incoming.setRoomId("general");
+        incoming.setType(MessageType.JOIN); // trying to send JOIN from frontend
+
+        handler.handleTextMessage(session, new TextMessage(objectMapper.writeValueAsString(incoming)));
+
+        verify(chatService).send(eq("general"), argThat(msg ->
+                MessageType.CHAT == msg.getType()
+        ));
+    }
+
     @Test
     @DisplayName("afterConnectionClosed - removes user and broadcasts leave")
     void disconnect_removesUser() throws Exception {

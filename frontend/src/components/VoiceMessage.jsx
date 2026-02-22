@@ -156,7 +156,7 @@ export default function VoiceMessage({ fileUrl, duration, waveformData, isOwn })
           {bars.map((v, i) => (
             <div
               key={i}
-              className={`voice-bar ${i < filledBars ? 'voice-bar-filled' : ''}`}
+              className={`voice-bar ${i < filledBars ? 'voice-bar-filled' : ''}${i === filledBars - 1 && playing ? ' voice-bar-active' : ''}`}
               style={{ height: `${Math.max(3, (v || 0.1) * 28)}px` }}
             />
           ))}
