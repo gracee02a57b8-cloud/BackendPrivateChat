@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import './AdminPanel.css';
 
-export default function AdminPanel({ token, onBack }) {
+export default function AdminPanel({ token, username, onLogout }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -36,11 +36,16 @@ export default function AdminPanel({ token, onBack }) {
   return (
     <div className="admin-panel">
       <div className="admin-header">
-        <button className="admin-back-btn" onClick={onBack}>← Назад</button>
-        <h1>🛡️ Панель администратора</h1>
-        <button className="admin-refresh-btn" onClick={fetchStats} disabled={loading}>
-          🔄 Обновить
-        </button>
+        <div className="admin-user-info">🛡️ {username}</div>
+        <h1>Панель администратора</h1>
+        <div className="admin-header-actions">
+          <button className="admin-refresh-btn" onClick={fetchStats} disabled={loading}>
+            🔄 Обновить
+          </button>
+          <button className="admin-logout-btn" onClick={onLogout}>
+            🚪 Выйти
+          </button>
+        </div>
       </div>
 
       {error && <div className="admin-error">⚠️ {error}</div>}

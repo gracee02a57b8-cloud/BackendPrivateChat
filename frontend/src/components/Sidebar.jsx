@@ -52,10 +52,8 @@ export default function Sidebar({
   onJoinRoom,
   onDeleteRoom,
   onShowNews,
-  onShowAdmin,
   onShowTasks,
   token,
-  role,
   unreadCounts = {},
   messagesByRoom = {},
   sidebarOpen,
@@ -208,14 +206,6 @@ export default function Sidebar({
         >
           📋 Задачи
         </button>
-        {role === 'ADMIN' && (
-          <button
-            className={`sb-tab${activeTab === 'admin' ? ' active' : ''}`}
-            onClick={() => { setActiveTab('admin'); onShowAdmin(); }}
-          >
-            🛡️ Админ
-          </button>
-        )}
       </div>
 
       {/* ── Search ── */}

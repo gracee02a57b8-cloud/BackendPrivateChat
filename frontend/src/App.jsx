@@ -44,20 +44,21 @@ function App() {
     return <Login onLogin={handleLogin} />;
   }
 
+  if (role === 'ADMIN') {
+    return (
+      <AdminPanel
+        token={token}
+        username={username}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
   if (view === 'news') {
     return (
       <NewsBoard
         token={token}
         username={username}
-        onBack={() => setView('chat')}
-      />
-    );
-  }
-
-  if (view === 'admin' && role === 'ADMIN') {
-    return (
-      <AdminPanel
-        token={token}
         onBack={() => setView('chat')}
       />
     );
@@ -70,8 +71,6 @@ function App() {
       onLogout={handleLogout}
       joinRoomId={joinRoomId}
       onShowNews={() => setView('news')}
-      onShowAdmin={() => setView('admin')}
-      role={role}
     />
   );
 }
