@@ -851,8 +851,8 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
       {showTasks ? (
         <TaskPanel token={token} username={username} onClose={() => setShowTasks(false)} />
       ) : (
-        <main id="chat-main">
         <ChatRoom
+          id="chat-main"
           messages={activeMessages}
           onSendMessage={sendMessage}
           onEditMessage={editMessage}
@@ -877,7 +877,6 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           }}
           callState={webrtc.callState}
         />
-        </main>
       )}
       {taskNotification && (
         <TaskNotificationPopup
