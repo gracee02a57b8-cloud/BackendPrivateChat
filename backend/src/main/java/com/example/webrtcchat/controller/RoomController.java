@@ -95,13 +95,15 @@ public class RoomController {
     }
 
     @DeleteMapping("/{roomId}")
-    public ResponseEntity<Void> deleteRoom(@PathVariable String roomId, Principal principal) {
-        boolean deleted = roomService.deleteRoom(roomId, principal.getName());
-        if (!deleted) {
+    public ResponseEntity<Map<String, String>> deleteRoom(@PathVariable String roomId, Principal principal) {
+        String result = roomService.deleteRoom(roomId, principal.getName());
+        if (result == null) {
             return ResponseEntity.status(403).build();
         }
-        chatService.clearHistory(roomId);
-        return ResponseEntity.ok().build();
+        if ("deleted".equals(result)) {
+            chatService.clearHistory(roomId);
+        }
+        return ResponseEntity.ok(Map.of("result", result));
     }
 
     @GetMapping("/{roomId}/media-stats")

@@ -75,16 +75,33 @@ public class RoomService {
                 .stream().map(this::toDto).toList();
     }
 
+    /**
+     * Delete or leave a room.
+     * @return "deleted" if room was deleted, "left" if user left the group, null if forbidden/not found.
+     */
     @Transactional
-    public boolean deleteRoom(String roomId, String username) {
+    public String deleteRoom(String roomId, String username) {
         return roomRepository.findById(roomId)
                 .map(room -> {
-                    if (room.getType() == RoomType.GENERAL) return false;
-                    if (!room.getCreatedBy().equals(username)) return false;
-                    roomRepository.delete(room);
-                    return true;
+                    if (room.getType() == RoomType.GENERAL) return (String) null;
+                    // Must be a member or the creator
+                    boolean isMember = room.getMembers().contains(username);
+                    boolean isCreator = username.equals(room.getCreatedBy());
+                    if (!isMember && !isCreator) return (String) null;
+
+                    if (room.getType() == RoomType.PRIVATE || isCreator) {
+                        // Private chat: either side can delete
+                        // Group: creator deletes entirely
+                        roomRepository.delete(room);
+                        return "deleted";
+                    } else {
+                        // Group member (not creator): leave the group
+                        room.getMembers().remove(username);
+                        roomRepository.save(room);
+                        return "left";
+                    }
                 })
-                .orElse(false);
+                .orElse(null);
     }
 
     private String privateRoomId(String u1, String u2) {

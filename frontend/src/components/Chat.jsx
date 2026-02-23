@@ -849,6 +849,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
+        const data = await res.json().catch(() => ({}));
         setMessagesByRoom((prev) => {
           const copy = { ...prev };
           delete copy[roomId];
@@ -857,9 +858,17 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
         loadedRooms.current.delete(roomId);
         if (activeRoomId === roomId) setActiveRoomId(null);
         fetchRooms();
+        if (data.result === 'left') {
+          showToast('Вы покинули группу', 'success');
+        } else {
+          showToast('Чат удалён', 'success');
+        }
+      } else {
+        showToast('Не удалось удалить чат', 'error');
       }
     } catch (err) {
       console.error(err);
+      showToast('Не удалось удалить чат', 'error');
     }
   };
 
