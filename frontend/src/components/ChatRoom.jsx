@@ -224,11 +224,22 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
   const dragCounter = useRef(0);
   const isAtBottom = useRef(true);
 
-  // Auto-scroll to latest message (Telegram-style)
+  // Auto-scroll to latest message only when user is at bottom (Telegram-style)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    setNewMsgCount(0);
-    isAtBottom.current = true;
+    if (isAtBottom.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      setNewMsgCount(0);
+    } else if (messages.length > 0) {
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg.sender === username) {
+        // Always scroll to own sent messages
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        isAtBottom.current = true;
+        setNewMsgCount(0);
+      } else {
+        setNewMsgCount((prev) => prev + 1);
+      }
+    }
   }, [messages]);
 
   // Scroll detection
@@ -261,6 +272,10 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
     setSearchQuery('');
     setSearchResults([]);
     setSearchIndex(0);
+    // Scroll to bottom instantly when entering a chat
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
+    }, 50);
   }, [roomName]);
 
   // Close context menu on any click

@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { copyToClipboard } from '../utils/clipboard';
 import { getAvatarColor } from '../utils/avatar';
-import { MoreVertical, Link, Camera, Pencil, Settings, LogOut, Mail, Link2, Download } from 'lucide-react';
+import { MoreVertical, Link, Camera, Pencil, Settings, LogOut } from 'lucide-react';
 
-export default function MyProfilePage({ username, avatarUrl, token, wsRef, onAvatarChange, connected, onOpenEdit, onOpenSettings, onLogout, onShowSearch, onShowJoin, installPrompt, onInstall }) {
+export default function MyProfilePage({ username, avatarUrl, token, wsRef, onAvatarChange, connected, onOpenEdit, onOpenSettings, onLogout }) {
   const [profile, setProfile] = useState(null);
   const [showMenu, setShowMenu] = useState(false);
   const [showNameModal, setShowNameModal] = useState(false);
@@ -243,27 +243,6 @@ export default function MyProfilePage({ username, avatarUrl, token, wsRef, onAva
             <div className="my-profile-info-value">{formatBirthday(profile.birthday)}</div>
             <div className="my-profile-info-label">День рождения</div>
           </div>
-        )}
-      </div>
-
-      {/* Quick Actions */}
-      <div className="my-profile-quick-actions">
-        <button className="sb-settings-item" onClick={onShowSearch}>
-          <span className="sb-settings-icon"><Mail size={18} /></span>
-          <span className="sb-settings-label">Написать сообщение</span>
-          <span className="sb-settings-arrow">›</span>
-        </button>
-        <button className="sb-settings-item" onClick={onShowJoin}>
-          <span className="sb-settings-icon"><Link2 size={18} /></span>
-          <span className="sb-settings-label">Войти по ссылке</span>
-          <span className="sb-settings-arrow">›</span>
-        </button>
-        {installPrompt && (
-          <button className="sb-settings-item" onClick={onInstall}>
-            <span className="sb-settings-icon"><Download size={18} /></span>
-            <span className="sb-settings-label">Установить приложение</span>
-            <span className="sb-settings-arrow">›</span>
-          </button>
         )}
       </div>
 

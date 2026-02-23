@@ -715,10 +715,6 @@ export default function Sidebar({
           onOpenEdit={() => setProfileSubView('edit')}
           onOpenSettings={() => setProfileSubView('settings')}
           onLogout={onLogout}
-          onShowSearch={() => setShowSearch(true)}
-          onShowJoin={() => setShowJoin(true)}
-          installPrompt={installPrompt}
-          onInstall={handleInstall}
         />
       )}
 
