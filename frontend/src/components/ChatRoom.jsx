@@ -118,7 +118,7 @@ function formatLastSeenHeader(ts) {
   return `был(а) ${d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}`;
 }
 
-export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, onDeleteMessage, onScheduleMessage, scheduledMessages, roomName, username, connected, token, activeRoom, onlineUsers, allUsers = [], typingUsers = [], onTyping, isE2E, onShowSecurityCode, avatarMap = {}, onStartCall, callState, onLeaveRoom, onBack }) {
+export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, onDeleteMessage, onScheduleMessage, scheduledMessages, roomName, username, connected, token, activeRoom, onlineUsers, allUsers = [], typingUsers = [], onTyping, isE2E, onShowSecurityCode, avatarMap = {}, onStartCall, callState, onLeaveRoom, onBack, onForwardToSaved }) {
   const [input, setInput] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
@@ -757,6 +757,11 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
         <button className="chat-header-back" onClick={onBack} aria-label="Назад">←</button>
 
         {/* Header avatar */}
+        {activeRoom?.type === 'SAVED_MESSAGES' && (
+          <div className="chat-header-avatar sb-saved-avatar">
+            🔖
+          </div>
+        )}
         {activeRoom?.type === 'PRIVATE' && (() => {
           const otherUser = getOtherUserInPM();
           const av = avatarMap[otherUser];
@@ -794,6 +799,9 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
               </span>
             );
           })()}
+          {activeRoom?.type === 'SAVED_MESSAGES' && (
+            <span className="header-online-status">личное хранилище</span>
+          )}
           {activeRoom?.type === 'ROOM' && (() => {
             const memberCount = activeRoom.members?.length || 0;
             const onlineCount = (activeRoom.members || []).filter(m => onlineUsers?.includes(m)).length;
@@ -1065,6 +1073,9 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
             </button>
             <button onClick={() => handleForwardMsg(contextMenu.msg)}>
               <span className="ctx-icon">↪</span> Переслать
+            </button>
+            <button onClick={() => { setContextMenu(null); if (onForwardToSaved) onForwardToSaved(contextMenu.msg); }}>
+              <span className="ctx-icon">🔖</span> В Избранное
             </button>
             {contextMenu.msg.sender === username && (
               <button onClick={() => startEdit(contextMenu.msg)}>

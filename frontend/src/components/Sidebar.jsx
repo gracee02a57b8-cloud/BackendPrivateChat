@@ -92,6 +92,7 @@ export default function Sidebar({
   wsRef,
   onAvatarChange,
   mobileTab = 'chats',
+  onOpenSaved,
 }) {
   const [chatFilter, setChatFilter] = useState('all');
   const [showSearch, setShowSearch] = useState(false);
@@ -161,6 +162,7 @@ export default function Sidebar({
   };
 
   const getDisplayName = (room) => {
+    if (room.type === 'SAVED_MESSAGES') return 'Избранное';
     return room.type === 'PRIVATE' ? getPrivateDisplayName(room) : room.name;
   };
 
@@ -206,7 +208,8 @@ export default function Sidebar({
   };
 
   const renderChatItem = (room) => {
-    const displayName = getDisplayName(room);
+    const isSaved = room.type === 'SAVED_MESSAGES';
+    const displayName = isSaved ? 'Избранное' : getDisplayName(room);
     const lastMsg = getLastMessage(room.id);
     const isOnline = room.type === 'PRIVATE' && onlineUsers.includes(displayName);
     const unread = unreadCounts[room.id] || 0;
@@ -225,11 +228,17 @@ export default function Sidebar({
         onClick={() => onSelectRoom(room.id)}
       >
         <div className="sb-chat-avatar-wrap">
-          <div className="sb-chat-avatar" style={{ background: avatarMap[displayName] ? 'transparent' : getAvatarColor(displayName) }}>
-            {avatarMap[displayName]
-              ? <img src={avatarMap[displayName]} alt="" className="sb-avatar-img" />
-              : getInitials(displayName)}
-          </div>
+          {isSaved ? (
+            <div className="sb-chat-avatar sb-saved-avatar">
+              🔖
+            </div>
+          ) : (
+            <div className="sb-chat-avatar" style={{ background: avatarMap[displayName] ? 'transparent' : getAvatarColor(displayName) }}>
+              {avatarMap[displayName]
+                ? <img src={avatarMap[displayName]} alt="" className="sb-avatar-img" />
+                : getInitials(displayName)}
+            </div>
+          )}
           {room.type === 'PRIVATE' && (
             <span className={`sb-online-dot ${isOnline ? 'online' : 'offline'}`} />
           )}
@@ -245,12 +254,16 @@ export default function Sidebar({
           </div>
         </div>
         <div className="sb-chat-actions">
-          <span className="sb-share-btn" onClick={(e) => copyShareLink(e, room.id)} title="Поделиться" role="button" aria-label="Поделиться ссылкой">
-            {shareCopied === room.id ? '✅' : '📤'}
-          </span>
-          <span className="sb-delete-btn" onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ id: room.id, name: displayName }); }} title="Удалить" role="button" aria-label="Удалить чат">
-            🗑
-          </span>
+          {!isSaved && (
+            <>
+              <span className="sb-share-btn" onClick={(e) => copyShareLink(e, room.id)} title="Поделиться" role="button" aria-label="Поделиться ссылкой">
+                {shareCopied === room.id ? '✅' : '📤'}
+              </span>
+              <span className="sb-delete-btn" onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ id: room.id, name: displayName }); }} title="Удалить" role="button" aria-label="Удалить чат">
+                🗑
+              </span>
+            </>
+          )}
         </div>
       </div>
     );
@@ -284,15 +297,13 @@ export default function Sidebar({
           </div>
         </div>
         <div className="sb-header-right">
-          <button className="sb-icon-btn sb-desktop-only" onClick={() => setShowContacts(!showContacts)} title="Контакты" aria-label="Контакты">👥</button>
-          <button className="sb-icon-btn" onClick={onShowNews} title="Новости" aria-label="Новости">📰</button>
-          <button className="sb-icon-btn" onClick={onShowTasks} title="Задачи" aria-label="Задачи">📋</button>
           <button className="sb-menu-btn" onClick={() => setShowMenu(!showMenu)} aria-label="Меню" title="Меню">⋮</button>
           {showMenu && (
             <div className="sb-menu-dropdown" ref={menuRef}>
               <button className="sb-desktop-only" onClick={() => { setShowMenu(false); setShowProfile(true); }}>👤 Профиль</button>
               <button onClick={() => { setShowMenu(false); setShowSearch(!showSearch); }}>✉️ Написать</button>
               <button onClick={() => { setShowMenu(false); setShowCreate(true); }}>➕ Создать группу</button>
+              <button onClick={() => { setShowMenu(false); if (onOpenSaved) onOpenSaved(); }}>🔖 Избранное</button>
               <button onClick={() => { setShowMenu(false); setShowJoin(true); }}>🔗 Войти по ссылке</button>
               {installPrompt && (
                 <button onClick={() => { setShowMenu(false); handleInstall(); }}>📲 Установить приложение</button>

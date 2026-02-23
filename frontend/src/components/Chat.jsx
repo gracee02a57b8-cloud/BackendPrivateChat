@@ -896,7 +896,66 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
     }
   };
 
+  const openSavedChat = async () => {
+    try {
+      const res = await fetch('/api/rooms/saved', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const room = await res.json();
+      fetchRooms();
+      selectRoom(room.id);
+      setMobileTab('chats');
+      return room;
+    } catch (err) {
+      console.error('[Saved] Failed to open saved messages:', err);
+      showToast('Не удалось открыть Избранное', 'error');
+      return null;
+    }
+  };
+
+  const forwardToSaved = async (msg) => {
+    try {
+      // Ensure saved room exists
+      const res = await fetch('/api/rooms/saved', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const savedRoom = await res.json();
+
+      // Send the forwarded message to saved room
+      const forwardedContent = `↪ ${msg.sender}: ${msg.content || ''}`.trim();
+      const fwdMsg = {
+        type: 'CHAT',
+        roomId: savedRoom.id,
+        content: forwardedContent || (msg.fileUrl ? '' : 'Пересланное сообщение'),
+      };
+      if (msg.fileUrl) {
+        fwdMsg.fileUrl = msg.fileUrl;
+        fwdMsg.fileName = msg.fileName;
+        fwdMsg.fileSize = msg.fileSize;
+        fwdMsg.fileType = msg.fileType;
+      }
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify(fwdMsg));
+        showToast('Сохранено в Избранное', 'success');
+        fetchRooms();
+      }
+    } catch (err) {
+      console.error('[Saved] Forward failed:', err);
+      showToast('Не удалось переслать в Избранное', 'error');
+    }
+  };
+
   const deleteRoom = async (roomId) => {
+    // Prevent deleting saved messages room
+    const room = rooms.find(r => r.id === roomId);
+    if (room?.type === 'SAVED_MESSAGES') {
+      showToast('Нельзя удалить Избранное', 'error');
+      return;
+    }
     try {
       const res = await fetch(`/api/rooms/${roomId}`, {
         method: 'DELETE',
@@ -939,7 +998,9 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
 
   const activeRoom = rooms.find((r) => r.id === activeRoomId);
   const activeMessages = messagesByRoom[activeRoomId] || [];
-  const roomName = activeRoom ? activeRoom.name : 'Выберите чат';
+  const roomName = activeRoom
+    ? (activeRoom.type === 'SAVED_MESSAGES' ? 'Избранное' : activeRoom.name)
+    : 'Выберите чат';
 
   const getPeerUsername = (room) => {
     if (!room || room.type !== 'PRIVATE') return null;
@@ -1061,6 +1122,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
         onDeleteRoom={deleteRoom}
         onShowNews={onShowNews}
         onShowTasks={() => setShowTasks(true)}
+        onOpenSaved={openSavedChat}
         token={token}
         unreadCounts={unreadCounts}
         messagesByRoom={messagesByRoom}
@@ -1102,6 +1164,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           }}
           callState={webrtc.callState}
           onLeaveRoom={deleteRoom}
+          onForwardToSaved={forwardToSaved}
         />
       )}
       {taskNotification && (

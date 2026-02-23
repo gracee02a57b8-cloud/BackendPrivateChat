@@ -41,6 +41,12 @@ public class RoomController {
         return ResponseEntity.ok(room);
     }
 
+    @PostMapping("/saved")
+    public ResponseEntity<RoomDto> getSavedRoom(Principal principal) {
+        RoomDto room = roomService.getOrCreateSavedRoom(principal.getName());
+        return ResponseEntity.ok(room);
+    }
+
     @PostMapping("/create")
     public ResponseEntity<RoomDto> createRoom(@RequestBody Map<String, String> body, Principal principal) {
         String name = body.get("name");

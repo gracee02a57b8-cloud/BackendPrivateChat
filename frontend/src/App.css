@@ -744,6 +744,12 @@
   border-radius: 50%;
 }
 
+/* Saved Messages (Избранное) avatar */
+.sb-saved-avatar {
+  background: linear-gradient(135deg, #4ecca3, #3b82f6) !important;
+  font-size: 1.4rem !important;
+}
+
 .sb-online-dot {
   position: absolute;
   bottom: 1px;

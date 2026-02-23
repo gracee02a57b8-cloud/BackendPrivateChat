@@ -50,6 +50,19 @@ public class RoomService {
     }
 
     @Transactional
+    public RoomDto getOrCreateSavedRoom(String username) {
+        String id = "saved_" + username;
+        return roomRepository.findById(id)
+                .map(this::toDto)
+                .orElseGet(() -> {
+                    RoomEntity room = new RoomEntity(id, "Избранное", RoomType.SAVED_MESSAGES, username, now());
+                    room.getMembers().add(username);
+                    roomRepository.save(room);
+                    return toDto(room);
+                });
+    }
+
+    @Transactional
     public RoomDto createRoom(String name, String creator) {
         String id = UUID.randomUUID().toString().substring(0, 8);
         RoomEntity room = new RoomEntity(id, name, RoomType.ROOM, creator, now());
@@ -84,6 +97,7 @@ public class RoomService {
         return roomRepository.findById(roomId)
                 .map(room -> {
                     if (room.getType() == RoomType.GENERAL) return (String) null;
+                    if (room.getType() == RoomType.SAVED_MESSAGES) return (String) null; // Cannot delete saved messages
                     // Must be a member or the creator
                     boolean isMember = room.getMembers().contains(username);
                     boolean isCreator = username.equals(room.getCreatedBy());
