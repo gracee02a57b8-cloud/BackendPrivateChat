@@ -1207,6 +1207,13 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           onLeaveRoom={deleteRoom}
           onForwardToSaved={forwardToSaved}
           onJoinRoom={joinRoom}
+          onJoinConference={async (confId) => {
+            try {
+              const joined = await conference.joinConference(confId, 'audio');
+              if (joined) showToast('Вы подключены к конференции \uD83D\uDC65', 'success');
+              else showToast('Не удалось подключиться к конференции', 'error');
+            } catch { showToast('Не удалось подключиться к конференции', 'error'); }
+          }}
           showAddMembers={newlyCreatedRoomId === activeRoomId && newlyCreatedRoomId !== null}
           onAddMembers={() => setShowAddMembersPanel(true)}
           onDismissAddMembers={() => setNewlyCreatedRoomId(null)}
@@ -1344,6 +1351,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           isVideoOff={conference.isVideoOff}
           avatarMap={avatarMap}
           localVideoRef={conference.localVideoRef}
+          localStream={conference.localStreamRef}
           setRemoteVideoRef={conference.setRemoteVideoRef}
           getRemoteStream={conference.getRemoteStream}
           onLeave={conference.leaveConference}

@@ -260,10 +260,8 @@ export default function useConference({ wsRef, username, token }) {
 
     setParticipants(prev => prev.filter(p => p !== peerId));
 
-    // If no peers left, end conference
-    if (peersRef.current.size === 0 && confStartedAt.current) {
-      leaveConference();
-    }
+    // NOTE: Do NOT auto-leave when no peers left.
+    // The conference stays alive on the server for new participants to join.
   }, []);
 
   // ──── public API ────
@@ -695,6 +693,7 @@ export default function useConference({ wsRef, username, token }) {
     confType,
     // refs
     localVideoRef,
+    localStreamRef,
     // actions
     createConference,
     joinConference,

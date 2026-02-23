@@ -44,15 +44,22 @@ export default function ConferenceScreen({
   isMinimized,
   onMinimize,
   onRestore,
+  localStream,
 }) {
   const isVideo = confType === 'video';
   const localVidEl = useRef(null);
   const [linkCopied, setLinkCopied] = useState(false);
 
-  // Attach local video ref
+  // Attach local video ref — re-attach when switching between minimized and full views
   useEffect(() => {
-    if (localVideoRef) localVideoRef.current = localVidEl.current;
-  }, [localVideoRef]);
+    if (localVideoRef) {
+      localVideoRef.current = localVidEl.current;
+    }
+    // Re-attach the local stream to the new video element
+    if (localVidEl.current && localStream?.current) {
+      localVidEl.current.srcObject = localStream.current;
+    }
+  }, [localVideoRef, localStream, isMinimized]);
 
   const handleCopyLink = useCallback(async () => {
     const ok = await onCopyLink();
