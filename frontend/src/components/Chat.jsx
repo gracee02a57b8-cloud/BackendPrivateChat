@@ -71,6 +71,29 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   useEffect(() => { confRef.current = conference; });
   useEffect(() => { roomsRef.current = rooms; }, [rooms]);
 
+  // Auto-join conference from URL (?conf=<confId>) — works for both fresh login and already-logged-in users
+  const joinConfIdHandled = useRef(false);
+  useEffect(() => {
+    if (joinConfId && connected && !joinConfIdHandled.current) {
+      joinConfIdHandled.current = true;
+      // Small delay to ensure WS is fully ready and conference hook is initialized
+      const timer = setTimeout(async () => {
+        try {
+          const joined = await confRef.current.joinConference(joinConfId, 'audio');
+          if (joined) {
+            showToast('Вы подключены к конференции 👥', 'success');
+          } else {
+            showToast('Не удалось подключиться к конференции', 'error');
+          }
+        } catch (err) {
+          console.error('[Conference] Auto-join from URL failed:', err);
+          showToast('Не удалось подключиться к конференции', 'error');
+        }
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [joinConfId, connected]);
+
   // Create notification sound
   useEffect(() => {
     try {
@@ -183,12 +206,6 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
               loadRoomHistory(room.id);
             })
             .catch(console.error);
-        }
-        // Auto-join conference from URL (?conf=<confId>)
-        if (joinConfId) {
-          setTimeout(() => {
-            confRef.current.joinConference(joinConfId, 'video');
-          }, 500);
         }
       };
 
