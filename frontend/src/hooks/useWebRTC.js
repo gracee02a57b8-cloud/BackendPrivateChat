@@ -418,6 +418,11 @@ export default function useWebRTC({ wsRef, username, token }) {
     cleanup();
   }, [callPeer, sendSignal, cleanup]);
 
+  /** Silent cleanup — no CALL_END signal (used for conference upgrade) */
+  const endCallSilent = useCallback(() => {
+    cleanup();
+  }, [cleanup]);
+
   /** Handle CALL_ANSWER from callee (decrypts E2E signaling) */
   const handleAnswer = useCallback(async (msg) => {
     const extra = await decryptExtra(msg);
@@ -486,6 +491,9 @@ export default function useWebRTC({ wsRef, username, token }) {
     const stream = localStreamRef.current;
     const pc = pcRef.current;
     if (!stream || !pc || typeof pc.addTrack !== 'function') return;
+
+    // Only allow renegotiation when connection is established
+    if (pc.connectionState !== 'connected') return;
 
     const existingVideoTracks = stream.getVideoTracks();
 
@@ -563,6 +571,7 @@ export default function useWebRTC({ wsRef, username, token }) {
     acceptCall,
     rejectCall,
     endCall,
+    endCallSilent,
     toggleMute,
     toggleVideo,
     // signal handlers (call from ws.onmessage)

@@ -316,6 +316,20 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
       if (msg.type === 'CALL_ANSWER') { webrtcRef.current.handleAnswer(msg); return; }
       if (msg.type === 'ICE_CANDIDATE') { webrtcRef.current.handleIceCandidate(msg); return; }
       if (msg.type === 'CALL_REJECT' || msg.type === 'CALL_END' || msg.type === 'CALL_BUSY') {
+        // Auto-join conference when peer upgrades 1:1 → conference
+        const extra = msg.extra || {};
+        if (msg.type === 'CALL_END' && extra.reason === 'upgrade_to_conference' && extra.confId) {
+          webrtcRef.current.handleCallEnd(msg);
+          // Small delay to let 1:1 cleanup finish, then auto-join
+          setTimeout(async () => {
+            const type = extra.confType || 'audio';
+            const joined = await confRef.current.joinConference(extra.confId, type);
+            if (joined) {
+              showToast('Вы подключены к конференции 👥', 'success');
+            }
+          }, 400);
+          return;
+        }
         webrtcRef.current.handleCallEnd(msg);
         return;
       }
@@ -874,25 +888,41 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
     }
   };
 
-  // Upgrade 1:1 call → conference: create conference, both join, close old 1:1 PC
+  // Upgrade 1:1 call → conference: create conference, invite peer, close old 1:1 PC
   const upgradeToConference = useCallback(async () => {
     if (webrtc.callState !== 'active') return;
     const peer = webrtc.callPeer;
     const type = webrtc.callType || 'audio';
-    // End the 1:1 call first
-    webrtc.endCall();
-    // Small delay to let cleanup finish
-    await new Promise(r => setTimeout(r, 300));
-    // Create conference — the current user becomes the creator
-    await conference.createConference(type);
-    // Auto-copy conference link and notify user
+
+    // 1. Create conference first (current user joins)
+    const confId = await conference.createConference(type);
+    if (!confId) return;
+
+    // 2. Signal peer to auto-join the conference, then end 1:1
+    const ws = wsRef.current;
+    if (ws?.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({
+        type: 'CALL_END',
+        extra: {
+          target: peer,
+          reason: 'upgrade_to_conference',
+          confId,
+          confType: type,
+        },
+      }));
+    }
+
+    // 3. Silent cleanup of 1:1 call (don't send another CALL_END)
+    webrtc.endCallSilent();
+
+    // 4. Auto-copy conference link and notify user
     const copied = await conference.copyShareLink();
     if (copied) {
       showToast('Конференция создана! Ссылка скопирована 📋', 'success');
     } else {
       showToast('Конференция создана!', 'success');
     }
-  }, [webrtc, conference]);
+  }, [webrtc, conference, wsRef]);
 
   // Compute security code when call becomes active (Bug 5)
   useEffect(() => {
