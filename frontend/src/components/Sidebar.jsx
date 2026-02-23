@@ -7,6 +7,7 @@ import MyProfilePage from './MyProfilePage';
 import EditProfilePage from './EditProfilePage';
 import RecentCalls from './RecentCalls';
 import AiChatPage from './AiChatPage';
+import StoriesBar from './StoriesBar';
 import { copyToClipboard } from '../utils/clipboard';
 import appSettings from '../utils/appSettings';
 import { getAvatarColor, getInitials, formatLastSeen } from '../utils/avatar';
@@ -64,6 +65,9 @@ export default function Sidebar({
   onStartCall,
   myContacts = [],
   onRefreshContacts,
+  storiesHook,
+  onOpenStoryViewer,
+  onOpenStoryUpload,
 }) {
   const [chatFilter, setChatFilter] = useState('all');
   const [showSearch, setShowSearch] = useState(false);
@@ -323,6 +327,18 @@ export default function Sidebar({
               onChange={(e) => setSearchFilter(e.target.value)}
             />
           </div>
+
+          {/* Stories Bar */}
+          {storiesHook && (storiesHook.groupedStories.length > 0 || true) && (
+            <StoriesBar
+              groupedStories={storiesHook.groupedStories}
+              username={username}
+              avatarUrl={avatarUrl}
+              avatarMap={avatarMap}
+              onOpenViewer={(author) => onOpenStoryViewer?.(author)}
+              onOpenUpload={() => onOpenStoryUpload?.()}
+            />
+          )}
 
           {/* User Search Modal */}
           {showSearch && (

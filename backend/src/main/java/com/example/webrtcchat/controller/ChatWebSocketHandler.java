@@ -11,6 +11,7 @@ import com.example.webrtcchat.service.ConferenceService;
 import com.example.webrtcchat.service.JwtService;
 import com.example.webrtcchat.service.RoomService;
 import com.example.webrtcchat.service.SchedulerService;
+import com.example.webrtcchat.service.StoryService;
 import com.example.webrtcchat.service.TaskService;
 import com.example.webrtcchat.service.WebPushService;
 import com.example.webrtcchat.types.MessageType;
@@ -51,6 +52,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final CallLogRepository callLogRepository;
     private final WebPushService webPushService;
     private final BlockedUserRepository blockedUserRepository;
+    private final StoryService storyService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // Track active call start times: "caller:callee" → epoch millis
@@ -61,7 +63,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     public ChatWebSocketHandler(ChatService chatService, JwtService jwtService, RoomService roomService,
                                 SchedulerService schedulerService, TaskService taskService,
                                 ConferenceService conferenceService, CallLogRepository callLogRepository,
-                                WebPushService webPushService, BlockedUserRepository blockedUserRepository) {
+                                WebPushService webPushService, BlockedUserRepository blockedUserRepository,
+                                StoryService storyService) {
         this.chatService = chatService;
         this.jwtService = jwtService;
         this.roomService = roomService;
@@ -71,6 +74,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         this.callLogRepository = callLogRepository;
         this.webPushService = webPushService;
         this.blockedUserRepository = blockedUserRepository;
+        this.storyService = storyService;
     }
 
     @Override
@@ -142,6 +146,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         // Handle AVATAR_UPDATE - broadcast to all online users
         if (incoming.getType() == MessageType.AVATAR_UPDATE) {
             handleAvatarUpdate(username, incoming);
+            return;
+        }
+
+        // Handle STORY_POSTED - broadcast to all online users
+        if (incoming.getType() == MessageType.STORY_POSTED) {
+            broadcastStoryPosted(username, incoming);
             return;
         }
 
@@ -433,6 +443,23 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         if (json == null) return;
 
         // Send to all online users (including sender, to confirm)
+        userSessions.forEach((user, s) -> sendSafe(s, json));
+    }
+
+    /**
+     * Broadcast STORY_POSTED to all online users so they refresh their stories bar.
+     */
+    private void broadcastStoryPosted(String username, MessageDto incoming) {
+        MessageDto broadcast = new MessageDto();
+        broadcast.setType(MessageType.STORY_POSTED);
+        broadcast.setSender(username);
+        broadcast.setContent(incoming.getContent()); // optional: storyId or videoUrl
+        broadcast.setTimestamp(now());
+
+        String json = serialize(broadcast);
+        if (json == null) return;
+
+        // Notify all online users (including sender)
         userSessions.forEach((user, s) -> sendSafe(s, json));
     }
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MessageSquare, Users, User, FlaskConical, Bot } from 'lucide-react';
+import { MessageSquare, Users, User, FlaskConical, Bot, Camera, MessageSquarePlus } from 'lucide-react';
 import Sidebar from './Sidebar';
 import ChatRoom from './ChatRoom';
 import TaskPanel from './TaskPanel';
@@ -11,10 +11,13 @@ import IncomingCallModal from './IncomingCallModal';
 import CallScreen from './CallScreen';
 import ConferenceScreen from './ConferenceScreen';
 import AddMembersPanel from './AddMembersPanel';
+import StoryUploadModal from './StoryUploadModal';
+import StoryViewer from './StoryViewer';
 import ToastContainer, { showToast } from './Toast';
 import useWebRTC from '../hooks/useWebRTC';
 import useConference from '../hooks/useConference';
 import useMediaPermissions from '../hooks/useMediaPermissions';
+import useStories from '../hooks/useStories';
 import e2eManager from '../crypto/E2EManager';
 import cryptoStore from '../crypto/CryptoStore';
 import groupCrypto from '../crypto/GroupCrypto';
@@ -51,6 +54,8 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   const [newlyCreatedRoomId, setNewlyCreatedRoomId] = useState(null);
   const [showAddMembersPanel, setShowAddMembersPanel] = useState(false);
   const [myContacts, setMyContacts] = useState([]);
+  const [showStoryUpload, setShowStoryUpload] = useState(false);
+  const [storyViewerAuthor, setStoryViewerAuthor] = useState(null);
   const wsRef = useRef(null);
   const loadedRooms = useRef(new Set());
   const activeRoomIdRef = useRef(null);
@@ -74,12 +79,17 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   // Media permissions (camera + mic) — request once on login
   const mediaPerm = useMediaPermissions();
 
+  // Stories hook
+  const storiesHook = useStories({ token, username, wsRef });
+
   // Keep refs up-to-date so ws.onmessage closure always accesses latest values (Bug 1 fix)
   const webrtcRef = useRef(webrtc);
   useEffect(() => { webrtcRef.current = webrtc; });
   const confRef = useRef(conference);
   useEffect(() => { confRef.current = conference; });
   useEffect(() => { roomsRef.current = rooms; }, [rooms]);
+  const storiesRef = useRef(storiesHook);
+  useEffect(() => { storiesRef.current = storiesHook; });
 
   // Auto-join conference from URL (?conf=<confId>) — works for both fresh login and already-logged-in users
   const joinConfIdHandled = useRef(false);
@@ -454,6 +464,12 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           onAvatarChange(newUrl);
           localStorage.setItem('avatarUrl', newUrl);
         }
+        return;
+      }
+
+      // Handle STORY_POSTED — refresh stories bar
+      if (msg.type === 'STORY_POSTED') {
+        storiesRef.current.fetchStories();
         return;
       }
 
@@ -1279,6 +1295,9 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
         mobileTab={mobileTab}
         myContacts={myContacts}
         onRefreshContacts={fetchContacts}
+        storiesHook={storiesHook}
+        onOpenStoryViewer={(author) => setStoryViewerAuthor(author)}
+        onOpenStoryUpload={() => setShowStoryUpload(true)}
         onStartCall={async (peer, type) => {
           await startPrivateChat(peer);
           webrtc.startCall(peer, type);
@@ -1472,6 +1491,40 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           isMinimized={isConfMinimized}
           onMinimize={() => setIsConfMinimized(true)}
           onRestore={() => setIsConfMinimized(false)}
+        />
+      )}
+
+      {/* ── FAB Buttons (visible on chats tab, no active room on mobile) ── */}
+      {!activeRoomId && mobileTab === 'chats' && (
+        <div className="fab-container">
+          <button className="fab fab-story" onClick={() => setShowStoryUpload(true)} title="Новая история">
+            <Camera size={22} />
+          </button>
+          <button className="fab fab-chat" onClick={() => { setMobileTab('contacts'); }} title="Новое сообщение">
+            <MessageSquarePlus size={22} />
+          </button>
+        </div>
+      )}
+
+      {/* ── Story Upload Modal ── */}
+      {showStoryUpload && (
+        <StoryUploadModal
+          onClose={() => setShowStoryUpload(false)}
+          onUpload={storiesHook.uploadStory}
+        />
+      )}
+
+      {/* ── Story Viewer ── */}
+      {storyViewerAuthor && storiesHook.groupedStories.length > 0 && (
+        <StoryViewer
+          groupedStories={storiesHook.groupedStories}
+          initialAuthor={storyViewerAuthor}
+          username={username}
+          avatarMap={avatarMap}
+          onClose={() => setStoryViewerAuthor(null)}
+          onView={storiesHook.viewStory}
+          onDelete={storiesHook.deleteStory}
+          onGetViewers={storiesHook.getViewers}
         />
       )}
 

@@ -46,5 +46,8 @@ public enum MessageType {
     CONF_ANSWER,    // peer-to-peer SDP answer within conference
     CONF_ICE,       // peer-to-peer ICE candidate within conference
 
+    // Stories
+    STORY_POSTED,   // server → all: new story uploaded
+
     ERROR           // server → client error notification
 }
