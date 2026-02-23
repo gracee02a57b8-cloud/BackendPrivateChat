@@ -277,9 +277,9 @@ export default function useConference({ wsRef, username, token }) {
         autoGainControl: true,
       },
       video: type === 'video' ? {
-        width:  { ideal: 1280, min: 640 },
-        height: { ideal: 720,  min: 360 },
-        frameRate: { ideal: 30, min: 15 },
+        width:  { ideal: 1280 },
+        height: { ideal: 720 },
+        frameRate: { ideal: 30 },
       } : false,
     });
     localStreamRef.current = stream;
@@ -574,13 +574,66 @@ export default function useConference({ wsRef, username, token }) {
     setIsMuted(prev => !prev);
   }, []);
 
-  /** Toggle video */
-  const toggleVideo = useCallback(() => {
+  /** Toggle video — add video track dynamically if audio-only conference */
+  const toggleVideo = useCallback(async () => {
     const stream = localStreamRef.current;
     if (!stream) return;
-    stream.getVideoTracks().forEach(t => { t.enabled = !t.enabled; });
-    setIsVideoOff(prev => !prev);
-  }, []);
+
+    const existingVideoTracks = stream.getVideoTracks();
+
+    if (existingVideoTracks.length > 0) {
+      // Already have video tracks — just toggle enabled
+      existingVideoTracks.forEach(t => { t.enabled = !t.enabled; });
+      setIsVideoOff(prev => !prev);
+    } else {
+      // Audio-only conference — dynamically add video track + add to all peers
+      try {
+        const videoStream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
+        });
+        const videoTrack = videoStream.getVideoTracks()[0];
+        if (!videoTrack) return;
+
+        // Add to local stream
+        stream.addTrack(videoTrack);
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+        }
+
+        // Add track to every peer connection and renegotiate
+        for (const [peerId, peer] of peersRef.current.entries()) {
+          const pc = peer.pc;
+          if (pc && pc.connectionState === 'connected') {
+            const sender = pc.addTrack(videoTrack, stream);
+            if (confCryptoRef.current) {
+              confCryptoRef.current.setupSenderEncryption(sender);
+            }
+            // Boost video bitrate
+            try {
+              const params = sender.getParameters();
+              if (!params.encodings || params.encodings.length === 0) params.encodings = [{}];
+              params.encodings[0].maxBitrate = 1_500_000;
+              params.encodings[0].maxFramerate = 30;
+              sender.setParameters(params).catch(() => {});
+            } catch (e) { /* ignore */ }
+            // Renegotiate
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            await sendConfSignal('CONF_OFFER', peerId, {
+              sdp: JSON.stringify(offer),
+              callType: 'video',
+              renegotiate: true,
+            });
+          }
+        }
+
+        setConfType('video');
+        setIsVideoOff(false);
+      } catch (err) {
+        console.error('[Conference] Failed to add video:', err);
+      }
+    }
+  }, [sendConfSignal]);
 
   /** Get copy link */
   const getShareLink = useCallback(() => {

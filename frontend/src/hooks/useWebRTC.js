@@ -262,9 +262,9 @@ export default function useWebRTC({ wsRef, username, token }) {
           autoGainControl: true,
         },
         video: type === 'video' ? {
-          width:  { ideal: 1280, min: 640 },
-          height: { ideal: 720,  min: 360 },
-          frameRate: { ideal: 30, min: 15 },
+          width:  { ideal: 1280 },
+          height: { ideal: 720 },
+          frameRate: { ideal: 30 },
         } : false,
       });
       localStreamRef.current = stream;
@@ -375,9 +375,9 @@ export default function useWebRTC({ wsRef, username, token }) {
           autoGainControl: true,
         },
         video: type === 'video' ? {
-          width:  { ideal: 1280, min: 640 },
-          height: { ideal: 720,  min: 360 },
-          frameRate: { ideal: 30, min: 15 },
+          width:  { ideal: 1280 },
+          height: { ideal: 720 },
+          frameRate: { ideal: 30 },
         } : false,
       });
       localStreamRef.current = stream;
@@ -541,9 +541,9 @@ export default function useWebRTC({ wsRef, username, token }) {
       try {
         const videoStream = await navigator.mediaDevices.getUserMedia({
           video: {
-            width:  { ideal: 1280, min: 640 },
-            height: { ideal: 720,  min: 360 },
-            frameRate: { ideal: 30, min: 15 },
+            width:  { ideal: 1280 },
+            height: { ideal: 720 },
+            frameRate: { ideal: 30 },
           },
         });
         const videoTrack = videoStream.getVideoTracks()[0];
