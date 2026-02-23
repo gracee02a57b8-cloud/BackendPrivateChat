@@ -309,11 +309,9 @@ export default function Sidebar({
               <button onClick={() => { setShowMenu(false); setShowSearch(!showSearch); }}>✉️ Написать</button>
               <button onClick={() => { setShowMenu(false); setShowCreate(true); }}>➕ Создать группу</button>
               <button onClick={() => { setShowMenu(false); if (onOpenSaved) onOpenSaved(); }}>🔖 Избранное</button>
-              <button onClick={() => { setShowMenu(false); setShowJoin(true); }}>🔗 Войти по ссылке</button>
               {installPrompt && (
                 <button onClick={() => { setShowMenu(false); handleInstall(); }}>📲 Установить приложение</button>
               )}
-              <button onClick={() => { setShowMenu(false); onLogout(); }}>🚪 Выйти</button>
             </div>
           )}
         </div>
