@@ -23,11 +23,18 @@ class E2EManager {
   constructor() {
     this._initialized = false;
     this._sessionLocks = new Map(); // Prevent concurrent session modifications
+    this._initPromise = null; // Track ongoing initialization
   }
 
   /** Initialize E2E — generate/load keys, register with server. */
   async initialize(token) {
     if (this._initialized) return;
+    if (this._initPromise) return this._initPromise;
+    this._initPromise = this._doInitialize(token);
+    return this._initPromise;
+  }
+
+  async _doInitialize(token) {
     try {
       await keyManager.initialize(token);
       this._initialized = true;
@@ -36,6 +43,25 @@ class E2EManager {
       console.log('[E2E] Initialized successfully');
     } catch (e) {
       console.error('[E2E] Initialization failed:', e);
+    } finally {
+      this._initPromise = null;
+    }
+  }
+
+  /**
+   * Wait for E2E initialization to complete (with timeout).
+   * Used by decrypt() to avoid failing on messages that arrive before init finishes.
+   */
+  async _waitForInit(timeoutMs = 10000) {
+    // If initialization is in progress, wait for it
+    if (this._initPromise) {
+      try { await this._initPromise; } catch { /* handled in _doInitialize */ }
+    }
+    if (this._initialized) return;
+    // Fallback: poll-wait in case init was triggered elsewhere
+    const start = Date.now();
+    while (!this._initialized && Date.now() - start < timeoutMs) {
+      await new Promise(r => setTimeout(r, 100));
     }
   }
 
@@ -130,6 +156,11 @@ class E2EManager {
    * @returns {Object} { text, fileKey? } decrypted payload
    */
   async decrypt(peerUsername, msg) {
+    // Wait for initialization if it's still in progress (fixes race condition
+    // where encrypted messages arrive via WebSocket before E2E init completes)
+    if (!this.isReady()) {
+      await this._waitForInit();
+    }
     if (!this.isReady()) throw new Error('E2E not initialized');
     if (!msg.encrypted) return { text: msg.content };
 

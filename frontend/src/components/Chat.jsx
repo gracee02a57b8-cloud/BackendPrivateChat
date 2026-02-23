@@ -375,7 +375,8 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
       }));
 
       // Auto-discover new private chat: if message arrives for unknown room, refresh sidebar
-      if (msg.sender !== username && !rooms.find(r => r.id === roomId)) {
+      // Use roomsRef (always-current) instead of stale `rooms` closure (Bug fix)
+      if (msg.sender !== username && !roomsRef.current.find(r => r.id === roomId)) {
         fetchRooms();
       }
 
@@ -476,6 +477,20 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
         for (const msg of data) {
           if (!msg.encrypted) continue;
           if (msg.sender !== username) {
+            // Check local cache FIRST to avoid re-decrypting (prevents session
+            // corruption when the same initial X3DH message is processed twice —
+            // once in real-time and again from history load)
+            if (msg.id) {
+              try {
+                const cached = await cryptoStore.getDecryptedContent(msg.id);
+                if (cached) {
+                  msg.content = cached.content;
+                  msg._fileKey = cached.fileKey;
+                  msg._thumbnailKey = cached.thumbnailKey;
+                  continue;
+                }
+              } catch { /* cache miss — proceed to decrypt */ }
+            }
             try {
               let result;
               if (msg.groupEncrypted) {
