@@ -280,8 +280,23 @@ export default function Sidebar({
       <div className="sb-header">
         <div className="sb-header-left">
           <button className="sb-close-btn" onClick={onCloseSidebar} aria-label="Закрыть меню"><ArrowLeft size={20} /></button>
+          {/* My story circle near "B" */}
+          {mobileTab === 'chats' && storiesHook && (() => {
+            const myGroup = storiesHook.groupedStories.find(g => g.author === username);
+            return (
+              <div
+                className={`sb-header-my-story${myGroup ? (myGroup.hasUnviewed ? ' unviewed' : ' viewed') : ' add'}`}
+                onClick={() => myGroup ? onOpenStoryViewer?.(username) : onOpenStoryUpload?.()}
+              >
+                <div className="sb-header-story-avatar" style={{ background: avatarUrl ? 'transparent' : getAvatarColor(username) }}>
+                  {avatarUrl ? <img src={avatarUrl} alt="" /> : getInitials(username)}
+                </div>
+                {!myGroup && <span className="sb-header-story-add-badge"><Plus size={8} /></span>}
+              </div>
+            );
+          })()}
           <div className="sb-mobile-title">
-            {mobileTab === 'chats' && '🐱 BarsikChat'}
+            {mobileTab === 'chats' && 'BarsikChat 🐱'}
             {mobileTab === 'contacts' && 'Контакты'}
             {mobileTab === 'settings' && 'Песочница'}
             {mobileTab === 'ai' && 'AI Помощник'}
@@ -301,24 +316,6 @@ export default function Sidebar({
             </div>
           </div>
         </div>
-        {/* Mini story circles in header */}
-        {mobileTab === 'chats' && storiesHook && storiesHook.groupedStories.length > 0 && (
-          <div className="sb-header-stories" onClick={() => setStoriesFeedOpen(o => !o)}>
-            {storiesHook.groupedStories.slice(0, 3).map((g) => {
-              const av = g.author === username ? avatarUrl : avatarMap[g.author];
-              return (
-                <div key={g.author} className={`sb-header-story-circle${g.hasUnviewed ? ' unviewed' : ''}`}>
-                  <div className="sb-header-story-avatar" style={{ background: av ? 'transparent' : getAvatarColor(g.author) }}>
-                    {av ? <img src={av} alt="" /> : getInitials(g.author)}
-                  </div>
-                </div>
-              );
-            })}
-            {storiesHook.groupedStories.length > 3 && (
-              <span className="sb-header-stories-more">+{storiesHook.groupedStories.length - 3}</span>
-            )}
-          </div>
-        )}
         <div className="sb-header-right">
           <button className="sb-menu-btn" onClick={() => setShowMenu(!showMenu)} aria-label="Меню" title="Меню"><MoreVertical size={20} /></button>
           {showMenu && (
@@ -339,6 +336,18 @@ export default function Sidebar({
       {/* ══════════  TAB: CHATS  ══════════ */}
       {(mobileTab === 'chats' || showContacts) && (
         <>
+          {/* Stories Bar — always visible between header and filters */}
+          {storiesHook && (
+            <StoriesBar
+              groupedStories={storiesHook.groupedStories}
+              username={username}
+              avatarUrl={avatarUrl}
+              avatarMap={avatarMap}
+              onOpenViewer={(author) => onOpenStoryViewer?.(author)}
+              onOpenUpload={() => onOpenStoryUpload?.()}
+            />
+          )}
+
           {/* Filter tabs */}
           <div className="sb-filters">
             {[
@@ -370,31 +379,6 @@ export default function Sidebar({
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
             />
-          </div>
-
-          {/* Stories Feed Panel (pull-to-reveal) */}
-          <div className={`stories-feed-panel${storiesFeedOpen ? ' open' : ''}`}>
-            {storiesHook && (
-              <StoriesBar
-                groupedStories={storiesHook.groupedStories}
-                username={username}
-                avatarUrl={avatarUrl}
-                avatarMap={avatarMap}
-                onOpenViewer={(author) => onOpenStoryViewer?.(author)}
-                onOpenUpload={() => onOpenStoryUpload?.()}
-              />
-            )}
-            <button className="stories-feed-close" onClick={() => setStoriesFeedOpen(false)}>
-              <ChevronUp size={16} /> Свернуть
-            </button>
-          </div>
-
-          {/* Pull indicator (tap or pull down to reveal stories) */}
-          <div className="stories-pull-indicator" onClick={() => setStoriesFeedOpen(o => !o)}>
-            <div className="stories-pull-bar" />
-            {!storiesFeedOpen && storiesHook && storiesHook.groupedStories.length > 0 && (
-              <span className="stories-pull-hint">Истории <ChevronDown size={12} /></span>
-            )}
           </div>
 
           {/* User Search Modal */}
