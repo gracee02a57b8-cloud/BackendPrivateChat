@@ -13,6 +13,8 @@ public class RoomDto {
     private Set<String> members = new CopyOnWriteArraySet<>();
     private String createdBy;
     private String createdAt;
+    private String description;
+    private String avatarUrl;
 
     public RoomDto() {}
 
@@ -41,4 +43,10 @@ public class RoomDto {
 
     public String getCreatedAt() { return createdAt; }
     public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
+
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+
+    public String getAvatarUrl() { return avatarUrl; }
+    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
 }

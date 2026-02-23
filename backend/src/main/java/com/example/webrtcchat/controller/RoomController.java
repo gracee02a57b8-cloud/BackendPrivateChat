@@ -56,7 +56,9 @@ public class RoomController {
         if (name.trim().length() > 50) {
             return ResponseEntity.badRequest().build();
         }
-        RoomDto room = roomService.createRoom(name.trim(), principal.getName());
+        String description = body.get("description");
+        String avatarUrl = body.get("avatarUrl");
+        RoomDto room = roomService.createRoom(name.trim(), principal.getName(), description, avatarUrl);
         return ResponseEntity.ok(room);
     }
 

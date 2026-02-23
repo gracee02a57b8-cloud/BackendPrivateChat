@@ -153,7 +153,7 @@ function formatLastSeenHeader(ts) {
   return `был(а) ${d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}`;
 }
 
-export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, onDeleteMessage, onScheduleMessage, scheduledMessages, roomName, username, connected, token, activeRoom, onlineUsers, allUsers = [], typingUsers = [], onTyping, isE2E, onShowSecurityCode, avatarMap = {}, onStartCall, callState, onLeaveRoom, onBack, onForwardToSaved, onJoinRoom }) {
+export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, onDeleteMessage, onScheduleMessage, scheduledMessages, roomName, username, connected, token, activeRoom, onlineUsers, allUsers = [], typingUsers = [], onTyping, isE2E, onShowSecurityCode, avatarMap = {}, onStartCall, callState, onLeaveRoom, onBack, onForwardToSaved, onJoinRoom, showAddMembers, onAddMembers, onDismissAddMembers }) {
   const [input, setInput] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
@@ -897,6 +897,14 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
           <button className="search-nav-btn" onClick={searchPrev} disabled={searchResults.length === 0} title="Предыдущее">▲</button>
           <button className="search-nav-btn" onClick={searchNext} disabled={searchResults.length === 0} title="Следующее">▼</button>
           <button className="search-close-btn" onClick={closeSearch} title="Закрыть">✕</button>
+        </div>
+      )}
+
+      {/* Add members banner for newly created groups */}
+      {showAddMembers && activeRoom?.type === 'ROOM' && (
+        <div className="add-members-banner">
+          <span className="add-members-text" onClick={onAddMembers}>Добавить участников</span>
+          <button className="add-members-close" onClick={onDismissAddMembers}>✕</button>
         </div>
       )}
 

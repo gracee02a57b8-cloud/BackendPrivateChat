@@ -64,9 +64,20 @@ public class RoomService {
 
     @Transactional
     public RoomDto createRoom(String name, String creator) {
+        return createRoom(name, creator, null, null);
+    }
+
+    @Transactional
+    public RoomDto createRoom(String name, String creator, String description, String avatarUrl) {
         String id = UUID.randomUUID().toString().substring(0, 8);
         RoomEntity room = new RoomEntity(id, name, RoomType.ROOM, creator, now());
         room.getMembers().add(creator);
+        if (description != null && !description.isBlank()) {
+            room.setDescription(description.trim());
+        }
+        if (avatarUrl != null && !avatarUrl.isBlank()) {
+            room.setAvatarUrl(avatarUrl.trim());
+        }
         roomRepository.save(room);
         return toDto(room);
     }
@@ -133,6 +144,8 @@ public class RoomService {
         dto.setType(entity.getType());
         dto.setCreatedBy(entity.getCreatedBy());
         dto.setCreatedAt(entity.getCreatedAt());
+        dto.setDescription(entity.getDescription());
+        dto.setAvatarUrl(entity.getAvatarUrl());
         dto.setMembers(new CopyOnWriteArraySet<>(entity.getMembers()));
         return dto;
     }

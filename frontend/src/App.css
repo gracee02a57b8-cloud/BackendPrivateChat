@@ -8309,6 +8309,140 @@
   cursor: not-allowed;
 }
 
+/* ── Create Group FAB ── */
+.create-group-fab {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4ecca3, #3b82f6);
+  color: #fff;
+  border: none;
+  font-size: 1.5rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(78, 204, 163, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s, opacity 0.15s;
+  z-index: 10;
+}
+.create-group-fab:active { transform: scale(0.92); }
+.create-group-fab:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Create Group Photo ── */
+.create-group-photo-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.create-group-photo {
+  width: 64px;
+  height: 64px;
+  min-width: 64px;
+  border-radius: 50%;
+  background: #2a2f45;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+  border: 2px dashed #4ecca3;
+  transition: border-color 0.2s;
+}
+.create-group-photo:hover { border-color: #3b82f6; }
+.create-group-photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+.create-group-photo-placeholder {
+  font-size: 1.6rem;
+  opacity: 0.6;
+}
+
+/* ── Create Group Details ── */
+.create-group-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 80px;
+}
+.create-group-desc-input {
+  width: 100%;
+  background: #181c2a;
+  border: 1px solid #2a2f45;
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: #e0e0e0;
+  font-size: 0.95rem;
+  resize: none;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.create-group-desc-input:focus { border-color: #4ecca3; }
+.create-group-desc-input::placeholder { color: #6b7280; }
+
+/* ── Create Group Members Preview ── */
+.create-group-members-preview {
+  margin-top: 8px;
+}
+.create-group-members-label {
+  font-size: 0.85rem;
+  color: #4ecca3;
+  font-weight: 600;
+  margin-bottom: 8px;
+  padding-left: 2px;
+}
+.create-group-member-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+}
+.create-group-member-name {
+  color: #e0e0e0;
+  font-size: 0.95rem;
+}
+
+/* ── Add Members Banner ── */
+.add-members-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, rgba(78, 204, 163, 0.15), rgba(59, 130, 246, 0.15));
+  border: 1px solid rgba(78, 204, 163, 0.3);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin: 0 12px 8px 12px;
+  animation: fadeIn 0.3s;
+}
+.add-members-text {
+  color: #4ecca3;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.add-members-text:hover { color: #3b82f6; }
+.add-members-close {
+  background: none;
+  border: none;
+  color: #6b7280;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 50%;
+  transition: background 0.15s, color 0.15s;
+}
+.add-members-close:hover { background: rgba(255,255,255,0.08); color: #e0e0e0; }
+
 /* ══════════  GROUP INVITE POPUP  ══════════ */
 .group-invite-overlay {
   position: fixed;

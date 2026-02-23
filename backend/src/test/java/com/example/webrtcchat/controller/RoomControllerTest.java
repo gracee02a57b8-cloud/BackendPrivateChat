@@ -2,6 +2,7 @@ package com.example.webrtcchat.controller;
 
 import com.example.webrtcchat.dto.MessageDto;
 import com.example.webrtcchat.dto.RoomDto;
+import com.example.webrtcchat.repository.MessageRepository;
 import com.example.webrtcchat.service.ChatService;
 import com.example.webrtcchat.service.JwtService;
 import com.example.webrtcchat.service.RoomService;
@@ -42,6 +43,9 @@ class RoomControllerTest {
     @MockBean
     private JwtService jwtService;
 
+    @MockBean
+    private MessageRepository messageRepository;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // === getUserRooms ===
@@ -64,7 +68,7 @@ class RoomControllerTest {
     @DisplayName("POST /api/rooms/create - success")
     void createRoom_success() throws Exception {
         RoomDto room = createRoomDto("abc12345", "My Room", RoomType.ROOM, Set.of("alice"));
-        when(roomService.createRoom("My Room", "alice")).thenReturn(room);
+        when(roomService.createRoom(eq("My Room"), eq("alice"), any(), any())).thenReturn(room);
 
         mockMvc.perform(post("/api/rooms/create")
                         .principal(() -> "alice")

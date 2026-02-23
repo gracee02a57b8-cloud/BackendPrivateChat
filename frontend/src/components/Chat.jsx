@@ -9,6 +9,7 @@ import SecurityCodeModal from './SecurityCodeModal';
 import IncomingCallModal from './IncomingCallModal';
 import CallScreen from './CallScreen';
 import ConferenceScreen from './ConferenceScreen';
+import AddMembersPanel from './AddMembersPanel';
 import ToastContainer, { showToast } from './Toast';
 import useWebRTC from '../hooks/useWebRTC';
 import useConference from '../hooks/useConference';
@@ -44,6 +45,8 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   const [avatarMap, setAvatarMap] = useState({});
   const [callSecurityCode, setCallSecurityCode] = useState(null);
   const [isCallMinimized, setIsCallMinimized] = useState(false);
+  const [newlyCreatedRoomId, setNewlyCreatedRoomId] = useState(null);
+  const [showAddMembersPanel, setShowAddMembersPanel] = useState(false);
   const wsRef = useRef(null);
   const loadedRooms = useRef(new Set());
   const activeRoomIdRef = useRef(null);
@@ -872,17 +875,32 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
     }
   };
 
-  const createRoom = async (name) => {
+  const createRoom = async (name, description, groupPhoto) => {
     try {
+      let avatarUrl = null;
+      if (groupPhoto) {
+        const formData = new FormData();
+        formData.append('file', groupPhoto);
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        });
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          avatarUrl = uploadData.url;
+        }
+      }
       const res = await fetch('/api/rooms/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, description: description || undefined, avatarUrl: avatarUrl || undefined }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const room = await res.json();
       fetchRooms();
       selectRoom(room.id);
+      setNewlyCreatedRoomId(room.id);
       return room;
     } catch (err) {
       console.error(err);
@@ -1181,6 +1199,19 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           onLeaveRoom={deleteRoom}
           onForwardToSaved={forwardToSaved}
           onJoinRoom={joinRoom}
+          showAddMembers={newlyCreatedRoomId === activeRoomId && newlyCreatedRoomId !== null}
+          onAddMembers={() => setShowAddMembersPanel(true)}
+          onDismissAddMembers={() => setNewlyCreatedRoomId(null)}
+        />
+      )}
+      {showAddMembersPanel && (
+        <AddMembersPanel
+          allUsers={allUsers}
+          username={username}
+          avatarMap={avatarMap}
+          activeRoom={activeRoom}
+          wsRef={wsRef}
+          onClose={() => setShowAddMembersPanel(false)}
         />
       )}
       {taskNotification && (

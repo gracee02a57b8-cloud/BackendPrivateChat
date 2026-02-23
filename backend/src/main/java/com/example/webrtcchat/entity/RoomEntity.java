@@ -26,6 +26,12 @@ public class RoomEntity {
 
     private String createdAt;
 
+    @Column(length = 500)
+    private String description;
+
+    @Column(length = 500)
+    private String avatarUrl;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "room_members", joinColumns = @JoinColumn(name = "room_id"))
     @Column(name = "username", length = 50)
@@ -55,6 +61,12 @@ public class RoomEntity {
 
     public String getCreatedAt() { return createdAt; }
     public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
+
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+
+    public String getAvatarUrl() { return avatarUrl; }
+    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
 
     public Set<String> getMembers() { return members; }
     public void setMembers(Set<String> members) { this.members = members; }

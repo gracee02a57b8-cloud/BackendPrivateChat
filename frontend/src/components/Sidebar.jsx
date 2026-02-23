@@ -694,7 +694,7 @@ export default function Sidebar({
         />
       )}
 
-      {showCreate && <CreateRoom onCreateRoom={onCreateRoom} onClose={() => setShowCreate(false)} allUsers={allUsers} username={username} avatarMap={avatarMap} wsRef={wsRef} />}
+      {showCreate && <CreateRoom onCreateRoom={onCreateRoom} onClose={(room) => { setShowCreate(false); if (room?.id) onSelectRoom(room.id); }} allUsers={allUsers} username={username} avatarMap={avatarMap} wsRef={wsRef} token={token} />}
       {showJoin && <JoinRoom onJoinRoom={onJoinRoom} onClose={() => setShowJoin(false)} />}
 
       {showProfile && (
