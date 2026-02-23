@@ -85,6 +85,7 @@ export default function CallScreen({
           <span className="call-mini-name">{callPeer}</span>
           <span className="call-mini-dur">{statusLabel}</span>
         </div>
+        <button className={`call-mini-btn call-mini-mute${isMuted ? ' active' : ''}`} onClick={(e) => { e.stopPropagation(); onToggleMute(); }} title={isMuted ? 'Включить микрофон' : 'Выключить микрофон'}>{isMuted ? '🔇' : '🎤'}</button>
         <button className="call-mini-btn call-mini-expand" onClick={(e) => { e.stopPropagation(); onRestore(); }} title="Развернуть">🔳</button>
         <button className="call-mini-btn call-mini-hangup" onClick={(e) => { e.stopPropagation(); onEndCall(); }} title="Завершить">📕</button>
       </div>

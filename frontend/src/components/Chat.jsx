@@ -45,6 +45,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   const [avatarMap, setAvatarMap] = useState({});
   const [callSecurityCode, setCallSecurityCode] = useState(null);
   const [isCallMinimized, setIsCallMinimized] = useState(false);
+  const [isConfMinimized, setIsConfMinimized] = useState(false);
   const [newlyCreatedRoomId, setNewlyCreatedRoomId] = useState(null);
   const [showAddMembersPanel, setShowAddMembersPanel] = useState(false);
   const wsRef = useRef(null);
@@ -1110,6 +1111,13 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
     }
   }, [webrtc.callState, webrtc.callPeer, e2eReady, token]);
 
+  // Reset conference minimize when conference ends
+  useEffect(() => {
+    if (conference.confState === 'idle') {
+      setIsConfMinimized(false);
+    }
+  }, [conference.confState]);
+
   return (
     <div className={`chat-container${sidebarOpen ? ' sidebar-active' : ''}${!activeRoomId ? ' mobile-sidebar-view' : ''}`}>
       {/* Skip navigation */}
@@ -1342,6 +1350,9 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           onToggleMute={conference.toggleMute}
           onToggleVideo={conference.toggleVideo}
           onCopyLink={conference.copyShareLink}
+          isMinimized={isConfMinimized}
+          onMinimize={() => setIsConfMinimized(true)}
+          onRestore={() => setIsConfMinimized(false)}
         />
       )}
 

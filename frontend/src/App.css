@@ -5959,6 +5959,83 @@
   background: #e53935;
 }
 
+/* ── Mute button in minimized call widget ── */
+.call-mini-mute {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+.call-mini-mute:hover {
+  background: rgba(106, 179, 243, 0.3);
+}
+.call-mini-mute.active {
+  background: #ef5350;
+  color: #fff;
+}
+.call-mini-mute.active:hover {
+  background: #e53935;
+}
+
+/* ── Minimized conference widget ── */
+.conf-mini-widget {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: var(--z-call-screen, 9998);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: linear-gradient(135deg, #1a2332, #17212b);
+  border: 1px solid #232e3c;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  animation: slideInRight 0.3s ease;
+  transition: box-shadow 0.2s;
+  min-width: 200px;
+}
+.conf-mini-widget:hover {
+  box-shadow: 0 8px 32px rgba(106, 179, 243, 0.2);
+}
+.conf-mini-icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+.conf-mini-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+.conf-mini-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #e4e6ea;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.conf-mini-dur {
+  font-size: 0.75rem;
+  color: #4ecca3;
+  font-variant-numeric: tabular-nums;
+}
+.conf-mini-mute {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+.conf-mini-mute:hover {
+  background: rgba(106, 179, 243, 0.3);
+}
+.conf-mini-mute.active {
+  background: #ef5350;
+  color: #fff;
+}
+.conf-mini-mute.active:hover {
+  background: #e53935;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -5996,6 +6073,14 @@
   }
 
   .call-mini-widget {
+    top: 8px;
+    right: 8px;
+    left: 8px;
+    min-width: unset;
+    padding: 6px 10px;
+  }
+
+  .conf-mini-widget {
     top: 8px;
     right: 8px;
     left: 8px;

@@ -41,6 +41,9 @@ export default function ConferenceScreen({
   onToggleMute,
   onToggleVideo,
   onCopyLink,
+  isMinimized,
+  onMinimize,
+  onRestore,
 }) {
   const isVideo = confType === 'video';
   const localVidEl = useRef(null);
@@ -74,6 +77,24 @@ export default function ConferenceScreen({
   const statusLabel =
     confState === 'joining' ? 'Подключение...' :
     formatDuration(confDuration);
+
+  // ── Minimized floating widget ──
+  if (isMinimized) {
+    return (
+      <div className="conf-mini-widget" onClick={onRestore}>
+        {/* Keep local video ref alive while minimized */}
+        <video ref={localVidEl} style={{ display: 'none' }} autoPlay playsInline muted />
+        <span className="conf-mini-icon">📞</span>
+        <div className="conf-mini-info">
+          <span className="conf-mini-name">Конференция</span>
+          <span className="conf-mini-dur">{participants.length} чел. · {statusLabel}</span>
+        </div>
+        <button className={`call-mini-btn conf-mini-mute${isMuted ? ' active' : ''}`} onClick={(e) => { e.stopPropagation(); onToggleMute(); }} title={isMuted ? 'Включить микрофон' : 'Выключить микрофон'}>{isMuted ? '🔇' : '🎤'}</button>
+        <button className="call-mini-btn call-mini-expand" onClick={(e) => { e.stopPropagation(); onRestore(); }} title="Развернуть">🔳</button>
+        <button className="call-mini-btn call-mini-hangup" onClick={(e) => { e.stopPropagation(); onLeave(); }} title="Покинуть">📕</button>
+      </div>
+    );
+  }
 
   return (
     <div className="conf-screen">
@@ -130,6 +151,16 @@ export default function ConferenceScreen({
 
       {/* Controls */}
       <div className="conf-controls">
+        {onMinimize && (
+          <button
+            className="conf-control-btn"
+            onClick={onMinimize}
+            title="Свернуть конференцию"
+          >
+            🗕
+          </button>
+        )}
+
         <button
           className={`conf-control-btn ${isMuted ? 'active' : ''}`}
           onClick={onToggleMute}
