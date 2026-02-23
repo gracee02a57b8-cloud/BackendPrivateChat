@@ -486,7 +486,7 @@ export default function Sidebar({
               const link = `${window.location.origin}`;
               copyToClipboard(link).then(() => { setInviteCopied(true); setTimeout(() => setInviteCopied(false), 2000); });
             }}>
-              <div className="contacts-action-icon" style={{ background: '#3b82f6' }}>�</div>
+              <div className="contacts-action-icon" style={{ background: '#3b82f6' }}><svg viewBox="0 0 24 24" width="22" height="22" fill="white"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>
               <span className="contacts-action-label">{inviteCopied ? '✅ Ссылка скопирована!' : 'Пригласить друзей'}</span>
             </div>
             <div className="contacts-action-item" onClick={() => setContactsSubView('calls')}>

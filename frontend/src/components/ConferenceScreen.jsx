@@ -169,15 +169,13 @@ export default function ConferenceScreen({
           {isMuted ? '🔇' : '🎤'}
         </button>
 
-        {isVideo && (
-          <button
-            className={`conf-control-btn ${isVideoOff ? 'active' : ''}`}
-            onClick={onToggleVideo}
-            title={isVideoOff ? 'Включить камеру' : 'Выключить камеру'}
-          >
-            {isVideoOff ? '📷' : '📹'}
-          </button>
-        )}
+        <button
+          className={`conf-control-btn ${isVideoOff ? 'active' : ''}`}
+          onClick={onToggleVideo}
+          title={isVideoOff ? 'Включить камеру' : 'Выключить камеру'}
+        >
+          {isVideoOff ? '📷' : '📹'}
+        </button>
 
         <button
           className="conf-control-btn conf-share-btn"
