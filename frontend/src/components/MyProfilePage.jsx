@@ -170,9 +170,9 @@ export default function MyProfilePage({ username, avatarUrl, token, wsRef, onAva
 
   return (
     <div className="my-profile-page">
-      {/* Header with three-dot menu */}
+      {/* Header with title and three-dot menu */}
       <div className="my-profile-header">
-        <div className="my-profile-header-spacer" />
+        <h2 className="my-profile-title">Профиль</h2>
         <div className="my-profile-menu-wrap" ref={menuRef}>
           <button className="my-profile-dots-btn" onClick={() => setShowMenu(!showMenu)} aria-label="Меню">⋮</button>
           {showMenu && (

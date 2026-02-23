@@ -254,8 +254,8 @@ export default function Sidebar({
 
   return (
     <div className={`chat-sidebar${sidebarOpen ? ' open' : ''}`}>
-      {/* ── Header (hidden in profile sub-views) ── */}
-      {!(mobileTab === 'profile' && profileSubView !== 'main') && (
+      {/* ── Header (hidden in profile tab) ── */}
+      {mobileTab !== 'profile' && (
       <div className="sb-header">
         <div className="sb-header-left">
           <button className="sb-close-btn" onClick={onCloseSidebar} aria-label="Закрыть меню">←</button>
