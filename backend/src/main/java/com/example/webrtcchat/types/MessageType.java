@@ -35,6 +35,9 @@ public enum MessageType {
     GROUP_INVITE,
     GROUP_INVITE_ACCEPT,
 
+    // Call history (displayed in chat)
+    CALL_LOG,
+
     // Conference (group call) signaling
     CONF_JOIN,      // user joined conference → broadcast to all participants
     CONF_LEAVE,     // user left conference → broadcast to all participants

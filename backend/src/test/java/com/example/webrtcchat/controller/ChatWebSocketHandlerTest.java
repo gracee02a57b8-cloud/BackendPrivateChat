@@ -1145,4 +1145,573 @@ class ChatWebSocketHandlerTest {
         handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(groupKeyMsg)));
         // No exception is success
     }
+
+    // ======================================================================
+    // ===                    CALL PUSH & LOGGING TESTS                   ===
+    // ======================================================================
+
+    @Test
+    @DisplayName("CALL_OFFER - always sends push notification to target (online or offline)")
+    void callOffer_alwaysSendsPush() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+        WebSocketSession bobSession = connectUser("s2", "bob", "token-b");
+
+        MessageDto offer = new MessageDto();
+        offer.setType(MessageType.CALL_OFFER);
+        Map<String, String> extra = new HashMap<>();
+        extra.put("target", "bob");
+        extra.put("callType", "audio");
+        extra.put("sdp", "{\"type\":\"offer\"}");
+        offer.setExtra(extra);
+
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(offer)));
+
+        // Push should be sent even though Bob is online
+        verify(webPushService).sendPushToUserAsync(eq("bob"),
+                eq("📞 Входящий звонок"),
+                eq("alice звонит вам"),
+                eq("call"), isNull());
+    }
+
+    @Test
+    @DisplayName("CALL_OFFER - sends push when target is offline")
+    void callOffer_sendsPushWhenOffline() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+        // Bob is NOT connected
+
+        MessageDto offer = new MessageDto();
+        offer.setType(MessageType.CALL_OFFER);
+        Map<String, String> extra = new HashMap<>();
+        extra.put("target", "bob");
+        extra.put("callType", "video");
+        extra.put("sdp", "{\"type\":\"offer\"}");
+        offer.setExtra(extra);
+
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(offer)));
+
+        // Push should be sent for the call
+        verify(webPushService).sendPushToUserAsync(eq("bob"),
+                eq("📞 Входящий звонок"),
+                eq("alice звонит вам"),
+                eq("call"), isNull());
+    }
+
+    @Test
+    @DisplayName("CALL_OFFER - saves call log when target is unavailable")
+    void callOffer_unavailable_savesCallLog() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+        // Bob not connected
+
+        RoomDto privateRoom = createRoom("private-ab", RoomType.PRIVATE);
+        when(roomService.getOrCreatePrivateRoom("alice", "bob")).thenReturn(privateRoom);
+
+        MessageDto offer = new MessageDto();
+        offer.setType(MessageType.CALL_OFFER);
+        Map<String, String> extra = new HashMap<>();
+        extra.put("target", "bob");
+        extra.put("callType", "audio");
+        offer.setExtra(extra);
+
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(offer)));
+
+        // Should save call log with status "unavailable"
+        verify(callLogRepository).save(argThat(log ->
+                "alice".equals(log.getCaller()) &&
+                "bob".equals(log.getCallee()) &&
+                "unavailable".equals(log.getStatus()) &&
+                "audio".equals(log.getCallType()) &&
+                log.getDuration() == 0
+        ));
+    }
+
+    @Test
+    @DisplayName("CALL_REJECT - saves call log with rejected status")
+    void callReject_savesCallLog() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+        WebSocketSession bobSession = connectUser("s2", "bob", "token-b");
+
+        RoomDto privateRoom = createRoom("private-ab", RoomType.PRIVATE);
+        when(roomService.getOrCreatePrivateRoom(anyString(), anyString())).thenReturn(privateRoom);
+
+        // Alice calls Bob first (CALL_OFFER to set up tracking)
+        MessageDto offer = new MessageDto();
+        offer.setType(MessageType.CALL_OFFER);
+        Map<String, String> extra = new HashMap<>();
+        extra.put("target", "bob");
+        extra.put("callType", "video");
+        offer.setExtra(extra);
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(offer)));
+
+        // Bob rejects the call
+        MessageDto reject = new MessageDto();
+        reject.setType(MessageType.CALL_REJECT);
+        Map<String, String> rejectExtra = new HashMap<>();
+        rejectExtra.put("target", "alice");
+        reject.setExtra(rejectExtra);
+        handler.handleTextMessage(bobSession, new TextMessage(objectMapper.writeValueAsString(reject)));
+
+        // Should save call log with status "rejected"
+        verify(callLogRepository, atLeastOnce()).save(argThat(log ->
+                "rejected".equals(log.getStatus())
+        ));
+    }
+
+    @Test
+    @DisplayName("CALL_BUSY - saves call log with busy status")
+    void callBusy_savesCallLog() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+        WebSocketSession bobSession = connectUser("s2", "bob", "token-b");
+
+        RoomDto privateRoom = createRoom("private-ab", RoomType.PRIVATE);
+        when(roomService.getOrCreatePrivateRoom(anyString(), anyString())).thenReturn(privateRoom);
+
+        // Alice calls Bob
+        MessageDto offer = new MessageDto();
+        offer.setType(MessageType.CALL_OFFER);
+        Map<String, String> extra = new HashMap<>();
+        extra.put("target", "bob");
+        extra.put("callType", "audio");
+        offer.setExtra(extra);
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(offer)));
+
+        // Bob is busy
+        MessageDto busy = new MessageDto();
+        busy.setType(MessageType.CALL_BUSY);
+        Map<String, String> busyExtra = new HashMap<>();
+        busyExtra.put("target", "alice");
+        busy.setExtra(busyExtra);
+        handler.handleTextMessage(bobSession, new TextMessage(objectMapper.writeValueAsString(busy)));
+
+        verify(callLogRepository, atLeastOnce()).save(argThat(log ->
+                "busy".equals(log.getStatus())
+        ));
+    }
+
+    @Test
+    @DisplayName("CALL_END with hangup - saves call log with completed status")
+    void callEnd_hangup_savesCompletedLog() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+        WebSocketSession bobSession = connectUser("s2", "bob", "token-b");
+
+        RoomDto privateRoom = createRoom("private-ab", RoomType.PRIVATE);
+        when(roomService.getOrCreatePrivateRoom(anyString(), anyString())).thenReturn(privateRoom);
+
+        // Alice calls Bob
+        MessageDto offer = new MessageDto();
+        offer.setType(MessageType.CALL_OFFER);
+        Map<String, String> extra = new HashMap<>();
+        extra.put("target", "bob");
+        extra.put("callType", "video");
+        offer.setExtra(extra);
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(offer)));
+
+        // Alice hangs up
+        MessageDto end = new MessageDto();
+        end.setType(MessageType.CALL_END);
+        Map<String, String> endExtra = new HashMap<>();
+        endExtra.put("target", "bob");
+        endExtra.put("reason", "hangup");
+        end.setExtra(endExtra);
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(end)));
+
+        verify(callLogRepository, atLeastOnce()).save(argThat(log ->
+                "completed".equals(log.getStatus())
+        ));
+    }
+
+    @Test
+    @DisplayName("Call log saves CALL_LOG message to private room")
+    void callLog_savesMessageToPrivateRoom() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+        // Bob not connected
+
+        RoomDto privateRoom = createRoom("private-ab", RoomType.PRIVATE);
+        when(roomService.getOrCreatePrivateRoom("alice", "bob")).thenReturn(privateRoom);
+
+        MessageDto offer = new MessageDto();
+        offer.setType(MessageType.CALL_OFFER);
+        Map<String, String> extra = new HashMap<>();
+        extra.put("target", "bob");
+        extra.put("callType", "audio");
+        offer.setExtra(extra);
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(offer)));
+
+        // Should save a CALL_LOG message to the private room
+        verify(chatService).send(eq("private-ab"), argThat(msg ->
+                msg.getType() == MessageType.CALL_LOG &&
+                "alice".equals(msg.getSender()) &&
+                msg.getContent().contains("не в сети")
+        ));
+    }
+
+    @Test
+    @DisplayName("Call log message is broadcast to room members")
+    void callLog_broadcastsToRoom() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+        WebSocketSession bobSession = connectUser("s2", "bob", "token-b");
+
+        RoomDto privateRoom = createRoom("private-ab", RoomType.PRIVATE);
+        when(roomService.getOrCreatePrivateRoom(anyString(), anyString())).thenReturn(privateRoom);
+        when(roomService.getRoomById("private-ab")).thenReturn(privateRoom);
+
+        // Alice calls Bob, Bob rejects
+        MessageDto offer = new MessageDto();
+        offer.setType(MessageType.CALL_OFFER);
+        Map<String, String> extra = new HashMap<>();
+        extra.put("target", "bob");
+        extra.put("callType", "audio");
+        offer.setExtra(extra);
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(offer)));
+
+        MessageDto reject = new MessageDto();
+        reject.setType(MessageType.CALL_REJECT);
+        Map<String, String> rejectExtra = new HashMap<>();
+        rejectExtra.put("target", "alice");
+        reject.setExtra(rejectExtra);
+        handler.handleTextMessage(bobSession, new TextMessage(objectMapper.writeValueAsString(reject)));
+
+        // Both users should receive the CALL_LOG message broadcast
+        verify(aliceSession, atLeastOnce()).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"type\":\"CALL_LOG\"");
+        }));
+        verify(bobSession, atLeastOnce()).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"type\":\"CALL_LOG\"");
+        }));
+    }
+
+    @Test
+    @DisplayName("CALL_LOG message contains call details in extra")
+    void callLog_containsCallDetails() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+
+        RoomDto privateRoom = createRoom("private-ab", RoomType.PRIVATE);
+        when(roomService.getOrCreatePrivateRoom("alice", "bob")).thenReturn(privateRoom);
+
+        MessageDto offer = new MessageDto();
+        offer.setType(MessageType.CALL_OFFER);
+        Map<String, String> extra = new HashMap<>();
+        extra.put("target", "bob");
+        extra.put("callType", "video");
+        offer.setExtra(extra);
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(offer)));
+
+        // Verify the CALL_LOG message has proper extra fields
+        verify(chatService).send(eq("private-ab"), argThat(msg -> {
+            if (msg.getType() != MessageType.CALL_LOG) return false;
+            Map<String, String> msgExtra = msg.getExtra();
+            return msgExtra != null &&
+                    "video".equals(msgExtra.get("callType")) &&
+                    "unavailable".equals(msgExtra.get("status")) &&
+                    "alice".equals(msgExtra.get("caller")) &&
+                    "bob".equals(msgExtra.get("callee"));
+        }));
+    }
+
+    // ======================================================================
+    // ===                   CONFERENCE SIGNALING TESTS                   ===
+    // ======================================================================
+
+    @Test
+    @DisplayName("CONF_JOIN - notifies existing participants")
+    void confJoin_notifiesExistingParticipants() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+        WebSocketSession bobSession = connectUser("s2", "bob", "token-b");
+
+        String confId = "conf-123";
+        when(conferenceService.joinConference(confId, "bob")).thenReturn(true);
+        when(conferenceService.getParticipants(confId)).thenReturn(Set.of("alice", "bob"));
+
+        MessageDto joinMsg = new MessageDto();
+        joinMsg.setType(MessageType.CONF_JOIN);
+        Map<String, String> extra = new HashMap<>();
+        extra.put("confId", confId);
+        joinMsg.setExtra(extra);
+
+        handler.handleTextMessage(bobSession, new TextMessage(objectMapper.writeValueAsString(joinMsg)));
+
+        // Alice should receive CONF_JOIN broadcast
+        verify(aliceSession).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"type\":\"CONF_JOIN\"")
+                    && payload.contains("\"sender\":\"bob\"");
+        }));
+
+        // Bob should receive CONF_PEERS
+        verify(bobSession).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"type\":\"CONF_PEERS\"")
+                    && payload.contains("alice");
+        }));
+    }
+
+    @Test
+    @DisplayName("CONF_JOIN - conference full returns error")
+    void confJoin_full_sendsError() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+
+        String confId = "conf-full";
+        when(conferenceService.joinConference(confId, "alice")).thenReturn(false);
+
+        MessageDto joinMsg = new MessageDto();
+        joinMsg.setType(MessageType.CONF_JOIN);
+        Map<String, String> extra = new HashMap<>();
+        extra.put("confId", confId);
+        joinMsg.setExtra(extra);
+
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(joinMsg)));
+
+        // Alice should get CONF_LEAVE with reason "full"
+        verify(aliceSession).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"type\":\"CONF_LEAVE\"")
+                    && payload.contains("\"reason\":\"full\"");
+        }));
+    }
+
+    @Test
+    @DisplayName("CONF_LEAVE - notifies remaining participants")
+    void confLeave_notifiesRemaining() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+        WebSocketSession bobSession = connectUser("s2", "bob", "token-b");
+
+        String confId = "conf-456";
+        when(conferenceService.getUserConference("alice")).thenReturn(null);
+        when(conferenceService.getParticipants(confId)).thenReturn(new java.util.LinkedHashSet<>(List.of("alice", "bob")));
+
+        MessageDto leaveMsg = new MessageDto();
+        leaveMsg.setType(MessageType.CONF_LEAVE);
+        Map<String, String> extra = new HashMap<>();
+        extra.put("confId", confId);
+        leaveMsg.setExtra(extra);
+
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(leaveMsg)));
+
+        // Bob should receive CONF_LEAVE from Alice
+        verify(bobSession).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"type\":\"CONF_LEAVE\"")
+                    && payload.contains("\"sender\":\"alice\"");
+        }));
+    }
+
+    @Test
+    @DisplayName("CONF_OFFER - relays to target within conference")
+    void confOffer_relaysToTarget() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+        WebSocketSession bobSession = connectUser("s2", "bob", "token-b");
+
+        String confId = "conf-789";
+        when(conferenceService.isInConference(confId, "alice")).thenReturn(true);
+        when(conferenceService.isInConference(confId, "bob")).thenReturn(true);
+
+        MessageDto offer = new MessageDto();
+        offer.setType(MessageType.CONF_OFFER);
+        Map<String, String> extra = new HashMap<>();
+        extra.put("target", "bob");
+        extra.put("confId", confId);
+        extra.put("sdp", "{\"type\":\"offer\"}");
+        extra.put("callType", "video");
+        offer.setExtra(extra);
+
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(offer)));
+
+        verify(bobSession).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"type\":\"CONF_OFFER\"")
+                    && payload.contains("\"sender\":\"alice\"")
+                    && payload.contains("\"sdp\"");
+        }));
+    }
+
+    @Test
+    @DisplayName("CONF_OFFER - rejected when user is not in conference")
+    void confOffer_notInConference_rejected() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+        WebSocketSession bobSession = connectUser("s2", "bob", "token-b");
+
+        String confId = "conf-789";
+        when(conferenceService.isInConference(confId, "alice")).thenReturn(true);
+        when(conferenceService.isInConference(confId, "bob")).thenReturn(false);
+
+        MessageDto offer = new MessageDto();
+        offer.setType(MessageType.CONF_OFFER);
+        Map<String, String> extra = new HashMap<>();
+        extra.put("target", "bob");
+        extra.put("confId", confId);
+        extra.put("sdp", "{\"type\":\"offer\"}");
+        offer.setExtra(extra);
+
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(offer)));
+
+        // Bob should NOT receive the offer
+        verify(bobSession, never()).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"type\":\"CONF_OFFER\"");
+        }));
+    }
+
+    @Test
+    @DisplayName("CONF_ANSWER - relays to target within conference")
+    void confAnswer_relaysToTarget() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+        WebSocketSession bobSession = connectUser("s2", "bob", "token-b");
+
+        String confId = "conf-789";
+        when(conferenceService.isInConference(confId, "alice")).thenReturn(true);
+        when(conferenceService.isInConference(confId, "bob")).thenReturn(true);
+
+        MessageDto answer = new MessageDto();
+        answer.setType(MessageType.CONF_ANSWER);
+        Map<String, String> extra = new HashMap<>();
+        extra.put("target", "alice");
+        extra.put("confId", confId);
+        extra.put("sdp", "{\"type\":\"answer\"}");
+        answer.setExtra(extra);
+
+        handler.handleTextMessage(bobSession, new TextMessage(objectMapper.writeValueAsString(answer)));
+
+        verify(aliceSession).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"type\":\"CONF_ANSWER\"")
+                    && payload.contains("\"sender\":\"bob\"");
+        }));
+    }
+
+    @Test
+    @DisplayName("CONF_ICE - relays ICE candidate to target")
+    void confIce_relaysToTarget() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+        WebSocketSession bobSession = connectUser("s2", "bob", "token-b");
+
+        String confId = "conf-789";
+        when(conferenceService.isInConference(confId, "alice")).thenReturn(true);
+        when(conferenceService.isInConference(confId, "bob")).thenReturn(true);
+
+        MessageDto ice = new MessageDto();
+        ice.setType(MessageType.CONF_ICE);
+        Map<String, String> extra = new HashMap<>();
+        extra.put("target", "bob");
+        extra.put("confId", confId);
+        extra.put("candidate", "{\"candidate\":\"...\"}");
+        ice.setExtra(extra);
+
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(ice)));
+
+        verify(bobSession).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"type\":\"CONF_ICE\"")
+                    && payload.contains("\"candidate\"");
+        }));
+    }
+
+    @Test
+    @DisplayName("CONF_JOIN - missing confId is handled gracefully")
+    void confJoin_noConfId_ignored() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+
+        MessageDto joinMsg = new MessageDto();
+        joinMsg.setType(MessageType.CONF_JOIN);
+        joinMsg.setExtra(new HashMap<>()); // no confId
+
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(joinMsg)));
+        // No exception is success
+        verify(conferenceService, never()).joinConference(anyString(), anyString());
+    }
+
+    @Test
+    @DisplayName("CONF_LEAVE - missing confId looks up user conference")
+    void confLeave_noConfId_looksUp() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+
+        when(conferenceService.getUserConference("alice")).thenReturn("conf-auto");
+        when(conferenceService.getParticipants("conf-auto")).thenReturn(new java.util.LinkedHashSet<>(List.of("alice")));
+
+        MessageDto leaveMsg = new MessageDto();
+        leaveMsg.setType(MessageType.CONF_LEAVE);
+        leaveMsg.setExtra(new HashMap<>()); // no confId → should look up
+
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(leaveMsg)));
+
+        verify(conferenceService).leaveConference("alice");
+    }
+
+    @Test
+    @DisplayName("CONF_OFFER/ANSWER/ICE - missing extra is handled gracefully")
+    void confSignaling_noExtra_ignored() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+
+        for (MessageType type : List.of(MessageType.CONF_OFFER, MessageType.CONF_ANSWER, MessageType.CONF_ICE)) {
+            MessageDto msg = new MessageDto();
+            msg.setType(type);
+            // No extra
+
+            handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(msg)));
+            // No exception is success
+        }
+    }
+
+    @Test
+    @DisplayName("Auto-leave conference on disconnect")
+    void disconnect_autoLeavesConference() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+        WebSocketSession bobSession = connectUser("s2", "bob", "token-b");
+
+        String confId = "conf-auto-leave";
+        when(conferenceService.getUserConference("alice")).thenReturn(confId);
+        when(conferenceService.getParticipants(confId)).thenReturn(new java.util.LinkedHashSet<>(List.of("alice", "bob")));
+
+        handler.afterConnectionClosed(aliceSession, CloseStatus.NORMAL);
+
+        // Should auto-leave conference
+        verify(conferenceService).leaveConference("alice");
+
+        // Bob should receive CONF_LEAVE
+        verify(bobSession).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"type\":\"CONF_LEAVE\"")
+                    && payload.contains("\"sender\":\"alice\"");
+        }));
+    }
+
+    @Test
+    @DisplayName("Multiple participants conference - join sends CONF_PEERS with all existing peers")
+    void confJoin_multipleParticipants_sendsPeersList() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+        WebSocketSession bobSession = connectUser("s2", "bob", "token-b");
+        WebSocketSession charlieSession = connectUser("s3", "charlie", "token-c");
+
+        String confId = "conf-multi";
+        when(conferenceService.joinConference(confId, "charlie")).thenReturn(true);
+        when(conferenceService.getParticipants(confId)).thenReturn(Set.of("alice", "bob", "charlie"));
+
+        MessageDto joinMsg = new MessageDto();
+        joinMsg.setType(MessageType.CONF_JOIN);
+        Map<String, String> extra = new HashMap<>();
+        extra.put("confId", confId);
+        joinMsg.setExtra(extra);
+
+        handler.handleTextMessage(charlieSession, new TextMessage(objectMapper.writeValueAsString(joinMsg)));
+
+        // Charlie should receive CONF_PEERS with alice and bob
+        verify(charlieSession).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"type\":\"CONF_PEERS\"")
+                    && payload.contains("alice")
+                    && payload.contains("bob");
+        }));
+
+        // Alice and Bob should receive CONF_JOIN from charlie
+        verify(aliceSession).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"type\":\"CONF_JOIN\"")
+                    && payload.contains("\"sender\":\"charlie\"");
+        }));
+        verify(bobSession).sendMessage(argThat(msg -> {
+            String payload = ((TextMessage) msg).getPayload();
+            return payload.contains("\"type\":\"CONF_JOIN\"")
+                    && payload.contains("\"sender\":\"charlie\"");
+        }));
+    }
 }

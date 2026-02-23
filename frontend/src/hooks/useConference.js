@@ -445,7 +445,18 @@ export default function useConference({ wsRef, username, token }) {
     if (peerId === username) return;
 
     try {
-      const pc = await createPeerConnection(peerId);
+      // Check if this is a renegotiation (e.g. peer toggled video on)
+      const existingPeer = peersRef.current.get(peerId);
+      const isRenegotiation = extra.renegotiate && existingPeer?.pc
+        && typeof existingPeer.pc.setRemoteDescription === 'function';
+
+      let pc;
+      if (isRenegotiation) {
+        // Reuse existing PeerConnection for renegotiation
+        pc = existingPeer.pc;
+      } else {
+        pc = await createPeerConnection(peerId);
+      }
 
       // Set peer's E2E media key for decryption
       if (confCryptoRef.current && extra.mediaKey) {
@@ -472,7 +483,13 @@ export default function useConference({ wsRef, username, token }) {
       await sendConfSignal('CONF_ANSWER', peerId, {
         sdp: JSON.stringify(answer),
         ...(mediaKey && { mediaKey }),
+        ...(isRenegotiation && { renegotiate: true }),
       });
+
+      // If peer upgraded to video, update our confType so we show their video
+      if (extra.callType === 'video') {
+        setConfType('video');
+      }
     } catch (err) {
       console.error(`[Conference] handleConfOffer from ${peerId} failed:`, err);
     }

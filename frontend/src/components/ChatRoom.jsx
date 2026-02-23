@@ -166,6 +166,60 @@ function formatLastSeenHeader(ts) {
   return `был(а) ${d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}`;
 }
 
+/** Call log bubble displayed in chat history */
+function CallLogBubble({ msg, username }) {
+  const extra = msg.extra || {};
+  const status = extra.status || 'completed';
+  const callType = extra.callType || 'audio';
+  const duration = parseInt(extra.duration || '0', 10);
+  const caller = extra.caller || msg.sender;
+  const isOutgoing = caller === username;
+
+  const getIcon = () => {
+    if (status === 'completed') return isOutgoing ? '📞↗' : '📞↙';
+    if (status === 'missed' || status === 'unavailable') return '📞✖';
+    if (status === 'rejected') return '📞✖';
+    if (status === 'busy') return '📞⏳';
+    return '📞';
+  };
+
+  const getLabel = () => {
+    const typeLabel = callType === 'video' ? 'Видеозвонок' : 'Звонок';
+    if (status === 'completed') {
+      const mins = Math.floor(duration / 60);
+      const secs = duration % 60;
+      const dur = mins > 0 ? `${mins} мин ${secs.toString().padStart(2, '0')} сек` : `${secs} сек`;
+      return `${isOutgoing ? 'Исходящий' : 'Входящий'} ${typeLabel.toLowerCase()} · ${dur}`;
+    }
+    if (status === 'missed') return `Пропущенный ${typeLabel.toLowerCase()}`;
+    if (status === 'rejected') return `Отклонённый ${typeLabel.toLowerCase()}`;
+    if (status === 'busy') return 'Абонент занят';
+    if (status === 'unavailable') return 'Абонент не в сети';
+    return typeLabel;
+  };
+
+  const isMissed = status === 'missed' || status === 'unavailable' || status === 'rejected';
+
+  const formatTime = (ts) => {
+    if (!ts) return '';
+    try {
+      const d = new Date(ts.includes?.('T') ? ts : ts.replace(' ', 'T'));
+      if (isNaN(d.getTime())) return ts;
+      return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    } catch { return ts; }
+  };
+
+  return (
+    <div className={`call-log-bubble${isMissed ? ' missed' : ''}`}>
+      <span className="call-log-icon">{getIcon()}</span>
+      <div className="call-log-info">
+        <span className="call-log-label">{getLabel()}</span>
+        <span className="call-log-time">{formatTime(msg.timestamp)}</span>
+      </div>
+    </div>
+  );
+}
+
 export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, onDeleteMessage, onScheduleMessage, scheduledMessages, roomName, username, connected, token, activeRoom, onlineUsers, allUsers = [], typingUsers = [], onTyping, isE2E, onShowSecurityCode, avatarMap = {}, onStartCall, callState, onLeaveRoom, onBack, onForwardToSaved, onJoinRoom, onJoinConference, showAddMembers, onAddMembers, onDismissAddMembers }) {
   const [input, setInput] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
@@ -962,20 +1016,21 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
           const prevMsg = messages[i - 1];
           const nextMsg = messages[i + 1];
           const isGrouped = prevMsg && prevMsg.sender === msg.sender
-            && prevMsg.type !== 'JOIN' && prevMsg.type !== 'LEAVE'
-            && msg.type !== 'JOIN' && msg.type !== 'LEAVE';
+            && prevMsg.type !== 'JOIN' && prevMsg.type !== 'LEAVE' && prevMsg.type !== 'CALL_LOG'
+            && msg.type !== 'JOIN' && msg.type !== 'LEAVE' && msg.type !== 'CALL_LOG';
 
           // Is this the last message in a group from the same sender?
           const isLastInGroup = !nextMsg
             || nextMsg.sender !== msg.sender
-            || nextMsg.type === 'JOIN' || nextMsg.type === 'LEAVE'
-            || msg.type === 'JOIN' || msg.type === 'LEAVE';
+            || nextMsg.type === 'JOIN' || nextMsg.type === 'LEAVE' || nextMsg.type === 'CALL_LOG'
+            || msg.type === 'JOIN' || msg.type === 'LEAVE' || msg.type === 'CALL_LOG';
 
           const isOwn = msg.sender === username;
           const isSys = msg.type === 'JOIN' || msg.type === 'LEAVE';
+          const isCallLog = msg.type === 'CALL_LOG';
 
           // Build class: grouped middle/last for proper border-radius
-          let msgClass = getMessageClass(msg);
+          let msgClass = isCallLog ? 'message system call-log-msg' : getMessageClass(msg);
           if (isGrouped && !isLastInGroup) msgClass += ' grouped middle';
           else if (isGrouped && isLastInGroup) msgClass += ' grouped last';
           else if (!isGrouped && !isLastInGroup) msgClass += ' first';
@@ -994,6 +1049,8 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
               >
                 {isSys ? (
                   <span className="system-text">{msg.content}</span>
+                ) : isCallLog ? (
+                  <CallLogBubble msg={msg} username={username} />
                 ) : (
                   <div className="message-row">
                     {/* Avatar — shown on last message in group (Telegram-style) */}

@@ -433,18 +433,18 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             activeCallStartTimes.put(callKey, System.currentTimeMillis());
             String callType = extra.getOrDefault("callType", "audio");
             activeCallTypes.put(callKey, callType);
+
+            // Always send push for incoming call (handles mobile with app backgrounded/screen off)
+            webPushService.sendPushToUserAsync(target,
+                    "📞 Входящий звонок",
+                    username + " звонит вам",
+                    "call", null);
         }
 
-        // If CALL_OFFER and target is offline → send CALL_END back to caller + log + push
+        // If CALL_OFFER and target is offline → send CALL_END back to caller + log
         if (incoming.getType() == MessageType.CALL_OFFER && (targetSession == null || !targetSession.isOpen())) {
             saveCallLog(username, target, extra.getOrDefault("callType", "audio"), "unavailable", 0);
             cleanupCallTracking(username, target);
-
-            // Send push notification for the missed call
-            webPushService.sendPushToUserAsync(target,
-                    "📞 Пропущенный звонок",
-                    username + " звонил вам",
-                    "call", null);
 
             MessageDto unavailable = new MessageDto();
             unavailable.setType(MessageType.CALL_END);
@@ -527,13 +527,71 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     private void saveCallLog(String caller, String callee, String callType, String status, int duration) {
         try {
+            String callId = UUID.randomUUID().toString();
             CallLogEntity log = new CallLogEntity(
-                    UUID.randomUUID().toString(),
-                    caller, callee, callType, status, duration, now()
+                    callId, caller, callee, callType, status, duration, now()
             );
             callLogRepository.save(log);
+
+            // Save a CALL_LOG message to the private room so it appears in chat history
+            try {
+                RoomDto privateRoom = roomService.getOrCreatePrivateRoom(caller, callee);
+                if (privateRoom != null) {
+                    // Build call description for the message content
+                    String callDesc = buildCallDescription(caller, callType, status, duration);
+
+                    MessageDto callMsg = new MessageDto();
+                    callMsg.setType(MessageType.CALL_LOG);
+                    callMsg.setId(callId);
+                    callMsg.setSender(caller);
+                    callMsg.setRoomId(privateRoom.getId());
+                    callMsg.setContent(callDesc);
+                    callMsg.setTimestamp(now());
+
+                    // Store call details in extra map
+                    Map<String, String> extra = new HashMap<>();
+                    extra.put("callType", callType);
+                    extra.put("status", status);
+                    extra.put("duration", String.valueOf(duration));
+                    extra.put("caller", caller);
+                    extra.put("callee", callee);
+                    callMsg.setExtra(extra);
+
+                    // Persist in chat history
+                    chatService.send(privateRoom.getId(), callMsg);
+
+                    // Broadcast to both users
+                    broadcastToRoom(privateRoom.getId(), callMsg);
+                }
+            } catch (Exception e) {
+                ChatWebSocketHandler.log.warn("Failed to save call log message to room: {}", e.getMessage());
+            }
         } catch (Exception e) {
             ChatWebSocketHandler.log.error("Failed to save call log: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Build a human-readable call description for the chat message.
+     */
+    private String buildCallDescription(String caller, String callType, String status, int duration) {
+        String typeIcon = "video".equals(callType) ? "📹" : "📞";
+        switch (status) {
+            case "completed":
+                int mins = duration / 60;
+                int secs = duration % 60;
+                String dur = mins > 0 ? String.format("%d мин %02d сек", mins, secs) : String.format("%d сек", secs);
+                return typeIcon + " Звонок · " + dur;
+            case "missed":
+                return typeIcon + " Пропущенный звонок";
+            case "rejected":
+                return typeIcon + " Отклонённый звонок";
+            case "busy":
+                return typeIcon + " Абонент занят";
+            case "unavailable":
+                return typeIcon + " Абонент не в сети";
+            default:
+                return typeIcon + " Звонок";
         }
     }
 

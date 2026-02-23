@@ -49,6 +49,7 @@ export default function ConferenceScreen({
   const isVideo = confType === 'video';
   const localVidEl = useRef(null);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [localHasVideo, setLocalHasVideo] = useState(false);
 
   // Attach local video ref — re-attach when switching between minimized and full views
   useEffect(() => {
@@ -60,6 +61,25 @@ export default function ConferenceScreen({
       localVidEl.current.srcObject = localStream.current;
     }
   }, [localVideoRef, localStream, isMinimized]);
+
+  // Track local stream video tracks (for dynamic audio→video toggle)
+  useEffect(() => {
+    const checkVideo = () => {
+      const stream = localStream?.current;
+      if (stream) {
+        const hasVid = stream.getVideoTracks().some(t => t.enabled && t.readyState === 'live');
+        setLocalHasVideo(hasVid);
+      } else {
+        setLocalHasVideo(false);
+      }
+    };
+    checkVideo();
+    const interval = setInterval(checkVideo, 500);
+    return () => clearInterval(interval);
+  }, [localStream]);
+
+  // Determine if self video should be displayed
+  const showSelfVideo = (isVideo || localHasVideo) && !isVideoOff;
 
   const handleCopyLink = useCallback(async () => {
     const ok = await onCopyLink();
@@ -124,9 +144,9 @@ export default function ConferenceScreen({
             autoPlay
             playsInline
             muted
-            style={{ display: (isVideo && !isVideoOff) ? undefined : 'none' }}
+            style={{ display: showSelfVideo ? undefined : 'none' }}
           />
-          {(!isVideo || isVideoOff) && (
+          {!showSelfVideo && (
             <div className="conf-tile-avatar">
               <AvatarDisplay name={username} avatarUrl={avatarMap?.[username]} />
             </div>
@@ -212,6 +232,7 @@ export default function ConferenceScreen({
 function PeerTile({ peerId, isVideo, avatarUrl, setRemoteVideoRef, getRemoteStream }) {
   const videoRef = useRef(null);
   const [hasStream, setHasStream] = useState(false);
+  const [hasVideoTrack, setHasVideoTrack] = useState(false);
 
   useEffect(() => {
     if (videoRef.current) {
@@ -220,6 +241,7 @@ function PeerTile({ peerId, isVideo, avatarUrl, setRemoteVideoRef, getRemoteStre
       if (stream) {
         videoRef.current.srcObject = stream;
         setHasStream(true);
+        setHasVideoTrack(stream.getVideoTracks().some(t => t.enabled && t.readyState === 'live'));
       }
     }
     return () => setRemoteVideoRef(peerId, null);
@@ -234,12 +256,16 @@ function PeerTile({ peerId, isVideo, avatarUrl, setRemoteVideoRef, getRemoteStre
           videoRef.current.srcObject = stream;
         }
         if (!hasStream) setHasStream(true);
+        // Check if stream has active video tracks (for dynamic video toggle)
+        const videoActive = stream.getVideoTracks().some(t => t.enabled && t.readyState === 'live');
+        setHasVideoTrack(videoActive);
       }
     }, 500);
     return () => clearInterval(interval);
   }, [peerId, getRemoteStream, hasStream]);
 
-  const showVideo = isVideo && hasStream;
+  // Show video if we have a stream with active video tracks (regardless of initial confType)
+  const showVideo = hasStream && (isVideo || hasVideoTrack);
 
   return (
     <div className="conf-tile">
