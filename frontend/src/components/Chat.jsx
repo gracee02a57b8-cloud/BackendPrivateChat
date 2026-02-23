@@ -31,6 +31,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   const [scheduledMessages, setScheduledMessages] = useState([]);
   const [showTasks, setShowTasks] = useState(false);
   const [taskNotification, setTaskNotification] = useState(null);
+  const [groupInvite, setGroupInvite] = useState(null);
   const [replyNotification, setReplyNotification] = useState(null);
   const [messageNotification, setMessageNotification] = useState(null);
   const [typingUsers, setTypingUsers] = useState({});
@@ -329,6 +330,16 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           taskStatus: msg.extra?.taskStatus || '',
           msgType: msg.type,
         });
+        return;
+      }
+
+      // Handle GROUP_INVITE — show invite popup
+      if (msg.type === 'GROUP_INVITE') {
+        const roomId = msg.extra?.roomId;
+        const roomName = msg.extra?.roomName;
+        if (roomId && roomName) {
+          setGroupInvite({ sender: msg.sender, roomId, roomName });
+        }
         return;
       }
 
@@ -1178,6 +1189,24 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           onClose={() => setTaskNotification(null)}
           onOpenTasks={() => { setTaskNotification(null); setShowTasks(true); }}
         />
+      )}
+      {groupInvite && (
+        <div className="group-invite-overlay">
+          <div className="group-invite-popup">
+            <div className="group-invite-icon">📩</div>
+            <h3 className="group-invite-title">Приглашение в группу</h3>
+            <p className="group-invite-text">
+              <strong>{groupInvite.sender}</strong> приглашает вас в группу <strong>«{groupInvite.roomName}»</strong>
+            </p>
+            <div className="group-invite-actions">
+              <button className="group-invite-accept" onClick={async () => {
+                await joinRoom(groupInvite.roomId);
+                setGroupInvite(null);
+              }}>Присоединиться</button>
+              <button className="group-invite-decline" onClick={() => setGroupInvite(null)}>Отклонить</button>
+            </div>
+          </div>
+        </div>
       )}
       {(securityCode || e2eUnavailable) && (
         <SecurityCodeModal

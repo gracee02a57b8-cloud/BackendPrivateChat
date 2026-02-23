@@ -31,6 +31,10 @@ public enum MessageType {
     // E2E group key distribution (relay to target user)
     GROUP_KEY,
 
+    // Group invite signaling
+    GROUP_INVITE,
+    GROUP_INVITE_ACCEPT,
+
     // Conference (group call) signaling
     CONF_JOIN,      // user joined conference → broadcast to all participants
     CONF_LEAVE,     // user left conference → broadcast to all participants

@@ -184,6 +184,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
+        // Handle GROUP_INVITE - relay to target user
+        if (incoming.getType() == MessageType.GROUP_INVITE) {
+            handleGroupInvite(username, incoming);
+            return;
+        }
+
         // Regular CHAT message
         incoming.setSender(username);
         incoming.setTimestamp(now());
@@ -681,6 +687,26 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
         log.error("Transport error for session {}: {}", session.getId(), exception.getMessage());
         session.close(CloseStatus.SERVER_ERROR);
+    }
+
+    /**
+     * Handle GROUP_INVITE: relay invitation to target user.
+     * extra must contain "target" (username to invite), "roomId", "roomName".
+     */
+    private void handleGroupInvite(String sender, MessageDto incoming) {
+        Map<String, String> extra = incoming.getExtra();
+        if (extra == null) return;
+        String target = extra.get("target");
+        if (target == null || target.isEmpty()) return;
+
+        incoming.setSender(sender);
+        incoming.setTimestamp(now());
+
+        WebSocketSession targetSession = userSessions.get(target);
+        if (targetSession != null && targetSession.isOpen()) {
+            sendSafe(targetSession, serialize(incoming));
+        }
+        // If target is offline the invite is lost — they can still join via link
     }
 
     /**
