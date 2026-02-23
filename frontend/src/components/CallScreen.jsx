@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 const AVATAR_COLORS = [
   '#e94560', '#4ecca3', '#f0a500', '#a855f7',
@@ -38,38 +38,70 @@ export default function CallScreen({
   onToggleVideo,
   securityCode,
   onUpgradeToConference,
+  isMinimized,
+  onMinimize,
+  onRestore,
 }) {
   const isVideo = callType === 'video' && !isVideoOff;
 
-  // Attach ref to video elements
+  // Always render video elements; refs are always available
   const localVidEl = useRef(null);
   const remoteVidEl = useRef(null);
   const remoteAudioEl = useRef(null);
 
+  // Always keep remoteVideoRef pointing to the <video> element
+  // The ontrack handler routes the stream to it regardless of callType
   useEffect(() => {
     if (localVideoRef) localVideoRef.current = localVidEl.current;
-    if (remoteVideoRef) {
-      // For video calls → use <video>; for audio calls → use hidden <audio>
-      remoteVideoRef.current = callType === 'video' ? remoteVidEl.current : remoteAudioEl.current;
+    if (remoteVideoRef) remoteVideoRef.current = remoteVidEl.current;
+  }, [localVideoRef, remoteVideoRef]);
+
+  // Sync remote stream to audio element for audio-only playback
+  useEffect(() => {
+    if (remoteVidEl.current && remoteVidEl.current.srcObject) {
+      remoteAudioEl.current.srcObject = remoteVidEl.current.srcObject;
     }
-  }, [localVideoRef, remoteVideoRef, callType]);
+  }, [callType]);
 
   const statusLabel =
     callState === 'outgoing' ? 'Вызываем...' :
     callState === 'connecting' ? 'Подключение...' :
     formatDuration(callDuration);
 
+  // ── Minimized floating widget ──
+  if (isMinimized) {
+    return (
+      <div className="call-mini-widget" onClick={onRestore}>
+        <audio ref={remoteAudioEl} autoPlay playsInline />
+        <video ref={remoteVidEl} style={{ display: 'none' }} autoPlay playsInline />
+        <video ref={localVidEl} style={{ display: 'none' }} autoPlay playsInline muted />
+        <span className="call-mini-avatar">
+          {avatarUrl
+            ? <img src={avatarUrl} alt="" className="call-mini-avatar-img" />
+            : <span style={{ background: getAvatarColor(callPeer || 'U') }} className="call-mini-avatar-ph">{(callPeer || 'U').charAt(0).toUpperCase()}</span>
+          }
+        </span>
+        <div className="call-mini-info">
+          <span className="call-mini-name">{callPeer}</span>
+          <span className="call-mini-dur">{statusLabel}</span>
+        </div>
+        <button className="call-mini-btn call-mini-expand" onClick={(e) => { e.stopPropagation(); onRestore(); }} title="Развернуть">🔳</button>
+        <button className="call-mini-btn call-mini-hangup" onClick={(e) => { e.stopPropagation(); onEndCall(); }} title="Завершить">📕</button>
+      </div>
+    );
+  }
+
+  // ── Full-screen call view ──
   return (
     <div className={`call-screen ${isVideo ? 'call-screen-video' : 'call-screen-audio'}`}>
-      {/* Remote video (full background) */}
-      {callType === 'video' && (
-        <video
-          ref={remoteVidEl}
-          className="call-remote-video"
-          autoPlay
-          playsInline
-        />
-      )}
+      {/* Remote video — always rendered, hidden when audio-only */}
+      <video
+        ref={remoteVidEl}
+        className="call-remote-video"
+        autoPlay
+        playsInline
+        style={{ display: isVideo ? 'block' : 'none' }}
+      />
 
       {/* Audio call: show peer avatar */}
       {!isVideo && (
@@ -99,18 +131,17 @@ export default function CallScreen({
         </div>
       )}
 
-      {/* Local video (picture-in-picture) */}
-      {callType === 'video' && (
-        <video
-          ref={localVidEl}
-          className="call-local-video"
-          autoPlay
-          playsInline
-          muted
-        />
-      )}
+      {/* Local video — always rendered, hidden when audio-only */}
+      <video
+        ref={localVidEl}
+        className="call-local-video"
+        autoPlay
+        playsInline
+        muted
+        style={{ display: isVideo ? 'block' : 'none' }}
+      />
 
-      {/* Hidden audio element – plays remote audio for audio-only calls */}
+      {/* Hidden audio element – plays remote audio always */}
       <audio ref={remoteAudioEl} autoPlay playsInline />
 
       {/* Security code (Bug 5) */}
@@ -124,6 +155,16 @@ export default function CallScreen({
 
       {/* Controls bar */}
       <div className="call-controls">
+        {onMinimize && (
+          <button
+            className="call-control-btn"
+            onClick={onMinimize}
+            title="Свернуть звонок"
+          >
+            🗕
+          </button>
+        )}
+
         <button
           className={`call-control-btn ${isMuted ? 'active' : ''}`}
           onClick={onToggleMute}

@@ -214,15 +214,9 @@ export default function useWebRTC({ wsRef, username, token }) {
 
     pc.ontrack = (e) => {
       remoteStreamRef.current = e.streams[0] || new MediaStream([e.track]);
+      // Always assign to remoteVideoRef — CallScreen always renders <video> now
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = remoteStreamRef.current;
-      } else {
-        // Fallback for audio-only calls if CallScreen hasn't mounted yet
-        const audio = document.createElement('audio');
-        audio.srcObject = remoteStreamRef.current;
-        audio.autoplay = true;
-        audio.play().catch(() => {});
-        remoteVideoRef.current = audio;
       }
       // E2E media decryption on incoming tracks
       if (callCryptoRef.current) {

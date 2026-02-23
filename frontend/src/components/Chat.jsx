@@ -40,6 +40,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   const [e2eUnavailable, setE2eUnavailable] = useState(false);
   const [avatarMap, setAvatarMap] = useState({});
   const [callSecurityCode, setCallSecurityCode] = useState(null);
+  const [isCallMinimized, setIsCallMinimized] = useState(false);
   const wsRef = useRef(null);
   const loadedRooms = useRef(new Set());
   const activeRoomIdRef = useRef(null);
@@ -901,6 +902,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
         .catch(() => setCallSecurityCode(null));
     } else if (webrtc.callState === 'idle') {
       setCallSecurityCode(null);
+      setIsCallMinimized(false);
     }
   }, [webrtc.callState, webrtc.callPeer, e2eReady, token]);
 
@@ -1074,6 +1076,9 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           onToggleVideo={webrtc.toggleVideo}
           securityCode={callSecurityCode}
           onUpgradeToConference={upgradeToConference}
+          isMinimized={isCallMinimized}
+          onMinimize={() => setIsCallMinimized(true)}
+          onRestore={() => setIsCallMinimized(false)}
         />
       )}
       {conference.confState !== 'idle' && (

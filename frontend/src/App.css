@@ -5806,6 +5806,116 @@
   background: rgba(78, 204, 163, 0.45) !important;
 }
 
+/* ===== Minimized Call Widget ===== */
+.call-mini-widget {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: var(--z-call-screen, 9998);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: linear-gradient(135deg, #1a2332, #17212b);
+  border: 1px solid #232e3c;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  animation: slideInRight 0.3s ease;
+  transition: box-shadow 0.2s;
+  min-width: 200px;
+}
+
+.call-mini-widget:hover {
+  box-shadow: 0 8px 32px rgba(106, 179, 243, 0.2);
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(60px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.call-mini-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.call-mini-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.call-mini-avatar-ph {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.call-mini-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.call-mini-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #e4e6ea;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.call-mini-dur {
+  font-size: 0.75rem;
+  color: #4ecca3;
+  font-variant-numeric: tabular-nums;
+}
+
+.call-mini-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.call-mini-expand {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.call-mini-expand:hover {
+  background: rgba(106, 179, 243, 0.3);
+}
+
+.call-mini-hangup {
+  background: #ef5350;
+  color: #fff;
+}
+
+.call-mini-hangup:hover {
+  background: #e53935;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -5840,6 +5950,14 @@
 
   .incoming-call-actions {
     gap: 2rem;
+  }
+
+  .call-mini-widget {
+    top: 8px;
+    right: 8px;
+    left: 8px;
+    min-width: unset;
+    padding: 6px 10px;
   }
 }
 
