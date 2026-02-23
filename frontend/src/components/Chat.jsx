@@ -1033,6 +1033,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           roomName={roomName}
           username={username}
           connected={connected}
+          onBack={() => { setActiveRoomId(null); setMobileTab('chats'); }}
           token={token}
           activeRoom={activeRoom}
           onlineUsers={onlineUsers}

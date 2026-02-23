@@ -949,6 +949,49 @@
   margin: 0;
 }
 
+/* ── Back button (hidden on desktop, shown on mobile) ── */
+.chat-header-back {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: #6ab3f3;
+  font-size: 1.4rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background 0.2s;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.chat-header-back:hover {
+  background: rgba(106, 179, 243, 0.12);
+}
+
+/* ── Header avatar (hidden on desktop, shown on mobile) ── */
+.chat-header-avatar {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.chat-header-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
 /* ===== Modal ===== */
 .modal-overlay {
   position: fixed;
@@ -3342,16 +3385,7 @@
     width: 100%;
   }
 
-  /* --- Chat header --- */
-  .chat-header {
-    padding-left: 3.2rem !important;
-  }
-
-  /* When sidebar is open, hamburger is hidden — no extra padding needed */
-  .sidebar-active .chat-header {
-    padding-left: 1rem !important;
-  }
-
+  /* --- Chat header (old hamburger padding removed — now has back button) --- */
   .chat-header h3 {
     font-size: 1rem;
   }
@@ -3611,17 +3645,10 @@
     gap: 10px;
   }
 
-  /* --- Chat --- */
-  .chat-header {
-    padding: 0.6rem 0.8rem 0.6rem 3rem !important;
-  }
-
-  .sidebar-active .chat-header {
-    padding-left: 0.8rem !important;
-  }
-
+  /* --- Chat (back button replaces hamburger padding) --- */
   .chat-header h3 {
     font-size: 0.9rem;
+    max-width: 120px;
   }
 
   .copy-link-btn {
@@ -7163,5 +7190,207 @@
   /* ── iOS safe-area: media permission banner ── */
   .media-perm-banner {
     top: env(safe-area-inset-top, 0px);
+  }
+
+  /* ══════════════════════════════════════════════════════
+     ██  TELEGRAM-STYLE CHAT VIEW (mobile)  ██
+     ══════════════════════════════════════════════════════ */
+
+  /* ── Chat header: back button + avatar + info + actions ── */
+  .chat-header {
+    padding: 8px 8px 8px 4px !important;
+    gap: 8px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    padding-top: calc(8px + env(safe-area-inset-top, 0px)) !important;
+  }
+
+  .chat-header-back {
+    display: flex;
+  }
+
+  .chat-header-avatar {
+    display: flex;
+  }
+
+  .chat-header h3 {
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
+  }
+
+  .header-online-status {
+    font-size: 0.7rem;
+  }
+
+  .chat-header-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Compact actions on mobile */
+  .chat-header-actions {
+    gap: 0.2rem;
+    flex-shrink: 0;
+  }
+
+  .call-header-btn,
+  .search-header-btn {
+    width: 34px;
+    height: 34px;
+    font-size: 1rem;
+    padding: 0;
+  }
+
+  /* Hide "Поделиться" text, E2E badge text on mobile - too wide */
+  .copy-link-btn {
+    font-size: 0;
+    padding: 0.3rem;
+    border: none;
+    min-width: 34px;
+    min-height: 34px;
+    justify-content: center;
+  }
+  .copy-link-btn::before {
+    content: '🔗';
+    font-size: 1rem;
+  }
+
+  .e2e-badge {
+    font-size: 0;
+    padding: 0.3rem;
+    min-width: 34px;
+    min-height: 34px;
+  }
+  .e2e-badge::before {
+    content: '🔒';
+    font-size: 1rem;
+  }
+
+  /* ── Chat main: full viewport ── */
+  .chat-main {
+    position: fixed;
+    inset: 0;
+    z-index: 500;
+    display: flex;
+    flex-direction: column;
+    background: #0e1621;
+  }
+
+  /* ── Messages area: fill between header and input ── */
+  .messages {
+    flex: 1;
+    padding: 8px 10px;
+    padding-bottom: 4px;
+  }
+
+  .message {
+    max-width: 82%;
+    padding: 0.3rem 0.5rem;
+  }
+
+  .message-bubble {
+    min-width: 0;
+  }
+
+  .message-body {
+    font-size: 0.88rem;
+    line-height: 1.35;
+  }
+
+  .msg-meta {
+    font-size: 0.62rem;
+  }
+
+  /* ── Message form: compact Telegram-style ── */
+  .message-form {
+    padding: 6px 8px;
+    padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+    gap: 4px;
+    border-top: 1px solid #232e3c;
+  }
+
+  .input-wrapper {
+    gap: 4px;
+  }
+
+  .input-wrapper textarea {
+    font-size: 0.88rem;
+    padding: 8px 10px !important;
+    border-radius: 20px;
+    min-height: 20px;
+    border-width: 1px;
+  }
+
+  .attach-btn {
+    font-size: 1.1rem;
+    padding: 2px 4px;
+  }
+
+  .form-actions {
+    gap: 2px;
+  }
+
+  .action-btn {
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0.4rem;
+    font-size: 1rem;
+    border-radius: 50%;
+  }
+
+  .action-btn.send-btn {
+    border-radius: 50%;
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    padding: 0;
+    font-size: 1.1rem;
+  }
+
+  .action-btn.emoji-btn,
+  .action-btn.schedule-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    border-radius: 50%;
+    padding: 0;
+  }
+
+  .action-btn.mic-btn,
+  .action-btn.video-circle-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    border-radius: 50%;
+    padding: 0;
+  }
+
+  /* ── Reply banner compact ── */
+  .reply-banner {
+    padding: 6px 10px;
+    font-size: 0.82rem;
+  }
+
+  /* ── Emoji picker position ── */
+  .emoji-picker {
+    bottom: calc(100% + 4px);
+    left: 0;
+    right: auto;
+    width: min(300px, calc(100vw - 20px));
+  }
+
+  /* ── Scroll-to-bottom ── */
+  .scroll-bottom-btn {
+    bottom: 70px;
+    right: 10px;
+  }
+
+  /* ── Empty chat message centered ── */
+  .messages-empty {
+    padding: 2rem 1rem;
   }
 }

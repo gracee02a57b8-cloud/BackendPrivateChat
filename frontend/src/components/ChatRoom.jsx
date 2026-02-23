@@ -118,7 +118,7 @@ function formatLastSeenHeader(ts) {
   return `был(а) ${d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}`;
 }
 
-export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, onDeleteMessage, onScheduleMessage, scheduledMessages, roomName, username, connected, token, activeRoom, onlineUsers, allUsers = [], typingUsers = [], onTyping, isE2E, onShowSecurityCode, avatarMap = {}, onStartCall, callState, onLeaveRoom }) {
+export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, onDeleteMessage, onScheduleMessage, scheduledMessages, roomName, username, connected, token, activeRoom, onlineUsers, allUsers = [], typingUsers = [], onTyping, isE2E, onShowSecurityCode, avatarMap = {}, onStartCall, callState, onLeaveRoom, onBack }) {
   const [input, setInput] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
@@ -753,6 +753,25 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
       )}
 
       <div className="chat-header">
+        {/* Back button (mobile) */}
+        <button className="chat-header-back" onClick={onBack} aria-label="Назад">←</button>
+
+        {/* Header avatar */}
+        {activeRoom?.type === 'PRIVATE' && (() => {
+          const otherUser = getOtherUserInPM();
+          const av = avatarMap[otherUser];
+          return (
+            <div className="chat-header-avatar" style={{ background: av ? 'transparent' : getAvatarColor(otherUser || '') }}>
+              {av ? <img src={av} alt="" className="chat-header-avatar-img" /> : getInitials(otherUser || '?')}
+            </div>
+          );
+        })()}
+        {activeRoom?.type === 'ROOM' && (
+          <div className="chat-header-avatar group-avatar" style={{ background: getAvatarColor(roomName) }}>
+            {getInitials(roomName)}
+          </div>
+        )}
+
         <div
           className={`chat-header-info${activeRoom?.type === 'ROOM' ? ' chat-header-clickable' : ''}`}
           onClick={activeRoom?.type === 'ROOM' ? () => setShowGroupInfo(true) : undefined}
