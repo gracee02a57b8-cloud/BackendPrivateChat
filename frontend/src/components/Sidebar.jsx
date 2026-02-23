@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import UserSearch from './UserSearch';
 import CreateRoom from './CreateRoom';
 import JoinRoom from './JoinRoom';
@@ -11,7 +11,7 @@ import StoriesBar from './StoriesBar';
 import { copyToClipboard } from '../utils/clipboard';
 import appSettings from '../utils/appSettings';
 import { getAvatarColor, getInitials, formatLastSeen } from '../utils/avatar';
-import { ArrowLeft, MoreVertical, User, Mail, Plus, Bookmark, Download, X, Search, Users, MessageSquare, CheckCircle, Share2, Trash2, Phone, Star, Newspaper, ClipboardList, Link, Volume2, Bell, Settings, LogOut } from 'lucide-react';
+import { ArrowLeft, MoreVertical, User, Mail, Plus, Bookmark, Download, X, Search, Users, MessageSquare, CheckCircle, Share2, Trash2, Phone, Star, Newspaper, ClipboardList, Link, Volume2, Bell, Settings, LogOut, ChevronDown, ChevronUp } from 'lucide-react';
 
 function formatTime(ts) {
   if (!ts) return '';
@@ -86,7 +86,11 @@ export default function Sidebar({
   const [notifSoundOn, setNotifSoundOn] = useState(() => appSettings.notifSound);
   const [callSoundOn, setCallSoundOn] = useState(() => appSettings.callSound);
   const [pushOn, setPushOn] = useState(() => appSettings.pushEnabled);
+  const [storiesFeedOpen, setStoriesFeedOpen] = useState(false);
   const menuRef = useRef(null);
+  const pullStartY = useRef(0);
+  const pullActive = useRef(false);
+  const chatListRef = useRef(null);
 
   // PWA install prompt
   useEffect(() => {
@@ -124,6 +128,28 @@ export default function Sidebar({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showMenu]);
+
+  // Pull-to-reveal stories gesture
+  const handlePullStart = useCallback((e) => {
+    const el = chatListRef.current;
+    if (el && el.scrollTop <= 0 && !storiesFeedOpen) {
+      pullStartY.current = e.touches[0].clientY;
+      pullActive.current = true;
+    }
+  }, [storiesFeedOpen]);
+
+  const handlePullMove = useCallback((e) => {
+    if (!pullActive.current) return;
+    const dy = e.touches[0].clientY - pullStartY.current;
+    if (dy > 60) {
+      setStoriesFeedOpen(true);
+      pullActive.current = false;
+    }
+  }, []);
+
+  const handlePullEnd = useCallback(() => {
+    pullActive.current = false;
+  }, []);
 
   const copyShareLink = (e, roomId) => {
     e.stopPropagation();
@@ -255,7 +281,7 @@ export default function Sidebar({
         <div className="sb-header-left">
           <button className="sb-close-btn" onClick={onCloseSidebar} aria-label="Закрыть меню"><ArrowLeft size={20} /></button>
           <div className="sb-mobile-title">
-            {mobileTab === 'chats' && 'BarsikChat'}
+            {mobileTab === 'chats' && '🐱 BarsikChat'}
             {mobileTab === 'contacts' && 'Контакты'}
             {mobileTab === 'settings' && 'Песочница'}
             {mobileTab === 'ai' && 'AI Помощник'}
@@ -275,6 +301,24 @@ export default function Sidebar({
             </div>
           </div>
         </div>
+        {/* Mini story circles in header */}
+        {mobileTab === 'chats' && storiesHook && storiesHook.groupedStories.length > 0 && (
+          <div className="sb-header-stories" onClick={() => setStoriesFeedOpen(o => !o)}>
+            {storiesHook.groupedStories.slice(0, 3).map((g) => {
+              const av = g.author === username ? avatarUrl : avatarMap[g.author];
+              return (
+                <div key={g.author} className={`sb-header-story-circle${g.hasUnviewed ? ' unviewed' : ''}`}>
+                  <div className="sb-header-story-avatar" style={{ background: av ? 'transparent' : getAvatarColor(g.author) }}>
+                    {av ? <img src={av} alt="" /> : getInitials(g.author)}
+                  </div>
+                </div>
+              );
+            })}
+            {storiesHook.groupedStories.length > 3 && (
+              <span className="sb-header-stories-more">+{storiesHook.groupedStories.length - 3}</span>
+            )}
+          </div>
+        )}
         <div className="sb-header-right">
           <button className="sb-menu-btn" onClick={() => setShowMenu(!showMenu)} aria-label="Меню" title="Меню"><MoreVertical size={20} /></button>
           {showMenu && (
@@ -328,17 +372,30 @@ export default function Sidebar({
             />
           </div>
 
-          {/* Stories Bar */}
-          {storiesHook && (storiesHook.groupedStories.length > 0 || true) && (
-            <StoriesBar
-              groupedStories={storiesHook.groupedStories}
-              username={username}
-              avatarUrl={avatarUrl}
-              avatarMap={avatarMap}
-              onOpenViewer={(author) => onOpenStoryViewer?.(author)}
-              onOpenUpload={() => onOpenStoryUpload?.()}
-            />
-          )}
+          {/* Stories Feed Panel (pull-to-reveal) */}
+          <div className={`stories-feed-panel${storiesFeedOpen ? ' open' : ''}`}>
+            {storiesHook && (
+              <StoriesBar
+                groupedStories={storiesHook.groupedStories}
+                username={username}
+                avatarUrl={avatarUrl}
+                avatarMap={avatarMap}
+                onOpenViewer={(author) => onOpenStoryViewer?.(author)}
+                onOpenUpload={() => onOpenStoryUpload?.()}
+              />
+            )}
+            <button className="stories-feed-close" onClick={() => setStoriesFeedOpen(false)}>
+              <ChevronUp size={16} /> Свернуть
+            </button>
+          </div>
+
+          {/* Pull indicator (tap or pull down to reveal stories) */}
+          <div className="stories-pull-indicator" onClick={() => setStoriesFeedOpen(o => !o)}>
+            <div className="stories-pull-bar" />
+            {!storiesFeedOpen && storiesHook && storiesHook.groupedStories.length > 0 && (
+              <span className="stories-pull-hint">Истории <ChevronDown size={12} /></span>
+            )}
+          </div>
 
           {/* User Search Modal */}
           {showSearch && (
@@ -429,7 +486,13 @@ export default function Sidebar({
               })()}
             </div>
           ) : (
-            <div className="sb-chat-list">
+            <div
+              className="sb-chat-list"
+              ref={chatListRef}
+              onTouchStart={handlePullStart}
+              onTouchMove={handlePullMove}
+              onTouchEnd={handlePullEnd}
+            >
               {getSortedRooms().map((room) => renderChatItem(room))}
               {rooms.length === 0 && (
                 <div className="sb-empty"><span><MessageSquare size={32} /></span><p>Нет чатов</p></div>
