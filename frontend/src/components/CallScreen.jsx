@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { getAvatarColor } from '../utils/avatar';
 import { Lock, ChevronDown, ChevronUp, SwitchCamera, Maximize2 } from 'lucide-react';
 
@@ -39,32 +39,41 @@ export default function CallScreen({
   const remoteVidEl = useRef(null);
   const remoteAudioEl = useRef(null);
 
-  // Feature #3: expandable security code
+  // Expandable security code
   const [securityExpanded, setSecurityExpanded] = useState(false);
 
-  // Feature #5: swap local/remote video
+  // Swap local/remote video — CSS-only swap, refs stay stable
   const [videoSwapped, setVideoSwapped] = useState(false);
 
-  // Store stream refs locally so we can re-attach after minimize/restore
+  // Stream caches (always canonical: local = actual local, remote = actual remote)
   const localStreamCache = useRef(null);
   const remoteStreamCache = useRef(null);
 
-  // Always keep refs pointing to the <video> elements
-  useEffect(() => {
+  // Reset swap when call type changes (renegotiation)
+  useEffect(() => { setVideoSwapped(false); }, [callType]);
+
+  // Sync hook refs to DOM elements immediately after DOM commit (before paint)
+  useLayoutEffect(() => {
     if (localVideoRef) localVideoRef.current = localVidEl.current;
     if (remoteVideoRef) remoteVideoRef.current = remoteVidEl.current;
-  }, [localVideoRef, remoteVideoRef]);
+  });
 
-  // Bug #1 fix: Re-attach streams when switching between minimized and full view
+  // Keep stream caches up-to-date + sync audio element
   useEffect(() => {
-    // Cache any existing streams
-    if (localVidEl.current?.srcObject) {
-      localStreamCache.current = localVidEl.current.srcObject;
-    }
-    if (remoteVidEl.current?.srcObject) {
-      remoteStreamCache.current = remoteVidEl.current.srcObject;
-    }
+    const interval = setInterval(() => {
+      if (localVidEl.current?.srcObject) localStreamCache.current = localVidEl.current.srcObject;
+      if (remoteVidEl.current?.srcObject) remoteStreamCache.current = remoteVidEl.current.srcObject;
+      if (remoteAudioEl.current && remoteStreamCache.current) {
+        if (remoteAudioEl.current.srcObject !== remoteStreamCache.current) {
+          remoteAudioEl.current.srcObject = remoteStreamCache.current;
+        }
+      }
+    }, 500);
+    return () => clearInterval(interval);
+  }, []);
 
+  // Re-attach streams when view or call state changes
+  useEffect(() => {
     const reattach = () => {
       if (localVidEl.current && localStreamCache.current) {
         if (localVidEl.current.srcObject !== localStreamCache.current) {
@@ -75,32 +84,18 @@ export default function CallScreen({
         if (remoteVidEl.current.srcObject !== remoteStreamCache.current) {
           remoteVidEl.current.srcObject = remoteStreamCache.current;
         }
-        if (remoteAudioEl.current) {
-          remoteAudioEl.current.srcObject = remoteStreamCache.current;
-        }
+      }
+      if (remoteAudioEl.current && remoteStreamCache.current) {
+        remoteAudioEl.current.srcObject = remoteStreamCache.current;
       }
       if (localVideoRef) localVideoRef.current = localVidEl.current;
       if (remoteVideoRef) remoteVideoRef.current = remoteVidEl.current;
     };
-
     reattach();
-    const timer = setTimeout(reattach, 100);
-    return () => clearTimeout(timer);
-  }, [isMinimized, localVideoRef, remoteVideoRef]);
-
-  // Keep stream cache up-to-date
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (localVidEl.current?.srcObject) localStreamCache.current = localVidEl.current.srcObject;
-      if (remoteVidEl.current?.srcObject) {
-        remoteStreamCache.current = remoteVidEl.current.srcObject;
-        if (remoteAudioEl.current && remoteAudioEl.current.srcObject !== remoteVidEl.current.srcObject) {
-          remoteAudioEl.current.srcObject = remoteVidEl.current.srcObject;
-        }
-      }
-    }, 500);
-    return () => clearInterval(interval);
-  }, []);
+    const t1 = setTimeout(reattach, 150);
+    const t2 = setTimeout(reattach, 500);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [isMinimized, callState, callType, isVideoOff, localVideoRef, remoteVideoRef]);
 
   const statusLabel =
     callState === 'outgoing' ? 'Вызываем...' :
@@ -134,15 +129,13 @@ export default function CallScreen({
   // ── Full-screen call view ──
   return (
     <div className={`call-screen ${isVideo ? 'call-screen-video' : 'call-screen-audio'}`}>
-      {/* Main video area — remote (or local if swapped) */}
+      {/* Remote video: full-screen normally, PiP-sized when swapped */}
       <video
-        ref={videoSwapped ? localVidEl : remoteVidEl}
-        className="call-remote-video"
+        ref={remoteVidEl}
+        className={isVideo ? (videoSwapped ? 'call-video-pip' : 'call-video-main') : ''}
         autoPlay
         playsInline
-        muted={videoSwapped}
         style={{ display: isVideo ? 'block' : 'none' }}
-        onClick={() => isVideo && videoSwapped && setVideoSwapped(false)}
       />
 
       {/* Audio call: show peer avatar */}
@@ -173,21 +166,24 @@ export default function CallScreen({
         </div>
       )}
 
-      {/* Feature #5: Local video PiP — tap to swap with main */}
+      {/* Local video: PiP-sized normally, full-screen when swapped */}
       {isVideo && (
-        <div className="call-local-pip-wrapper" onClick={() => setVideoSwapped(v => !v)}>
-          <video
-            ref={videoSwapped ? remoteVidEl : localVidEl}
-            className="call-local-video"
-            autoPlay
-            playsInline
-            muted={!videoSwapped}
-          />
+        <video
+          ref={localVidEl}
+          className={videoSwapped ? 'call-video-main' : 'call-video-pip'}
+          autoPlay
+          playsInline
+          muted
+        />
+      )}
+
+      {/* Overlay on PiP position: tap to swap + camera switch */}
+      {isVideo && (
+        <div className="call-pip-overlay" onClick={() => setVideoSwapped(v => !v)}>
           <span className="call-pip-swap-hint" title="Нажмите, чтобы поменять">
             <Maximize2 size={14} />
           </span>
-          {/* Feature #6: switch camera button */}
-          {onSwitchCamera && !videoSwapped && (
+          {onSwitchCamera && (
             <button
               className="call-pip-switch-cam"
               onClick={(e) => { e.stopPropagation(); onSwitchCamera(); }}

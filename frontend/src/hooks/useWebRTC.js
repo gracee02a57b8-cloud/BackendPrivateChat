@@ -384,6 +384,16 @@ export default function useWebRTC({ wsRef, username, token }) {
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
       }
+      // Retry srcObject assignment after CallScreen mounts (refs may be null during state transition)
+      const retryId = setInterval(() => {
+        if (localVideoRef.current) {
+          if (!localVideoRef.current.srcObject || localVideoRef.current.srcObject !== stream) {
+            localVideoRef.current.srcObject = stream;
+          }
+          clearInterval(retryId);
+        }
+      }, 100);
+      setTimeout(() => clearInterval(retryId), 3000);
 
       // E2E media: generate key + set peer's key for decryption
       let mediaKey = null;
@@ -584,21 +594,28 @@ export default function useWebRTC({ wsRef, username, token }) {
   const switchCamera = useCallback(async () => {
     const stream = localStreamRef.current;
     const pc = pcRef.current;
-    if (!stream || !pc) return;
+    if (!stream || !pc || typeof pc.getSenders !== 'function') return;
 
     const currentVideoTrack = stream.getVideoTracks()[0];
     if (!currentVideoTrack) return;
 
     try {
-      // Determine current facingMode
-      const settings = currentVideoTrack.getSettings();
-      const currentFacing = settings.facingMode || 'user';
-      const newFacing = currentFacing === 'user' ? 'environment' : 'user';
+      // Primary method: enumerate devices and cycle through video inputs
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(d => d.kind === 'videoinput');
 
-      // Get new video stream with the opposite camera
+      if (videoDevices.length < 2) {
+        console.warn('[WebRTC] Only one camera available');
+        return;
+      }
+
+      const currentDeviceId = currentVideoTrack.getSettings().deviceId;
+      const currentIdx = videoDevices.findIndex(d => d.deviceId === currentDeviceId);
+      const nextIdx = (currentIdx + 1) % videoDevices.length;
+
       const newStream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: { exact: newFacing },
+          deviceId: { exact: videoDevices[nextIdx].deviceId },
           width: { ideal: 1280 },
           height: { ideal: 720 },
           frameRate: { ideal: 30 },
@@ -620,49 +637,13 @@ export default function useWebRTC({ wsRef, username, token }) {
       stream.removeTrack(currentVideoTrack);
       stream.addTrack(newTrack);
 
-      // Update local video display
+      // Force re-assign srcObject to trigger video update
       if (localVideoRef.current) {
+        localVideoRef.current.srcObject = null;
         localVideoRef.current.srcObject = stream;
       }
     } catch (err) {
       console.error('[WebRTC] switchCamera error:', err);
-      // Fallback: try cycling through available devices
-      try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevices = devices.filter(d => d.kind === 'videoinput');
-        if (videoDevices.length < 2) return;
-
-        const currentDeviceId = currentVideoTrack.getSettings().deviceId;
-        const currentIdx = videoDevices.findIndex(d => d.deviceId === currentDeviceId);
-        const nextIdx = (currentIdx + 1) % videoDevices.length;
-
-        const newStream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            deviceId: { exact: videoDevices[nextIdx].deviceId },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-        });
-
-        const newTrack = newStream.getVideoTracks()[0];
-        if (!newTrack) return;
-
-        const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
-        if (sender) {
-          await sender.replaceTrack(newTrack);
-          if (callCryptoRef.current) callCryptoRef.current.setupSenderEncryption(sender);
-        }
-
-        currentVideoTrack.stop();
-        stream.removeTrack(currentVideoTrack);
-        stream.addTrack(newTrack);
-
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = stream;
-        }
-      } catch (fallbackErr) {
-        console.error('[WebRTC] switchCamera fallback error:', fallbackErr);
-      }
     }
   }, []);
 
