@@ -4,6 +4,7 @@ import com.example.webrtcchat.dto.MessageDto;
 import com.example.webrtcchat.dto.RoomDto;
 import com.example.webrtcchat.dto.TaskDto;
 import com.example.webrtcchat.service.ChatService;
+import com.example.webrtcchat.service.ConferenceService;
 import com.example.webrtcchat.service.JwtService;
 import com.example.webrtcchat.service.RoomService;
 import com.example.webrtcchat.service.SchedulerService;
@@ -42,15 +43,18 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final RoomService roomService;
     private final SchedulerService schedulerService;
     private final TaskService taskService;
+    private final ConferenceService conferenceService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public ChatWebSocketHandler(ChatService chatService, JwtService jwtService, RoomService roomService,
-                                SchedulerService schedulerService, TaskService taskService) {
+                                SchedulerService schedulerService, TaskService taskService,
+                                ConferenceService conferenceService) {
         this.chatService = chatService;
         this.jwtService = jwtService;
         this.roomService = roomService;
         this.schedulerService = schedulerService;
         this.taskService = taskService;
+        this.conferenceService = conferenceService;
     }
 
     @Override
@@ -122,6 +126,22 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         // Handle AVATAR_UPDATE - broadcast to all online users
         if (incoming.getType() == MessageType.AVATAR_UPDATE) {
             handleAvatarUpdate(username, incoming);
+            return;
+        }
+
+        // Handle conference (group call) signaling
+        if (incoming.getType() == MessageType.CONF_OFFER
+                || incoming.getType() == MessageType.CONF_ANSWER
+                || incoming.getType() == MessageType.CONF_ICE) {
+            handleConferenceRelay(username, incoming);
+            return;
+        }
+        if (incoming.getType() == MessageType.CONF_JOIN) {
+            handleConferenceJoin(username, incoming);
+            return;
+        }
+        if (incoming.getType() == MessageType.CONF_LEAVE) {
+            handleConferenceLeave(username, incoming);
             return;
         }
 
@@ -407,12 +427,153 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
+    // ======================== Conference Signaling ========================
+
+    /**
+     * Handle CONF_JOIN: user joins a conference, notify all existing participants.
+     */
+    private void handleConferenceJoin(String username, MessageDto incoming) {
+        Map<String, String> extra = incoming.getExtra();
+        if (extra == null) return;
+        String confId = extra.get("confId");
+        if (confId == null || confId.isEmpty()) return;
+
+        boolean joined = conferenceService.joinConference(confId, username);
+        if (!joined) {
+            // Conference full or not found — notify the user
+            MessageDto error = new MessageDto();
+            error.setType(MessageType.CONF_LEAVE);
+            error.setSender("system");
+            error.setTimestamp(now());
+            Map<String, String> errExtra = new HashMap<>();
+            errExtra.put("confId", confId);
+            errExtra.put("reason", "full");
+            error.setExtra(errExtra);
+            WebSocketSession s = userSessions.get(username);
+            if (s != null) sendSafe(s, serialize(error));
+            return;
+        }
+
+        // Send CONF_PEERS to the new joiner (list of existing peers EXCLUDING themselves)
+        java.util.Set<String> participants = conferenceService.getParticipants(confId);
+        java.util.List<String> peersExceptNew = participants.stream()
+                .filter(p -> !p.equals(username)).toList();
+
+        MessageDto peersMsg = new MessageDto();
+        peersMsg.setType(MessageType.CONF_PEERS);
+        peersMsg.setSender("system");
+        peersMsg.setTimestamp(now());
+        Map<String, String> peersExtra = new HashMap<>();
+        peersExtra.put("confId", confId);
+        peersExtra.put("peers", String.join(",", peersExceptNew));
+        peersExtra.put("count", String.valueOf(participants.size()));
+        peersMsg.setExtra(peersExtra);
+        WebSocketSession joinerSession = userSessions.get(username);
+        if (joinerSession != null) sendSafe(joinerSession, serialize(peersMsg));
+
+        // Broadcast CONF_JOIN to all OTHER participants
+        MessageDto joinMsg = new MessageDto();
+        joinMsg.setType(MessageType.CONF_JOIN);
+        joinMsg.setSender(username);
+        joinMsg.setTimestamp(now());
+        Map<String, String> joinExtra = new HashMap<>();
+        joinExtra.put("confId", confId);
+        joinExtra.put("count", String.valueOf(participants.size()));
+        joinMsg.setExtra(joinExtra);
+        String joinJson = serialize(joinMsg);
+
+        for (String peer : peersExceptNew) {
+            WebSocketSession s = userSessions.get(peer);
+            if (s != null) sendSafe(s, joinJson);
+        }
+    }
+
+    /**
+     * Handle CONF_LEAVE: user leaves a conference, notify all remaining participants.
+     */
+    private void handleConferenceLeave(String username, MessageDto incoming) {
+        Map<String, String> extra = incoming.getExtra();
+        String confId = null;
+        if (extra != null) confId = extra.get("confId");
+        if (confId == null) confId = conferenceService.getUserConference(username);
+        if (confId == null) return;
+
+        // Get remaining participants BEFORE removing
+        java.util.Set<String> remaining = conferenceService.getParticipants(confId);
+        remaining = new java.util.LinkedHashSet<>(remaining);
+        remaining.remove(username);
+
+        conferenceService.leaveConference(username);
+
+        // Broadcast CONF_LEAVE to remaining
+        MessageDto leaveMsg = new MessageDto();
+        leaveMsg.setType(MessageType.CONF_LEAVE);
+        leaveMsg.setSender(username);
+        leaveMsg.setTimestamp(now());
+        Map<String, String> leaveExtra = new HashMap<>();
+        leaveExtra.put("confId", confId);
+        leaveExtra.put("count", String.valueOf(remaining.size()));
+        leaveMsg.setExtra(leaveExtra);
+        String leaveJson = serialize(leaveMsg);
+
+        for (String peer : remaining) {
+            WebSocketSession s = userSessions.get(peer);
+            if (s != null) sendSafe(s, leaveJson);
+        }
+    }
+
+    /**
+     * Relay CONF_OFFER, CONF_ANSWER, CONF_ICE to the target user within a conference.
+     * Uses extra.target for the recipient and extra.confId for conference context.
+     */
+    private void handleConferenceRelay(String username, MessageDto incoming) {
+        Map<String, String> extra = incoming.getExtra();
+        if (extra == null) return;
+        String target = extra.get("target");
+        String confId = extra.get("confId");
+        if (target == null || confId == null) return;
+
+        // Verify both users are in the conference
+        if (!conferenceService.isInConference(confId, username)
+                || !conferenceService.isInConference(confId, target)) {
+            log.warn("[Conference] Relay rejected: {} → {} in conf {}", username, target, confId);
+            return;
+        }
+
+        incoming.setSender(username);
+        incoming.setTimestamp(now());
+
+        WebSocketSession targetSession = userSessions.get(target);
+        if (targetSession != null && targetSession.isOpen()) {
+            sendSafe(targetSession, serialize(incoming));
+        }
+    }
+
+    /**
+     * Auto-leave conference when user disconnects.
+     */
+    private void autoLeaveConference(String username) {
+        String confId = conferenceService.getUserConference(username);
+        if (confId == null) return;
+
+        // Create a synthetic CONF_LEAVE message
+        MessageDto leaveMsg = new MessageDto();
+        leaveMsg.setType(MessageType.CONF_LEAVE);
+        Map<String, String> extra = new HashMap<>();
+        extra.put("confId", confId);
+        leaveMsg.setExtra(extra);
+        handleConferenceLeave(username, leaveMsg);
+    }
+
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         String username = (String) session.getAttributes().get("username");
         sessions.remove(session.getId());
 
         if (username != null) {
+            // Auto-leave any conference
+            autoLeaveConference(username);
+
             // Only remove from userSessions if this IS the current session (I7)
             WebSocketSession current = userSessions.get(username);
             if (current != null && current.getId().equals(session.getId())) {

@@ -1,0 +1,72 @@
+package com.example.webrtcchat.controller;
+
+import com.example.webrtcchat.service.ConferenceService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.security.Principal;
+import java.util.Map;
+
+/**
+ * REST endpoints for conference (group call) management.
+ */
+@RestController
+@RequestMapping("/api/conference")
+public class ConferenceController {
+
+    private final ConferenceService conferenceService;
+
+    public ConferenceController(ConferenceService conferenceService) {
+        this.conferenceService = conferenceService;
+    }
+
+    /**
+     * Create a new conference. Returns { confId, ... }.
+     */
+    @PostMapping
+    public ResponseEntity<Map<String, Object>> createConference(Principal principal) {
+        String confId = conferenceService.createConference(principal.getName());
+        Map<String, Object> info = conferenceService.getConferenceInfo(confId);
+        return ResponseEntity.ok(info);
+    }
+
+    /**
+     * Join an existing conference.
+     */
+    @PostMapping("/{confId}/join")
+    public ResponseEntity<Map<String, Object>> joinConference(
+            @PathVariable String confId, Principal principal) {
+        if (!conferenceService.exists(confId)) {
+            return ResponseEntity.notFound().build();
+        }
+        boolean joined = conferenceService.joinConference(confId, principal.getName());
+        if (!joined) {
+            return ResponseEntity.status(409)
+                    .body(Map.of("error", "Conference is full (max 10 participants)"));
+        }
+        Map<String, Object> info = conferenceService.getConferenceInfo(confId);
+        return ResponseEntity.ok(info);
+    }
+
+    /**
+     * Leave a conference.
+     */
+    @PostMapping("/{confId}/leave")
+    public ResponseEntity<Void> leaveConference(
+            @PathVariable String confId, Principal principal) {
+        conferenceService.leaveConference(principal.getName());
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Get conference info (participants, count, etc.).
+     */
+    @GetMapping("/{confId}")
+    public ResponseEntity<Map<String, Object>> getConference(@PathVariable String confId) {
+        Map<String, Object> info = conferenceService.getConferenceInfo(confId);
+        if (info == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(info);
+    }
+}

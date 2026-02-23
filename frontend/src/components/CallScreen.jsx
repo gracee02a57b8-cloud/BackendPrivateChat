@@ -37,6 +37,7 @@ export default function CallScreen({
   onToggleMute,
   onToggleVideo,
   securityCode,
+  onUpgradeToConference,
 }) {
   const isVideo = callType === 'video';
 
@@ -138,6 +139,16 @@ export default function CallScreen({
             title={isVideoOff ? 'Включить камеру' : 'Выключить камеру'}
           >
             {isVideoOff ? '📷' : '📹'}
+          </button>
+        )}
+
+        {callState === 'active' && onUpgradeToConference && (
+          <button
+            className="call-control-btn call-conf-btn"
+            onClick={onUpgradeToConference}
+            title="Создать конференцию (добавить участников)"
+          >
+            👥
           </button>
         )}
 

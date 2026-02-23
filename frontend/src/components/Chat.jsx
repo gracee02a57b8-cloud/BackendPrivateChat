@@ -8,8 +8,10 @@ import MessageNotificationPopup from './MessageNotificationPopup';
 import SecurityCodeModal from './SecurityCodeModal';
 import IncomingCallModal from './IncomingCallModal';
 import CallScreen from './CallScreen';
+import ConferenceScreen from './ConferenceScreen';
 import ToastContainer from './Toast';
 import useWebRTC from '../hooks/useWebRTC';
+import useConference from '../hooks/useConference';
 import useMediaPermissions from '../hooks/useMediaPermissions';
 import e2eManager from '../crypto/E2EManager';
 import cryptoStore from '../crypto/CryptoStore';
@@ -17,7 +19,7 @@ import groupCrypto from '../crypto/GroupCrypto';
 
 const WS_URL = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
 
-export default function Chat({ token, username, avatarUrl, onAvatarChange, onLogout, joinRoomId, onShowNews }) {
+export default function Chat({ token, username, avatarUrl, onAvatarChange, onLogout, joinRoomId, joinConfId, onShowNews }) {
   const [rooms, setRooms] = useState([]);
   const [activeRoomId, setActiveRoomId] = useState(null);
   const [messagesByRoom, setMessagesByRoom] = useState({});
@@ -55,12 +57,17 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   // WebRTC calls hook
   const webrtc = useWebRTC({ wsRef, username, token });
 
+  // Conference hook
+  const conference = useConference({ wsRef, username, token });
+
   // Media permissions (camera + mic) — request once on login
   const mediaPerm = useMediaPermissions();
 
   // Keep refs up-to-date so ws.onmessage closure always accesses latest values (Bug 1 fix)
   const webrtcRef = useRef(webrtc);
   useEffect(() => { webrtcRef.current = webrtc; });
+  const confRef = useRef(conference);
+  useEffect(() => { confRef.current = conference; });
   useEffect(() => { roomsRef.current = rooms; }, [rooms]);
 
   // Create notification sound
@@ -176,6 +183,12 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
             })
             .catch(console.error);
         }
+        // Auto-join conference from URL (?conf=<confId>)
+        if (joinConfId) {
+          setTimeout(() => {
+            confRef.current.joinConference(joinConfId, 'video');
+          }, 500);
+        }
       };
 
     ws.onmessage = async (event) => {
@@ -288,6 +301,14 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
         setReplyNotification(msg);
         return;
       }
+
+      // Handle conference signaling (use confRef to avoid stale closure)
+      if (msg.type === 'CONF_PEERS') { confRef.current.handleConfPeers(msg); return; }
+      if (msg.type === 'CONF_JOIN') { confRef.current.handleConfJoin(msg); return; }
+      if (msg.type === 'CONF_OFFER') { confRef.current.handleConfOffer(msg); return; }
+      if (msg.type === 'CONF_ANSWER') { confRef.current.handleConfAnswer(msg); return; }
+      if (msg.type === 'CONF_ICE') { confRef.current.handleConfIce(msg); return; }
+      if (msg.type === 'CONF_LEAVE') { confRef.current.handleConfLeave(msg); return; }
 
       // Handle WebRTC call signaling (use refs to avoid stale closure — Bug 1 fix)
       if (msg.type === 'CALL_OFFER') { webrtcRef.current.handleOffer(msg); return; }
@@ -852,6 +873,19 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
     }
   };
 
+  // Upgrade 1:1 call → conference: create conference, both join, close old 1:1 PC
+  const upgradeToConference = useCallback(async () => {
+    if (webrtc.callState !== 'active') return;
+    const peer = webrtc.callPeer;
+    const type = webrtc.callType || 'audio';
+    // End the 1:1 call first
+    webrtc.endCall();
+    // Small delay to let cleanup finish
+    await new Promise(r => setTimeout(r, 300));
+    // Create conference — the current user becomes the creator
+    await conference.createConference(type);
+  }, [webrtc, conference]);
+
   // Compute security code when call becomes active (Bug 5)
   useEffect(() => {
     if (webrtc.callState === 'active' && webrtc.callPeer && e2eReady) {
@@ -1031,6 +1065,26 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           onToggleMute={webrtc.toggleMute}
           onToggleVideo={webrtc.toggleVideo}
           securityCode={callSecurityCode}
+          onUpgradeToConference={upgradeToConference}
+        />
+      )}
+      {conference.confState !== 'idle' && (
+        <ConferenceScreen
+          confState={conference.confState}
+          participants={conference.participants}
+          username={username}
+          confType={conference.confType}
+          confDuration={conference.confDuration}
+          isMuted={conference.isMuted}
+          isVideoOff={conference.isVideoOff}
+          avatarMap={avatarMap}
+          localVideoRef={conference.localVideoRef}
+          setRemoteVideoRef={conference.setRemoteVideoRef}
+          getRemoteStream={conference.getRemoteStream}
+          onLeave={conference.leaveConference}
+          onToggleMute={conference.toggleMute}
+          onToggleVideo={conference.toggleVideo}
+          onCopyLink={conference.copyShareLink}
         />
       )}
     </div>

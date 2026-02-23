@@ -11,13 +11,20 @@ function App() {
   const [role, setRole] = useState(localStorage.getItem('role'));
   const [avatarUrl, setAvatarUrl] = useState(localStorage.getItem('avatarUrl') || '');
   const [joinRoomId, setJoinRoomId] = useState(null);
+  const [joinConfId, setJoinConfId] = useState(null);
   const [view, setView] = useState('chat');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const joinId = params.get('join');
+    const confId = params.get('conf');
     if (joinId) {
       setJoinRoomId(joinId);
+    }
+    if (confId) {
+      setJoinConfId(confId);
+    }
+    if (joinId || confId) {
       window.history.replaceState({}, '', '/');
     }
   }, []);
@@ -77,6 +84,7 @@ function App() {
       onAvatarChange={setAvatarUrl}
       onLogout={handleLogout}
       joinRoomId={joinRoomId}
+      joinConfId={joinConfId}
       onShowNews={() => setView('news')}
     />
   );
