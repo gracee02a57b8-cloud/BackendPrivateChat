@@ -1,5 +1,7 @@
 package com.example.webrtcchat.controller;
 
+import com.example.webrtcchat.entity.UserEntity;
+import com.example.webrtcchat.repository.UserRepository;
 import com.example.webrtcchat.service.ChatService;
 import com.example.webrtcchat.service.JwtService;
 import org.slf4j.Logger;
@@ -14,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -30,12 +33,15 @@ public class ProfileController {
 
     private final ChatService chatService;
     private final JwtService jwtService;
+    private final UserRepository userRepository;
     private final Path uploadDir;
 
     public ProfileController(ChatService chatService, JwtService jwtService,
+                             UserRepository userRepository,
                              @Value("${upload.dir:uploads}") String uploadDirPath) {
         this.chatService = chatService;
         this.jwtService = jwtService;
+        this.userRepository = userRepository;
         this.uploadDir = Paths.get(uploadDirPath).toAbsolutePath().normalize();
     }
 
@@ -44,11 +50,75 @@ public class ProfileController {
         String username = extractUsername(authHeader);
         if (username == null) return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
 
-        String avatarUrl = chatService.getAvatarUrl(username);
-        return ResponseEntity.ok(Map.of(
-                "username", username,
-                "avatarUrl", avatarUrl != null ? avatarUrl : ""
-        ));
+        var userOpt = userRepository.findByUsername(username);
+        if (userOpt.isEmpty()) return ResponseEntity.status(404).body(Map.of("error", "User not found"));
+
+        UserEntity user = userOpt.get();
+        Map<String, Object> profile = new HashMap<>();
+        profile.put("username", user.getUsername());
+        profile.put("avatarUrl", user.getAvatarUrl() != null ? user.getAvatarUrl() : "");
+        profile.put("phone", user.getPhone() != null ? user.getPhone() : "");
+        profile.put("bio", user.getBio() != null ? user.getBio() : "");
+        profile.put("birthday", user.getBirthday() != null ? user.getBirthday() : "");
+        profile.put("firstName", user.getFirstName() != null ? user.getFirstName() : "");
+        profile.put("lastName", user.getLastName() != null ? user.getLastName() : "");
+        profile.put("profileColor", user.getProfileColor() != null ? user.getProfileColor() : "");
+        profile.put("createdAt", user.getCreatedAt() != null ? user.getCreatedAt() : "");
+        return ResponseEntity.ok(profile);
+    }
+
+    @PutMapping
+    public ResponseEntity<?> updateProfile(@RequestHeader("Authorization") String authHeader,
+                                           @RequestBody Map<String, String> body) {
+        String username = extractUsername(authHeader);
+        if (username == null) return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+
+        var userOpt = userRepository.findByUsername(username);
+        if (userOpt.isEmpty()) return ResponseEntity.status(404).body(Map.of("error", "User not found"));
+
+        UserEntity user = userOpt.get();
+
+        if (body.containsKey("firstName")) {
+            String fn = body.get("firstName");
+            if (fn != null && fn.length() > 50) return ResponseEntity.badRequest().body(Map.of("error", "Имя не более 50 символов"));
+            user.setFirstName(fn);
+        }
+        if (body.containsKey("lastName")) {
+            String ln = body.get("lastName");
+            if (ln != null && ln.length() > 50) return ResponseEntity.badRequest().body(Map.of("error", "Фамилия не более 50 символов"));
+            user.setLastName(ln);
+        }
+        if (body.containsKey("phone")) {
+            String phone = body.get("phone");
+            if (phone != null && phone.length() > 30) return ResponseEntity.badRequest().body(Map.of("error", "Номер не более 30 символов"));
+            user.setPhone(phone);
+        }
+        if (body.containsKey("bio")) {
+            String bio = body.get("bio");
+            if (bio != null && bio.length() > 500) return ResponseEntity.badRequest().body(Map.of("error", "О себе не более 500 символов"));
+            user.setBio(bio);
+        }
+        if (body.containsKey("birthday")) {
+            user.setBirthday(body.get("birthday"));
+        }
+        if (body.containsKey("profileColor")) {
+            user.setProfileColor(body.get("profileColor"));
+        }
+
+        userRepository.save(user);
+        log.info("Profile updated for user '{}'", username);
+
+        Map<String, Object> profile = new HashMap<>();
+        profile.put("username", user.getUsername());
+        profile.put("avatarUrl", user.getAvatarUrl() != null ? user.getAvatarUrl() : "");
+        profile.put("phone", user.getPhone() != null ? user.getPhone() : "");
+        profile.put("bio", user.getBio() != null ? user.getBio() : "");
+        profile.put("birthday", user.getBirthday() != null ? user.getBirthday() : "");
+        profile.put("firstName", user.getFirstName() != null ? user.getFirstName() : "");
+        profile.put("lastName", user.getLastName() != null ? user.getLastName() : "");
+        profile.put("profileColor", user.getProfileColor() != null ? user.getProfileColor() : "");
+        profile.put("createdAt", user.getCreatedAt() != null ? user.getCreatedAt() : "");
+        return ResponseEntity.ok(profile);
     }
 
     @PostMapping("/avatar")

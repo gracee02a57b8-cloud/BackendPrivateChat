@@ -3,6 +3,8 @@ import UserSearch from './UserSearch';
 import CreateRoom from './CreateRoom';
 import JoinRoom from './JoinRoom';
 import ProfileModal from './ProfileModal';
+import MyProfilePage from './MyProfilePage';
+import EditProfilePage from './EditProfilePage';
 import { copyToClipboard } from '../utils/clipboard';
 
 const AVATAR_COLORS = [
@@ -100,6 +102,7 @@ export default function Sidebar({
   const [showContacts, setShowContacts] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
+  const [profileSubView, setProfileSubView] = useState('main'); // 'main' | 'edit' | 'settings'
   const [installPrompt, setInstallPrompt] = useState(null);
   const menuRef = useRef(null);
 
@@ -114,6 +117,11 @@ export default function Sidebar({
     window.addEventListener('appinstalled', () => setInstallPrompt(null));
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
+
+  // Reset profile sub-view when switching tabs
+  useEffect(() => {
+    if (mobileTab !== 'profile') setProfileSubView('main');
+  }, [mobileTab]);
 
   const handleInstall = async () => {
     if (!installPrompt) return;
@@ -246,7 +254,8 @@ export default function Sidebar({
 
   return (
     <div className={`chat-sidebar${sidebarOpen ? ' open' : ''}`}>
-      {/* ── Header ── */}
+      {/* ── Header (hidden in profile sub-views) ── */}
+      {!(mobileTab === 'profile' && profileSubView !== 'main') && (
       <div className="sb-header">
         <div className="sb-header-left">
           <button className="sb-close-btn" onClick={onCloseSidebar} aria-label="Закрыть меню">←</button>
@@ -289,6 +298,7 @@ export default function Sidebar({
           )}
         </div>
       </div>
+      )}
 
       {/* ══════════  TAB: CHATS  ══════════ */}
       {(mobileTab === 'chats' || showContacts) && (
@@ -563,27 +573,58 @@ export default function Sidebar({
       )}
 
       {/* ══════════  TAB: PROFILE (mobile)  ══════════ */}
-      {mobileTab === 'profile' && (
-        <div className="sb-profile-panel">
-          <div className="sb-profile-card">
-            <div className="sb-profile-avatar" style={{ background: avatarUrl ? 'transparent' : getAvatarColor(username) }}>
-              {avatarUrl
-                ? <img src={avatarUrl} alt="" className="sb-avatar-img" />
-                : getInitials(username)}
-            </div>
-            <div className="sb-profile-name">{username}</div>
-            <div className={`sb-profile-status ${connected ? 'online' : ''}`}>
-              {connected ? '● В сети' : '● Офлайн'}
-            </div>
+      {mobileTab === 'profile' && profileSubView === 'edit' && (
+        <EditProfilePage
+          token={token}
+          username={username}
+          onBack={() => setProfileSubView('main')}
+          onProfileUpdate={() => {}}
+        />
+      )}
+      {mobileTab === 'profile' && profileSubView === 'settings' && (
+        <div className="sb-settings-panel">
+          <div className="edit-profile-header">
+            <button className="edit-profile-back" onClick={() => setProfileSubView('main')}>←</button>
+            <h2 className="edit-profile-title">Настройки</h2>
+            <div style={{ width: 40 }} />
           </div>
           <div className="sb-settings-list">
-            <button className="sb-settings-item" onClick={() => setShowProfile(true)}>
-              <span className="sb-settings-icon">✏️</span>
-              <span className="sb-settings-label">Редактировать профиль</span>
+            <button className="sb-settings-item" onClick={onShowNews}>
+              <span className="sb-settings-icon">📰</span>
+              <span className="sb-settings-label">Новости</span>
+              <span className="sb-settings-arrow">›</span>
+            </button>
+            <button className="sb-settings-item" onClick={onShowTasks}>
+              <span className="sb-settings-icon">📋</span>
+              <span className="sb-settings-label">Задачи</span>
+              <span className="sb-settings-arrow">›</span>
+            </button>
+            {installPrompt && (
+              <button className="sb-settings-item" onClick={handleInstall}>
+                <span className="sb-settings-icon">📲</span>
+                <span className="sb-settings-label">Установить приложение</span>
+                <span className="sb-settings-arrow">›</span>
+              </button>
+            )}
+            <button className="sb-settings-item sb-settings-logout" onClick={onLogout}>
+              <span className="sb-settings-icon">🚪</span>
+              <span className="sb-settings-label">Выйти</span>
               <span className="sb-settings-arrow">›</span>
             </button>
           </div>
         </div>
+      )}
+      {mobileTab === 'profile' && profileSubView === 'main' && (
+        <MyProfilePage
+          username={username}
+          avatarUrl={avatarUrl}
+          token={token}
+          wsRef={wsRef}
+          onAvatarChange={onAvatarChange}
+          connected={connected}
+          onOpenEdit={() => setProfileSubView('edit')}
+          onOpenSettings={() => setProfileSubView('settings')}
+        />
       )}
 
       {showCreate && <CreateRoom onCreateRoom={onCreateRoom} onClose={() => setShowCreate(false)} />}
