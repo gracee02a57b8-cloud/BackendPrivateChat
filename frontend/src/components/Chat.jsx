@@ -976,6 +976,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
             if (peer) webrtc.startCall(peer, type);
           }}
           callState={webrtc.callState}
+          onLeaveRoom={deleteRoom}
         />
       )}
       {taskNotification && (

@@ -27,4 +27,18 @@ public interface MessageRepository extends JpaRepository<MessageEntity, String> 
 
     @Transactional
     void deleteByRoomId(String roomId);
+
+    // ── Media stats queries ──
+
+    @Query("SELECT COUNT(m) FROM MessageEntity m WHERE m.roomId = :roomId AND m.fileUrl IS NOT NULL AND m.fileType LIKE 'image/%'")
+    long countPhotosByRoomId(@Param("roomId") String roomId);
+
+    @Query("SELECT COUNT(m) FROM MessageEntity m WHERE m.roomId = :roomId AND m.fileUrl IS NOT NULL AND m.fileType LIKE 'video/%'")
+    long countVideosByRoomId(@Param("roomId") String roomId);
+
+    @Query("SELECT COUNT(m) FROM MessageEntity m WHERE m.roomId = :roomId AND m.fileUrl IS NOT NULL AND m.fileType NOT LIKE 'image/%' AND m.fileType NOT LIKE 'video/%'")
+    long countFilesByRoomId(@Param("roomId") String roomId);
+
+    @Query("SELECT COUNT(m) FROM MessageEntity m WHERE m.roomId = :roomId AND m.content LIKE '%http%'")
+    long countLinksByRoomId(@Param("roomId") String roomId);
 }

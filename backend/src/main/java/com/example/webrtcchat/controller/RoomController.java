@@ -2,6 +2,7 @@ package com.example.webrtcchat.controller;
 
 import com.example.webrtcchat.dto.MessageDto;
 import com.example.webrtcchat.dto.RoomDto;
+import com.example.webrtcchat.repository.MessageRepository;
 import com.example.webrtcchat.service.ChatService;
 import com.example.webrtcchat.service.RoomService;
 import com.example.webrtcchat.types.RoomType;
@@ -18,10 +19,12 @@ public class RoomController {
 
     private final RoomService roomService;
     private final ChatService chatService;
+    private final MessageRepository messageRepository;
 
-    public RoomController(RoomService roomService, ChatService chatService) {
+    public RoomController(RoomService roomService, ChatService chatService, MessageRepository messageRepository) {
         this.roomService = roomService;
         this.chatService = chatService;
+        this.messageRepository = messageRepository;
     }
 
     @GetMapping
@@ -99,5 +102,23 @@ public class RoomController {
         }
         chatService.clearHistory(roomId);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/{roomId}/media-stats")
+    public ResponseEntity<Map<String, Long>> getMediaStats(@PathVariable String roomId, Principal principal) {
+        RoomDto room = roomService.getRoomById(roomId);
+        if (room == null) {
+            return ResponseEntity.notFound().build();
+        }
+        if (room.getType() != RoomType.GENERAL && !room.getMembers().contains(principal.getName())) {
+            return ResponseEntity.status(403).build();
+        }
+        Map<String, Long> stats = Map.of(
+                "photos", messageRepository.countPhotosByRoomId(roomId),
+                "videos", messageRepository.countVideosByRoomId(roomId),
+                "files", messageRepository.countFilesByRoomId(roomId),
+                "links", messageRepository.countLinksByRoomId(roomId)
+        );
+        return ResponseEntity.ok(stats);
     }
 }

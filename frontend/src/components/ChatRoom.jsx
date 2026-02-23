@@ -9,6 +9,7 @@ import e2eManager from '../crypto/E2EManager';
 import useDecryptedUrl from '../hooks/useDecryptedUrl';
 import { copyToClipboard } from '../utils/clipboard';
 import { showToast } from './Toast';
+import GroupInfoPanel from './GroupInfoPanel';
 
 function formatFileSize(bytes) {
   if (bytes < 1024) return bytes + ' Б';
@@ -117,7 +118,7 @@ function formatLastSeenHeader(ts) {
   return `был(а) ${d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}`;
 }
 
-export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, onDeleteMessage, onScheduleMessage, scheduledMessages, roomName, username, connected, token, activeRoom, onlineUsers, allUsers = [], typingUsers = [], onTyping, isE2E, onShowSecurityCode, avatarMap = {}, onStartCall, callState }) {
+export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, onDeleteMessage, onScheduleMessage, scheduledMessages, roomName, username, connected, token, activeRoom, onlineUsers, allUsers = [], typingUsers = [], onTyping, isE2E, onShowSecurityCode, avatarMap = {}, onStartCall, callState, onLeaveRoom }) {
   const [input, setInput] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
@@ -139,6 +140,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
   const [reactions, setReactions] = useState({});
   const [isRecording, setIsRecording] = useState(false);
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
+  const [showGroupInfo, setShowGroupInfo] = useState(false);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const inputRef = useRef(null);
@@ -184,6 +186,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
     setReplyingTo(null);
     setSelectionPopup(null);
     setMentionQuery(null);
+    setShowGroupInfo(false);
   }, [roomName]);
 
   // Close context menu on any click
@@ -695,8 +698,14 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
       )}
 
       <div className="chat-header">
-        <div className="chat-header-info">
-          <h3>{roomName}</h3>
+        <div
+          className={`chat-header-info${activeRoom?.type === 'ROOM' ? ' chat-header-clickable' : ''}`}
+          onClick={activeRoom?.type === 'ROOM' ? () => setShowGroupInfo(true) : undefined}
+        >
+          <div className="chat-header-title-row">
+            <h3>{roomName}</h3>
+            {activeRoom?.type === 'ROOM' && <span className="chat-header-chevron">›</span>}
+          </div>
           {activeRoom?.type === 'PRIVATE' && (() => {
             const otherUser = getOtherUserInPM();
             const isOnline = otherUser && onlineUsers?.includes(otherUser);
@@ -708,6 +717,15 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
             return (
               <span className="header-online-status">
                 {lastSeen ? formatLastSeenHeader(lastSeen) : '● не в сети'}
+              </span>
+            );
+          })()}
+          {activeRoom?.type === 'ROOM' && (() => {
+            const memberCount = activeRoom.members?.length || 0;
+            const onlineCount = (activeRoom.members || []).filter(m => onlineUsers?.includes(m)).length;
+            return (
+              <span className="header-online-status">
+                {memberCount} участн.{onlineCount > 0 ? `, ${onlineCount} в сети` : ''}
               </span>
             );
           })()}
@@ -1151,6 +1169,18 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
             </div>
           </div>
         </div>
+      )}
+      {showGroupInfo && activeRoom?.type === 'ROOM' && (
+        <GroupInfoPanel
+          room={activeRoom}
+          username={username}
+          allUsers={allUsers}
+          onlineUsers={onlineUsers}
+          avatarMap={avatarMap}
+          token={token}
+          onClose={() => setShowGroupInfo(false)}
+          onLeaveRoom={onLeaveRoom}
+        />
       )}
     </div>
   );
