@@ -1296,8 +1296,8 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           <span className="bottom-nav-label">Контакты</span>
         </button>
         <button className={`bottom-nav-item${mobileTab === 'settings' ? ' active' : ''}`} onClick={() => { setMobileTab('settings'); if (activeRoomId) setActiveRoomId(null); }}>
-          <span className="bottom-nav-icon">⚙️</span>
-          <span className="bottom-nav-label">Настройки</span>
+          <span className="bottom-nav-icon">🧪</span>
+          <span className="bottom-nav-label">Песочница</span>
         </button>
         <button className={`bottom-nav-item${mobileTab === 'profile' ? ' active' : ''}`} onClick={() => { setMobileTab('profile'); if (activeRoomId) setActiveRoomId(null); }}>
           <span className="bottom-nav-icon">

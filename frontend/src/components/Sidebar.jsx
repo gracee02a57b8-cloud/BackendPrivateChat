@@ -284,7 +284,7 @@ export default function Sidebar({
           <div className="sb-mobile-title">
             {mobileTab === 'chats' && 'BarsikChat'}
             {mobileTab === 'contacts' && 'Контакты'}
-            {mobileTab === 'settings' && 'Настройки'}
+            {mobileTab === 'settings' && 'Песочница'}
             {mobileTab === 'profile' && 'Профиль'}
           </div>
           <div className="sb-desktop-header-user">
@@ -593,11 +593,6 @@ export default function Sidebar({
                 <span className="sb-settings-arrow">›</span>
               </button>
             )}
-            <button className="sb-settings-item sb-settings-logout" onClick={onLogout}>
-              <span className="sb-settings-icon">🚪</span>
-              <span className="sb-settings-label">Выйти</span>
-              <span className="sb-settings-arrow">›</span>
-            </button>
           </div>
 
           {/* User Search Modal */}
@@ -683,11 +678,6 @@ export default function Sidebar({
                 <span className="sb-settings-arrow">›</span>
               </button>
             )}
-            <button className="sb-settings-item sb-settings-logout" onClick={onLogout}>
-              <span className="sb-settings-icon">🚪</span>
-              <span className="sb-settings-label">Выйти</span>
-              <span className="sb-settings-arrow">›</span>
-            </button>
           </div>
         </div>
       )}
