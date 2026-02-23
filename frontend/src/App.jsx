@@ -23,9 +23,16 @@ function App() {
     }
     if (confId) {
       setJoinConfId(confId);
+      // Persist to sessionStorage so it survives login/register flow
+      sessionStorage.setItem('pendingConfId', confId);
     }
     if (joinId || confId) {
       window.history.replaceState({}, '', '/');
+    }
+    // Also check sessionStorage for previously saved confId (e.g. after page reload during login)
+    if (!confId) {
+      const saved = sessionStorage.getItem('pendingConfId');
+      if (saved) setJoinConfId(saved);
     }
   }, []);
 
@@ -53,7 +60,7 @@ function App() {
   };
 
   if (!token) {
-    return <Login onLogin={handleLogin} />;
+    return <Login onLogin={handleLogin} pendingConfId={joinConfId} />;
   }
 
   if (role === 'ADMIN') {

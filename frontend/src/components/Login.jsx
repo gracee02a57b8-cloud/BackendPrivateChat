@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export default function Login({ onLogin }) {
+export default function Login({ onLogin, pendingConfId }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -55,9 +55,16 @@ export default function Login({ onLogin }) {
       <div className="login-card">
         <div className="login-logo">🐱</div>
         <h1>BarsikChat</h1>
-        <p className="login-subtitle">
-          {isRegister ? 'Создайте аккаунт' : 'Безопасный чат для команды'}
-        </p>
+        {pendingConfId ? (
+          <div className="login-conf-banner">
+            <span>📞</span>
+            <span>Вас пригласили в конференцию!<br/>Войдите или зарегистрируйтесь для подключения</span>
+          </div>
+        ) : (
+          <p className="login-subtitle">
+            {isRegister ? 'Создайте аккаунт' : 'Безопасный чат для команды'}
+          </p>
+        )}
         <form onSubmit={handleSubmit}>
           <div className="login-input-wrapper">
             <span className="login-input-icon">👤</span>

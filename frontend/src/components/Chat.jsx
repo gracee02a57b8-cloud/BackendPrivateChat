@@ -74,12 +74,16 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   // Auto-join conference from URL (?conf=<confId>) — works for both fresh login and already-logged-in users
   const joinConfIdHandled = useRef(false);
   useEffect(() => {
-    if (joinConfId && connected && !joinConfIdHandled.current) {
+    // Use prop or fallback to sessionStorage (survives login/register flow)
+    const confIdToJoin = joinConfId || sessionStorage.getItem('pendingConfId');
+    if (confIdToJoin && connected && !joinConfIdHandled.current) {
       joinConfIdHandled.current = true;
+      // Clear sessionStorage — no longer needed
+      sessionStorage.removeItem('pendingConfId');
       // Small delay to ensure WS is fully ready and conference hook is initialized
       const timer = setTimeout(async () => {
         try {
-          const joined = await confRef.current.joinConference(joinConfId, 'audio');
+          const joined = await confRef.current.joinConference(confIdToJoin, 'audio');
           if (joined) {
             showToast('Вы подключены к конференции 👥', 'success');
           } else {
