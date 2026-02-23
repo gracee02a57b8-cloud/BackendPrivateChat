@@ -3,6 +3,8 @@ package com.example.webrtcchat.controller;
 import com.example.webrtcchat.dto.MessageDto;
 import com.example.webrtcchat.dto.RoomDto;
 import com.example.webrtcchat.dto.TaskDto;
+import com.example.webrtcchat.entity.CallLogEntity;
+import com.example.webrtcchat.repository.CallLogRepository;
 import com.example.webrtcchat.service.ChatService;
 import com.example.webrtcchat.service.ConferenceService;
 import com.example.webrtcchat.service.JwtService;
@@ -44,17 +46,24 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final SchedulerService schedulerService;
     private final TaskService taskService;
     private final ConferenceService conferenceService;
+    private final CallLogRepository callLogRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    // Track active call start times: "caller:callee" → epoch millis
+    private final Map<String, Long> activeCallStartTimes = new ConcurrentHashMap<>();
+    // Track active call types: "caller:callee" → "audio"/"video"
+    private final Map<String, String> activeCallTypes = new ConcurrentHashMap<>();
 
     public ChatWebSocketHandler(ChatService chatService, JwtService jwtService, RoomService roomService,
                                 SchedulerService schedulerService, TaskService taskService,
-                                ConferenceService conferenceService) {
+                                ConferenceService conferenceService, CallLogRepository callLogRepository) {
         this.chatService = chatService;
         this.jwtService = jwtService;
         this.roomService = roomService;
         this.schedulerService = schedulerService;
         this.taskService = taskService;
         this.conferenceService = conferenceService;
+        this.callLogRepository = callLogRepository;
     }
 
     @Override
@@ -391,6 +400,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
      * Handle WebRTC call signaling: relay messages directly to the target user.
      * Target username is taken from extra.target field.
      * For CALL_OFFER: check if target is online, otherwise send CALL_END back.
+     * Also logs call history for CALL_OFFER, CALL_END, CALL_REJECT, CALL_BUSY.
      */
     private void handleCallSignaling(String username, MessageDto incoming) {
         Map<String, String> extra = incoming.getExtra();
@@ -404,8 +414,19 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
         WebSocketSession targetSession = userSessions.get(target);
 
-        // If CALL_OFFER and target is offline → send CALL_END back to caller
+        // Track call start on CALL_OFFER
+        if (incoming.getType() == MessageType.CALL_OFFER) {
+            String callKey = callKey(username, target);
+            activeCallStartTimes.put(callKey, System.currentTimeMillis());
+            String callType = extra.getOrDefault("callType", "audio");
+            activeCallTypes.put(callKey, callType);
+        }
+
+        // If CALL_OFFER and target is offline → send CALL_END back to caller + log
         if (incoming.getType() == MessageType.CALL_OFFER && (targetSession == null || !targetSession.isOpen())) {
+            saveCallLog(username, target, extra.getOrDefault("callType", "audio"), "unavailable", 0);
+            cleanupCallTracking(username, target);
+
             MessageDto unavailable = new MessageDto();
             unavailable.setType(MessageType.CALL_END);
             unavailable.setSender(target);
@@ -421,9 +442,79 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
+        // Log on call termination events
+        if (incoming.getType() == MessageType.CALL_REJECT) {
+            String callKey = findCallKey(username, target);
+            String callType = activeCallTypes.getOrDefault(callKey, "audio");
+            saveCallLog(resolveCallCaller(callKey, username, target), resolveCallCallee(callKey, username, target), callType, "rejected", 0);
+            cleanupCallTracking(username, target);
+        } else if (incoming.getType() == MessageType.CALL_BUSY) {
+            String callKey = findCallKey(username, target);
+            String callType = activeCallTypes.getOrDefault(callKey, "audio");
+            saveCallLog(resolveCallCaller(callKey, username, target), resolveCallCallee(callKey, username, target), callType, "busy", 0);
+            cleanupCallTracking(username, target);
+        } else if (incoming.getType() == MessageType.CALL_END) {
+            String callKey = findCallKey(username, target);
+            Long startTime = activeCallStartTimes.get(callKey);
+            String callType = activeCallTypes.getOrDefault(callKey, "audio");
+            int duration = 0;
+            String status = "missed";
+            if (startTime != null) {
+                duration = (int) ((System.currentTimeMillis() - startTime) / 1000);
+                // If duration > 3 seconds, it was likely answered
+                status = duration > 3 ? "completed" : "missed";
+            }
+            String reason = extra.getOrDefault("reason", "");
+            if ("hangup".equals(reason)) status = "completed";
+            saveCallLog(resolveCallCaller(callKey, username, target), resolveCallCallee(callKey, username, target), callType, status, duration);
+            cleanupCallTracking(username, target);
+        }
+
         // Relay message to target user
         if (targetSession != null && targetSession.isOpen()) {
             sendSafe(targetSession, serialize(incoming));
+        }
+    }
+
+    private String callKey(String u1, String u2) {
+        return u1 + ":" + u2;
+    }
+
+    private String findCallKey(String u1, String u2) {
+        // Try both directions
+        String key1 = u1 + ":" + u2;
+        String key2 = u2 + ":" + u1;
+        if (activeCallStartTimes.containsKey(key1)) return key1;
+        if (activeCallStartTimes.containsKey(key2)) return key2;
+        return key1; // fallback
+    }
+
+    private String resolveCallCaller(String callKey, String u1, String u2) {
+        if (callKey != null && callKey.contains(":")) return callKey.split(":")[0];
+        return u1;
+    }
+
+    private String resolveCallCallee(String callKey, String u1, String u2) {
+        if (callKey != null && callKey.contains(":")) return callKey.split(":")[1];
+        return u2;
+    }
+
+    private void cleanupCallTracking(String u1, String u2) {
+        activeCallStartTimes.remove(u1 + ":" + u2);
+        activeCallStartTimes.remove(u2 + ":" + u1);
+        activeCallTypes.remove(u1 + ":" + u2);
+        activeCallTypes.remove(u2 + ":" + u1);
+    }
+
+    private void saveCallLog(String caller, String callee, String callType, String status, int duration) {
+        try {
+            CallLogEntity log = new CallLogEntity(
+                    UUID.randomUUID().toString(),
+                    caller, callee, callType, status, duration, now()
+            );
+            callLogRepository.save(log);
+        } catch (Exception e) {
+            ChatWebSocketHandler.log.error("Failed to save call log: {}", e.getMessage());
         }
     }
 

@@ -5,6 +5,7 @@ import JoinRoom from './JoinRoom';
 import ProfileModal from './ProfileModal';
 import MyProfilePage from './MyProfilePage';
 import EditProfilePage from './EditProfilePage';
+import RecentCalls from './RecentCalls';
 import { copyToClipboard } from '../utils/clipboard';
 import appSettings from '../utils/appSettings';
 
@@ -93,6 +94,7 @@ export default function Sidebar({
   onAvatarChange,
   mobileTab = 'chats',
   onOpenSaved,
+  onStartCall,
 }) {
   const [chatFilter, setChatFilter] = useState('all');
   const [showSearch, setShowSearch] = useState(false);
@@ -104,7 +106,9 @@ export default function Sidebar({
   const [showContacts, setShowContacts] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
-  const [profileSubView, setProfileSubView] = useState('main'); // 'main' | 'edit' | 'settings'
+  const [profileSubView, setProfileSubView] = useState('main');
+  const [contactsSubView, setContactsSubView] = useState('list'); // 'list' | 'calls'
+  const [inviteCopied, setInviteCopied] = useState(false); // 'main' | 'edit' | 'settings'
   const [installPrompt, setInstallPrompt] = useState(null);
   const [notifSoundOn, setNotifSoundOn] = useState(() => appSettings.notifSound);
   const [callSoundOn, setCallSoundOn] = useState(() => appSettings.callSound);
@@ -126,6 +130,7 @@ export default function Sidebar({
   // Reset profile sub-view when switching tabs
   useEffect(() => {
     if (mobileTab !== 'profile') setProfileSubView('main');
+    if (mobileTab !== 'contacts') setContactsSubView('list');
   }, [mobileTab]);
 
   const handleInstall = async () => {
@@ -457,7 +462,16 @@ export default function Sidebar({
       )}
 
       {/* ══════════  TAB: CONTACTS (mobile)  ══════════ */}
-      {mobileTab === 'contacts' && !showContacts && (
+      {mobileTab === 'contacts' && contactsSubView === 'calls' && (
+        <RecentCalls
+          token={token}
+          username={username}
+          onBack={() => setContactsSubView('list')}
+          onStartCall={onStartCall}
+          avatarMap={avatarMap}
+        />
+      )}
+      {mobileTab === 'contacts' && contactsSubView === 'list' && !showContacts && (
         <>
           <div className="sb-search">
             <span className="sb-search-icon">🔍</span>
@@ -469,6 +483,19 @@ export default function Sidebar({
             />
           </div>
           <div className="sb-chat-list">
+            {/* Action buttons */}
+            <div className="contacts-action-item" onClick={() => {
+              const link = `${window.location.origin}`;
+              copyToClipboard(link).then(() => { setInviteCopied(true); setTimeout(() => setInviteCopied(false), 2000); });
+            }}>
+              <div className="contacts-action-icon" style={{ background: '#3b82f6' }}>👥</div>
+              <span className="contacts-action-label">{inviteCopied ? '✅ Ссылка скопирована!' : 'Пригласить друзей'}</span>
+            </div>
+            <div className="contacts-action-item" onClick={() => setContactsSubView('calls')}>
+              <div className="contacts-action-icon" style={{ background: '#4ecca3' }}>📞</div>
+              <span className="contacts-action-label">Недавние звонки</span>
+            </div>
+            <div className="contacts-sort-label">Сортировка по времени захода</div>
             {(() => {
               const contacts = allUsers
                 .filter(u => u.username !== username)

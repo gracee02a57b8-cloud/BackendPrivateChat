@@ -1133,6 +1133,10 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
         wsRef={wsRef}
         onAvatarChange={onAvatarChange}
         mobileTab={mobileTab}
+        onStartCall={async (peer, type) => {
+          await startPrivateChat(peer);
+          webrtc.startCall(peer, type);
+        }}
       />
       {showTasks ? (
         <TaskPanel token={token} username={username} onClose={() => setShowTasks(false)} />
