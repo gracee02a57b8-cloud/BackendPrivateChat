@@ -256,8 +256,16 @@ export default function useWebRTC({ wsRef, username, token }) {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: type === 'video',
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+        video: type === 'video' ? {
+          width:  { ideal: 1280, min: 640 },
+          height: { ideal: 720,  min: 360 },
+          frameRate: { ideal: 30, min: 15 },
+        } : false,
       });
       localStreamRef.current = stream;
       if (localVideoRef.current) {
@@ -276,6 +284,15 @@ export default function useWebRTC({ wsRef, username, token }) {
       stream.getTracks().forEach(t => {
         const sender = pc.addTrack(t, stream);
         if (callCryptoRef.current) callCryptoRef.current.setupSenderEncryption(sender);
+        if (t.kind === 'video') {
+          try {
+            const params = sender.getParameters();
+            if (!params.encodings || params.encodings.length === 0) params.encodings = [{}];
+            params.encodings[0].maxBitrate = 2_000_000;
+            params.encodings[0].maxFramerate = 30;
+            sender.setParameters(params).catch(() => {});
+          } catch (e) { /* ignore */ }
+        }
       });
 
       const offer = await pc.createOffer();
@@ -352,8 +369,16 @@ export default function useWebRTC({ wsRef, username, token }) {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: type === 'video',
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+        video: type === 'video' ? {
+          width:  { ideal: 1280, min: 640 },
+          height: { ideal: 720,  min: 360 },
+          frameRate: { ideal: 30, min: 15 },
+        } : false,
       });
       localStreamRef.current = stream;
       if (localVideoRef.current) {
@@ -373,6 +398,15 @@ export default function useWebRTC({ wsRef, username, token }) {
       stream.getTracks().forEach(t => {
         const sender = pc.addTrack(t, stream);
         if (callCryptoRef.current) callCryptoRef.current.setupSenderEncryption(sender);
+        if (t.kind === 'video') {
+          try {
+            const params = sender.getParameters();
+            if (!params.encodings || params.encodings.length === 0) params.encodings = [{}];
+            params.encodings[0].maxBitrate = 2_000_000;
+            params.encodings[0].maxFramerate = 30;
+            sender.setParameters(params).catch(() => {});
+          } catch (e) { /* ignore */ }
+        }
       });
 
       const offer = JSON.parse(sdpStr);
@@ -505,7 +539,13 @@ export default function useWebRTC({ wsRef, username, token }) {
     } else {
       // Audio-only call — dynamically add video track + renegotiate
       try {
-        const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const videoStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width:  { ideal: 1280, min: 640 },
+            height: { ideal: 720,  min: 360 },
+            frameRate: { ideal: 30, min: 15 },
+          },
+        });
         const videoTrack = videoStream.getVideoTracks()[0];
         if (!videoTrack) return;
 
