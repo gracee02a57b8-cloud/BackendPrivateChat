@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MessageSquare, Users, User } from 'lucide-react';
+import { MessageSquare, Users, User, FlaskConical } from 'lucide-react';
 import Sidebar from './Sidebar';
 import ChatRoom from './ChatRoom';
 import TaskPanel from './TaskPanel';
@@ -38,7 +38,8 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   const [messageNotification, setMessageNotification] = useState(null);
   const [typingUsers, setTypingUsers] = useState({});
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [mobileTab, setMobileTab] = useState('chats');
+  const [mobileTab, setMobileTabRaw] = useState(() => sessionStorage.getItem('mobileTab') || 'chats');
+  const setMobileTab = (tab) => { setMobileTabRaw(tab); sessionStorage.setItem('mobileTab', tab); };
   const [e2eReady, setE2eReady] = useState(false);
   const [securityCode, setSecurityCode] = useState(null);
   const [securityCodePeer, setSecurityCodePeer] = useState(null);
@@ -1387,6 +1388,10 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
         <button className={`bottom-nav-item${mobileTab === 'contacts' ? ' active' : ''}`} onClick={() => { setMobileTab('contacts'); if (activeRoomId) setActiveRoomId(null); }}>
           <span className="bottom-nav-icon"><Users size={22} /></span>
           <span className="bottom-nav-label">Контакты</span>
+        </button>
+        <button className={`bottom-nav-item${mobileTab === 'settings' ? ' active' : ''}`} onClick={() => { setMobileTab('settings'); if (activeRoomId) setActiveRoomId(null); }}>
+          <span className="bottom-nav-icon"><FlaskConical size={22} /></span>
+          <span className="bottom-nav-label">Песочница</span>
         </button>
         <button className={`bottom-nav-item${mobileTab === 'profile' ? ' active' : ''}`} onClick={() => { setMobileTab('profile'); if (activeRoomId) setActiveRoomId(null); }}>
           <span className="bottom-nav-icon">

@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { copyToClipboard } from '../utils/clipboard';
 import { getAvatarColor } from '../utils/avatar';
-import { MoreVertical, Link, Camera, Pencil, Settings, LogOut, Newspaper, ClipboardList, Mail, Plus, Link2, Download } from 'lucide-react';
+import { MoreVertical, Link, Camera, Pencil, Settings, LogOut, Mail, Link2, Download } from 'lucide-react';
 
-export default function MyProfilePage({ username, avatarUrl, token, wsRef, onAvatarChange, connected, onOpenEdit, onOpenSettings, onLogout, onShowNews, onShowTasks, onShowSearch, onShowCreate, onShowJoin, installPrompt, onInstall }) {
+export default function MyProfilePage({ username, avatarUrl, token, wsRef, onAvatarChange, connected, onOpenEdit, onOpenSettings, onLogout, onShowSearch, onShowJoin, installPrompt, onInstall }) {
   const [profile, setProfile] = useState(null);
   const [showMenu, setShowMenu] = useState(false);
   const [showNameModal, setShowNameModal] = useState(false);
@@ -248,24 +248,9 @@ export default function MyProfilePage({ username, avatarUrl, token, wsRef, onAva
 
       {/* Quick Actions */}
       <div className="my-profile-quick-actions">
-        <button className="sb-settings-item" onClick={onShowNews}>
-          <span className="sb-settings-icon"><Newspaper size={18} /></span>
-          <span className="sb-settings-label">Новости</span>
-          <span className="sb-settings-arrow">›</span>
-        </button>
-        <button className="sb-settings-item" onClick={onShowTasks}>
-          <span className="sb-settings-icon"><ClipboardList size={18} /></span>
-          <span className="sb-settings-label">Задачи</span>
-          <span className="sb-settings-arrow">›</span>
-        </button>
         <button className="sb-settings-item" onClick={onShowSearch}>
           <span className="sb-settings-icon"><Mail size={18} /></span>
           <span className="sb-settings-label">Написать сообщение</span>
-          <span className="sb-settings-arrow">›</span>
-        </button>
-        <button className="sb-settings-item" onClick={onShowCreate}>
-          <span className="sb-settings-icon"><Plus size={18} /></span>
-          <span className="sb-settings-label">Создать группу</span>
           <span className="sb-settings-arrow">›</span>
         </button>
         <button className="sb-settings-item" onClick={onShowJoin}>

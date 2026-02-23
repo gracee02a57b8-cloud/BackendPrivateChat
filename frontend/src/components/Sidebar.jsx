@@ -252,6 +252,7 @@ export default function Sidebar({
           <div className="sb-mobile-title">
             {mobileTab === 'chats' && 'BarsikChat'}
             {mobileTab === 'contacts' && 'Контакты'}
+            {mobileTab === 'settings' && 'Песочница'}
             {mobileTab === 'profile' && 'Профиль'}
           </div>
           <div className="sb-desktop-header-user">
@@ -579,14 +580,54 @@ export default function Sidebar({
         </>
       )}
 
-      {/* User Search Modal */}
-      {showSearch && (
-        <UserSearch
-          token={token}
-          username={username}
-          onStartChat={(user) => { onStartPrivateChat(user); setShowSearch(false); }}
-          onClose={() => setShowSearch(false)}
-        />
+      {/* ══════════  TAB: SETTINGS (mobile)  ══════════ */}
+      {mobileTab === 'settings' && (
+        <div className="sb-settings-panel">
+          <div className="sb-settings-list">
+            <button className="sb-settings-item" onClick={onShowNews}>
+              <span className="sb-settings-icon"><Newspaper size={18} /></span>
+              <span className="sb-settings-label">Новости</span>
+              <span className="sb-settings-arrow">›</span>
+            </button>
+            <button className="sb-settings-item" onClick={onShowTasks}>
+              <span className="sb-settings-icon"><ClipboardList size={18} /></span>
+              <span className="sb-settings-label">Задачи</span>
+              <span className="sb-settings-arrow">›</span>
+            </button>
+            <button className="sb-settings-item" onClick={() => { setShowSearch(!showSearch); }}>
+              <span className="sb-settings-icon"><Mail size={18} /></span>
+              <span className="sb-settings-label">Написать сообщение</span>
+              <span className="sb-settings-arrow">›</span>
+            </button>
+            <button className="sb-settings-item" onClick={() => setShowCreate(true)}>
+              <span className="sb-settings-icon"><Plus size={18} /></span>
+              <span className="sb-settings-label">Создать группу</span>
+              <span className="sb-settings-arrow">›</span>
+            </button>
+            <button className="sb-settings-item" onClick={() => setShowJoin(true)}>
+              <span className="sb-settings-icon"><Link size={18} /></span>
+              <span className="sb-settings-label">Войти по ссылке</span>
+              <span className="sb-settings-arrow">›</span>
+            </button>
+            {installPrompt && (
+              <button className="sb-settings-item" onClick={handleInstall}>
+                <span className="sb-settings-icon"><Download size={18} /></span>
+                <span className="sb-settings-label">Установить приложение</span>
+                <span className="sb-settings-arrow">›</span>
+              </button>
+            )}
+          </div>
+
+          {/* User Search Modal */}
+          {showSearch && (
+            <UserSearch
+              token={token}
+              username={username}
+              onStartChat={(user) => { onStartPrivateChat(user); setShowSearch(false); }}
+              onClose={() => setShowSearch(false)}
+            />
+          )}
+        </div>
       )}
 
       {/* ══════════  TAB: PROFILE (mobile)  ══════════ */}
@@ -660,12 +701,6 @@ export default function Sidebar({
                 <span className="sb-settings-arrow">›</span>
               </button>
             )}
-
-            <button className="sb-settings-item sb-settings-logout" onClick={onLogout}>
-              <span className="sb-settings-icon"><LogOut size={18} /></span>
-              <span className="sb-settings-label">Выйти</span>
-              <span className="sb-settings-arrow">›</span>
-            </button>
           </div>
         </div>
       )}
@@ -680,10 +715,7 @@ export default function Sidebar({
           onOpenEdit={() => setProfileSubView('edit')}
           onOpenSettings={() => setProfileSubView('settings')}
           onLogout={onLogout}
-          onShowNews={onShowNews}
-          onShowTasks={onShowTasks}
           onShowSearch={() => setShowSearch(true)}
-          onShowCreate={() => setShowCreate(true)}
           onShowJoin={() => setShowJoin(true)}
           installPrompt={installPrompt}
           onInstall={handleInstall}
