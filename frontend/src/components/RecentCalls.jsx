@@ -1,15 +1,6 @@
 import { useState, useEffect } from 'react';
-
-const AVATAR_COLORS = [
-  '#e94560', '#4ecca3', '#f0a500', '#a855f7',
-  '#3b82f6', '#ec4899', '#14b8a6', '#f97316',
-];
-function getAvatarColor(name) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
-function getInitials(name) { return name.charAt(0).toUpperCase(); }
+import { getAvatarColor, getInitials } from '../utils/avatar';
+import { ArrowLeft, ArrowUpRight, ArrowDownLeft, Loader2, Phone, Video } from 'lucide-react';
 
 function formatCallTime(ts) {
   if (!ts) return '';
@@ -91,17 +82,17 @@ export default function RecentCalls({ token, username, onBack, onStartCall, avat
   return (
     <div className="recent-calls-page">
       <div className="edit-profile-header">
-        <button className="edit-profile-back" onClick={onBack}>←</button>
+        <button className="edit-profile-back" onClick={onBack}><ArrowLeft size={20} /></button>
         <h2 className="edit-profile-title">Звонки</h2>
         <div style={{ width: 40 }} />
       </div>
 
       <div className="recent-calls-list">
         {loading && (
-          <div className="sb-empty"><span>⏳</span><p>Загрузка...</p></div>
+          <div className="sb-empty"><span><Loader2 size={32} className="spin" /></span><p>Загрузка...</p></div>
         )}
         {!loading && calls.length === 0 && (
-          <div className="sb-empty"><span>📞</span><p>Нет звонков</p></div>
+          <div className="sb-empty"><span><Phone size={32} /></span><p>Нет звонков</p></div>
         )}
         {!loading && calls.map((call) => {
           const peer = getPeerName(call);
@@ -130,7 +121,7 @@ export default function RecentCalls({ token, username, onBack, onStartCall, avat
                 onClick={(e) => { e.stopPropagation(); onStartCall?.(peer, call.callType || 'audio'); }}
                 title={isVideo ? 'Видеозвонок' : 'Аудиозвонок'}
               >
-                {isVideo ? '📹' : '📞'}
+                {isVideo ? <Video size={20} /> : <Phone size={20} />}
               </button>
             </div>
           );

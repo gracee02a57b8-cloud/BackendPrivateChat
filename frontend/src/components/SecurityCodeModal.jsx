@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { copyToClipboard } from '../utils/clipboard';
+import { LockOpen, ShieldCheck, KeyRound, Check, Clipboard } from 'lucide-react';
 
 /**
  * SecurityCodeModal — displays the safety number for identity verification.
@@ -50,7 +51,7 @@ export default function SecurityCodeModal({ securityCode, peerUsername, onClose,
     <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label="Код безопасности">
       <div className="modal security-code-modal" onClick={(e) => e.stopPropagation()} ref={modalRef}>
         <div className="security-code-header">
-          <span className="security-icon">{unavailable ? '🔓' : '🔐'}</span>
+          <span className="security-icon">{unavailable ? <LockOpen size={40} /> : <ShieldCheck size={40} />}</span>
           <h3>{unavailable ? 'E2E шифрование' : 'Код безопасности'}</h3>
         </div>
         {unavailable ? (
@@ -59,7 +60,7 @@ export default function SecurityCodeModal({ securityCode, peerUsername, onClose,
               Сквозное шифрование с пользователем <strong>{peerUsername}</strong> пока недоступно.
             </p>
             <div className="e2e-unavailable-info">
-              <p>🔑 Для активации E2E шифрования необходимо, чтобы оба участника обменялись хотя бы одним сообщением в этом чате.</p>
+              <p><KeyRound size={14} /> Для активации E2E шифрования необходимо, чтобы оба участника обменялись хотя бы одним сообщением в этом чате.</p>
               <p>После установки сессии здесь появится код безопасности для верификации.</p>
             </div>
             <div className="security-code-actions">
@@ -77,7 +78,7 @@ export default function SecurityCodeModal({ securityCode, peerUsername, onClose,
             </div>
             <div className="security-code-actions">
               <button className="btn-secondary" onClick={handleCopy}>
-                {copied ? '✓ Скопировано' : '📋 Копировать'}
+                {copied ? <><Check size={14} /> Скопировано</> : <><Clipboard size={14} /> Копировать</>}
               </button>
               <button className="btn-primary" onClick={onClose}>Готово</button>
             </div>

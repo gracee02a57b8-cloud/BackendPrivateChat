@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import NewsCard from './NewsCard';
 import { showToast } from './Toast';
 import ConfirmModal from './ConfirmModal';
+import { ArrowLeft, Newspaper, Camera, X, Trash2 } from 'lucide-react';
 
 export default function NewsBoard({ token, username, onBack }) {
   const [newsList, setNewsList] = useState([]);
@@ -104,8 +105,8 @@ export default function NewsBoard({ token, username, onBack }) {
   return (
     <div className="news-board">
       <div className="news-header">
-        <button className="back-btn" onClick={onBack}>← Чат</button>
-        <h2>📰 Доска новостей</h2>
+        <button className="back-btn" onClick={onBack}><ArrowLeft size={16} /> Чат</button>
+        <h2><Newspaper size={20} /> Доска новостей</h2>
         <button className="add-news-btn" onClick={() => setShowForm(!showForm)}>
           {showForm ? 'Отмена' : '+ Добавить'}
         </button>
@@ -130,13 +131,13 @@ export default function NewsBoard({ token, username, onBack }) {
           />
           <div className="upload-area">
             <label className="upload-label">
-              📷 {imageFile ? imageFile.name : 'Прикрепить картинку'}
+              <Camera size={16} /> {imageFile ? imageFile.name : 'Прикрепить картинку'}
               <input type="file" accept="image/*" onChange={handleImageChange} hidden />
             </label>
             {imagePreview && (
               <div className="image-preview">
                 <img src={imagePreview} alt="Preview" />
-                <button type="button" className="remove-image" onClick={() => { setImageFile(null); setImagePreview(null); }}>✕</button>
+                <button type="button" className="remove-image" onClick={() => { setImageFile(null); setImagePreview(null); }}><X size={14} /></button>
               </div>
             )}
           </div>
@@ -160,7 +161,7 @@ export default function NewsBoard({ token, username, onBack }) {
       {deleteConfirm && (
         <ConfirmModal
           message="Удалить эту новость?"
-          icon="🗑"
+          icon={<Trash2 size={24} />}
           confirmLabel="Удалить"
           onConfirm={confirmDelete}
           onCancel={() => setDeleteConfirm(null)}

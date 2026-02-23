@@ -1,14 +1,6 @@
 import { useState, useRef } from 'react';
-
-const AVATAR_COLORS = [
-  '#e94560', '#4ecca3', '#f0a500', '#a855f7',
-  '#3b82f6', '#ec4899', '#14b8a6', '#f97316',
-];
-function getAvatarColor(name) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
+import { getAvatarColor } from '../utils/avatar';
+import { X, Loader2, Camera, Trash2 } from 'lucide-react';
 
 export default function ProfileModal({ username, avatarUrl, token, wsRef, onAvatarChange, onClose }) {
   const [uploading, setUploading] = useState(false);
@@ -106,7 +98,7 @@ export default function ProfileModal({ username, avatarUrl, token, wsRef, onAvat
       <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
         <div className="profile-modal-header">
           <h3>Профиль</h3>
-          <button className="profile-modal-close" onClick={onClose}>✕</button>
+          <button className="profile-modal-close" onClick={onClose}><X size={20} /></button>
         </div>
 
         <div className="profile-modal-body">
@@ -120,7 +112,7 @@ export default function ProfileModal({ username, avatarUrl, token, wsRef, onAvat
                 </div>
               )}
               <div className="profile-avatar-overlay">
-                {uploading ? '⏳' : '📷'}
+                {uploading ? <Loader2 size={20} className="spin" /> : <Camera size={20} />}
               </div>
             </div>
             <input
@@ -140,7 +132,7 @@ export default function ProfileModal({ username, avatarUrl, token, wsRef, onAvat
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
             >
-              📷 {preview ? 'Изменить фото' : 'Загрузить фото'}
+              <Camera size={16} /> {preview ? 'Изменить фото' : 'Загрузить фото'}
             </button>
             {preview && (
               <button
@@ -148,7 +140,7 @@ export default function ProfileModal({ username, avatarUrl, token, wsRef, onAvat
                 onClick={handleDelete}
                 disabled={uploading}
               >
-                🗑 Удалить фото
+                <Trash2 size={16} /> Удалить фото
               </button>
             )}
           </div>

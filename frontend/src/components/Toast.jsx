@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { AlertTriangle, CheckCircle, Info } from 'lucide-react';
 
 let showToastGlobal = null;
 
@@ -34,7 +35,7 @@ export default function ToastContainer() {
   return (
     <div className="toast-container">
       <div className={`toast toast-${toast.type}`} key={toast.id} role="alert" aria-live="polite">
-        <span>{toast.type === 'error' ? '⚠️' : toast.type === 'success' ? '✅' : 'ℹ️'}</span>
+        <span>{toast.type === 'error' ? <AlertTriangle size={16} /> : toast.type === 'success' ? <CheckCircle size={16} /> : <Info size={16} />}</span>
         <span>{toast.message}</span>
       </div>
     </div>

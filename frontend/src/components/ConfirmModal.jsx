@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { AlertTriangle } from 'lucide-react';
 
 /**
  * ConfirmModal — accessible replacement for native confirm().
@@ -7,7 +8,7 @@ import { useEffect, useRef } from 'react';
 export default function ConfirmModal({
   message,
   detail,
-  icon = '⚠️',
+  icon = <AlertTriangle size={24} />,
   confirmLabel = 'Подтвердить',
   cancelLabel = 'Отмена',
   onConfirm,

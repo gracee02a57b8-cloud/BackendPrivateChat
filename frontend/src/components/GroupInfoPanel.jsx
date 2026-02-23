@@ -1,38 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { copyToClipboard } from '../utils/clipboard';
 import { showToast } from './Toast';
-
-const AVATAR_COLORS = [
-  '#e94560', '#4ecca3', '#f0a500', '#a855f7',
-  '#3b82f6', '#ec4899', '#14b8a6', '#f97316',
-];
-
-function getAvatarColor(name) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
-
-function formatLastSeen(ts) {
-  if (!ts) return 'не в сети';
-  const d = new Date(ts.includes?.('T') ? ts : ts.replace(' ', 'T'));
-  if (isNaN(d.getTime())) return 'не в сети';
-  const now = new Date();
-  const diff = now - d;
-  if (diff < 60000) return 'был(а) только что';
-  if (diff < 3600000) return `был(а) ${Math.floor(diff / 60000)} мин. назад`;
-  if (d.toDateString() === now.toDateString()) {
-    return `был(а) в ${d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
-  }
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
-  if (d.toDateString() === yesterday.toDateString()) {
-    return `был(а) вчера в ${d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
-  }
-  return `был(а) ${d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}`;
-}
+import { getAvatarColor, formatLastSeen } from '../utils/avatar';
+import { X, Link, LogOut, Image, Film, FolderOpen, Users } from 'lucide-react';
 
 /**
  * GroupInfoPanel — Telegram-style overlay panel showing group info.
@@ -106,7 +76,7 @@ export default function GroupInfoPanel({
     <div className="grp-info-overlay" onClick={onClose}>
       <div className="grp-info-panel" onClick={e => e.stopPropagation()}>
         {/* Close button */}
-        <button className="grp-info-close" onClick={onClose}>✕</button>
+        <button className="grp-info-close" onClick={onClose}><X size={20} /></button>
 
         {/* Header: avatar + name + count */}
         <div className="grp-info-header">
@@ -126,11 +96,11 @@ export default function GroupInfoPanel({
         {/* Action buttons */}
         <div className="grp-info-actions">
           <button className="grp-info-action-btn" onClick={handleCopyLink} title="Скопировать ссылку-приглашение">
-            <span className="grp-info-action-icon">🔗</span>
+            <span className="grp-info-action-icon"><Link size={20} /></span>
             <span className="grp-info-action-label">Ссылка</span>
           </button>
           <button className="grp-info-action-btn" onClick={handleLeave} title="Покинуть группу">
-            <span className="grp-info-action-icon">🚪</span>
+            <span className="grp-info-action-icon"><LogOut size={20} /></span>
             <span className="grp-info-action-label">Покинуть</span>
           </button>
         </div>
@@ -140,25 +110,25 @@ export default function GroupInfoPanel({
           <div className="grp-info-media">
             {mediaStats.photos > 0 && (
               <div className="grp-info-media-row">
-                <span className="grp-info-media-icon">🖼</span>
+                <span className="grp-info-media-icon"><Image size={16} /></span>
                 <span>{mediaStats.photos} фотографи{mediaStats.photos === 1 ? 'я' : mediaStats.photos < 5 ? 'и' : 'й'}</span>
               </div>
             )}
             {mediaStats.videos > 0 && (
               <div className="grp-info-media-row">
-                <span className="grp-info-media-icon">🎬</span>
+                <span className="grp-info-media-icon"><Film size={16} /></span>
                 <span>{mediaStats.videos} видео</span>
               </div>
             )}
             {mediaStats.files > 0 && (
               <div className="grp-info-media-row">
-                <span className="grp-info-media-icon">📁</span>
+                <span className="grp-info-media-icon"><FolderOpen size={16} /></span>
                 <span>{mediaStats.files} файл{mediaStats.files === 1 ? '' : mediaStats.files < 5 ? 'а' : 'ов'}</span>
               </div>
             )}
             {mediaStats.links > 0 && (
               <div className="grp-info-media-row">
-                <span className="grp-info-media-icon">🔗</span>
+                <span className="grp-info-media-icon"><Link size={16} /></span>
                 <span>{mediaStats.links} ссыл{mediaStats.links === 1 ? 'ка' : mediaStats.links < 5 ? 'ки' : 'ок'}</span>
               </div>
             )}
@@ -173,7 +143,7 @@ export default function GroupInfoPanel({
         {/* Members */}
         <div className="grp-info-members">
           <div className="grp-info-members-header">
-            <span>👥 {members.length} УЧАСТНИК{members.length === 1 ? '' : members.length < 5 ? 'А' : 'ОВ'}</span>
+            <span><Users size={16} /> {members.length} УЧАСТНИК{members.length === 1 ? '' : members.length < 5 ? 'А' : 'ОВ'}</span>
           </div>
           <div className="grp-info-members-list">
             {enrichedMembers.map(member => (

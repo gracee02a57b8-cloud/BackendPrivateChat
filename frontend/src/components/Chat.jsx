@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { MessageSquare, Users, User } from 'lucide-react';
 import Sidebar from './Sidebar';
 import ChatRoom from './ChatRoom';
 import TaskPanel from './TaskPanel';
@@ -1379,23 +1380,19 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
       {/* ── Mobile Bottom Navigation (Telegram-style) ── */}
       <nav className="mobile-bottom-nav">
         <button className={`bottom-nav-item${mobileTab === 'chats' ? ' active' : ''}`} onClick={() => { setMobileTab('chats'); if (activeRoomId) setActiveRoomId(null); }}>
-          <span className="bottom-nav-icon">💬</span>
+          <span className="bottom-nav-icon"><MessageSquare size={22} /></span>
           <span className="bottom-nav-label">Чаты</span>
           {(() => { const t = Object.values(unreadCounts).reduce((s,v) => s+v, 0); return t > 0 ? <span className="bottom-nav-badge">{t > 99 ? '99+' : t}</span> : null; })()}
         </button>
         <button className={`bottom-nav-item${mobileTab === 'contacts' ? ' active' : ''}`} onClick={() => { setMobileTab('contacts'); if (activeRoomId) setActiveRoomId(null); }}>
-          <span className="bottom-nav-icon">👥</span>
+          <span className="bottom-nav-icon"><Users size={22} /></span>
           <span className="bottom-nav-label">Контакты</span>
-        </button>
-        <button className={`bottom-nav-item${mobileTab === 'settings' ? ' active' : ''}`} onClick={() => { setMobileTab('settings'); if (activeRoomId) setActiveRoomId(null); }}>
-          <span className="bottom-nav-icon">🧪</span>
-          <span className="bottom-nav-label">Песочница</span>
         </button>
         <button className={`bottom-nav-item${mobileTab === 'profile' ? ' active' : ''}`} onClick={() => { setMobileTab('profile'); if (activeRoomId) setActiveRoomId(null); }}>
           <span className="bottom-nav-icon">
             {avatarUrl
               ? <img src={avatarUrl} alt="" className="bottom-nav-avatar" />
-              : '👤'}
+              : <User size={22} />}
           </span>
           <span className="bottom-nav-label">Профиль</span>
         </button>

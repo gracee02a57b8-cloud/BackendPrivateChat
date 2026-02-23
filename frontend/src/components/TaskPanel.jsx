@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import ConfirmModal from './ConfirmModal';
+import { ClipboardList, Plus, X, ArrowLeft, Paperclip, Trash2, User, FileText, Clock, Play, CheckCircle, RotateCcw } from 'lucide-react';
 
 const STATUS_LABELS = {
-  OPEN: '🔴 Открыта',
-  IN_PROGRESS: '🟡 В работе',
-  DONE: '🟢 Выполнена',
+  OPEN: 'Открыта',
+  IN_PROGRESS: 'В работе',
+  DONE: 'Выполнена',
 };
 
 const STATUS_COLORS = {
@@ -165,12 +166,12 @@ export default function TaskPanel({ token, username, onClose }) {
   return (
     <div className="task-panel">
       <div className="task-header">
-        <h2>📋 Задачи</h2>
+        <h2><ClipboardList size={20} /> Задачи</h2>
         <div className="task-header-actions">
           <button className="add-task-btn" onClick={() => { if (!showForm) setDeadline(getMskNow()); setShowForm(!showForm); }}>
-            {showForm ? '✕ Закрыть' : '➕ Новая задача'}
+            {showForm ? <><X size={14} /> Закрыть</> : <><Plus size={14} /> Новая задача</>}
           </button>
-          <button className="back-btn" onClick={onClose}>← Назад в чат</button>
+          <button className="back-btn" onClick={onClose}><ArrowLeft size={14} /> Назад в чат</button>
         </div>
       </div>
 
@@ -218,11 +219,11 @@ export default function TaskPanel({ token, username, onClose }) {
           </div>
           <div className="task-file-upload">
             <label className="task-file-label">
-              📎 {taskFile ? taskFile.name : 'Прикрепить файл'}
+              <Paperclip size={14} /> {taskFile ? taskFile.name : 'Прикрепить файл'}
               <input type="file" onChange={(e) => setTaskFile(e.target.files[0] || null)} hidden />
             </label>
             {taskFile && (
-              <button type="button" className="task-file-remove" onClick={() => setTaskFile(null)}>✕</button>
+              <button type="button" className="task-file-remove" onClick={() => setTaskFile(null)}><X size={14} /></button>
             )}
           </div>
           <button type="submit" disabled={!title.trim() || !assignedTo.trim() || !deadline || uploading}>
@@ -253,37 +254,37 @@ export default function TaskPanel({ token, username, onClose }) {
               <span className="task-status-dot" style={{ background: STATUS_COLORS[task.status] || '#888' }} />
               <h4 className="task-title">{task.title}</h4>
               {task.createdBy === username && (
-                <button className="task-delete-btn" onClick={() => deleteTask(task.id)}>🗑</button>
+                <button className="task-delete-btn" onClick={() => deleteTask(task.id)}><Trash2 size={14} /></button>
               )}
             </div>
             {task.description && <p className="task-desc">{task.description}</p>}
             {task.fileUrl && (
               <a className="task-file-link" href={task.fileUrl} target="_blank" rel="noopener noreferrer">
-                📎 {task.fileName || 'Файл'}
+                <Paperclip size={14} /> {task.fileName || 'Файл'}
               </a>
             )}
             <div className="task-meta">
-              <span>👤 {task.assignedTo}</span>
-              <span>📝 {task.createdBy}</span>
+              <span><User size={12} /> {task.assignedTo}</span>
+              <span><FileText size={12} /> {task.createdBy}</span>
               <span className={isOverdue(task) ? 'deadline-overdue' : ''}>
-                ⏰ {task.deadline ? new Date(task.deadline).toLocaleString('ru-RU') : '—'}
+                <Clock size={12} /> {task.deadline ? new Date(task.deadline).toLocaleString('ru-RU') : '—'}
               </span>
             </div>
             <div className="task-actions">
               <span className="task-status-label">{STATUS_LABELS[task.status]}</span>
               {task.status === 'OPEN' && (task.assignedTo === username || task.createdBy === username) && (
                 <button className="task-action-btn progress" onClick={() => updateStatus(task.id, 'IN_PROGRESS')}>
-                  ▶ В работу
+                  <Play size={12} /> В работу
                 </button>
               )}
               {task.status === 'IN_PROGRESS' && (task.assignedTo === username || task.createdBy === username) && (
                 <button className="task-action-btn done" onClick={() => updateStatus(task.id, 'DONE')}>
-                  ✅ Выполнено
+                  <CheckCircle size={12} /> Выполнено
                 </button>
               )}
               {task.status === 'DONE' && task.createdBy === username && (
                 <button className="task-action-btn reopen" onClick={() => updateStatus(task.id, 'OPEN')}>
-                  🔄 Переоткрыть
+                  <RotateCcw size={12} /> Переоткрыть
                 </button>
               )}
             </div>
@@ -294,7 +295,7 @@ export default function TaskPanel({ token, username, onClose }) {
       {deleteTaskConfirm && (
         <ConfirmModal
           message="Удалить задачу?"
-          icon="🗑"
+          icon={<Trash2 size={24} />}
           confirmLabel="Удалить"
           onConfirm={confirmDeleteTask}
           onCancel={() => setDeleteTaskConfirm(null)}

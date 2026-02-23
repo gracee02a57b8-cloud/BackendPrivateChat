@@ -1,17 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-
-const AVATAR_COLORS = [
-  '#e94560', '#4ecca3', '#f0a500', '#a855f7',
-  '#3b82f6', '#ec4899', '#14b8a6', '#f97316',
-];
-
-function getAvatarColor(name) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
+import { getAvatarColor } from '../utils/avatar';
+import { Phone, MicOff, CameraOff } from 'lucide-react';
 
 function formatDuration(seconds) {
   const m = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -128,7 +117,7 @@ export default function ConferenceScreen({
       {/* Header */}
       <div className="conf-header">
         <span className="conf-title">
-          📞 Конференция
+          <Phone size={16} /> Конференция
           <span className="conf-participant-count">{participants.length} чел.</span>
         </span>
         <span className="conf-timer">{statusLabel}</span>
@@ -153,8 +142,8 @@ export default function ConferenceScreen({
           )}
           <div className="conf-tile-label">
             <span className="conf-tile-name">Вы</span>
-            {isMuted && <span className="conf-tile-muted">🔇</span>}
-            {isVideoOff && <span className="conf-tile-muted">📷</span>}
+            {isMuted && <span className="conf-tile-muted"><MicOff size={14} /></span>}
+            {isVideoOff && <span className="conf-tile-muted"><CameraOff size={14} /></span>}
           </div>
         </div>
 

@@ -11,6 +11,8 @@ import useDecryptedUrl from '../hooks/useDecryptedUrl';
 import { copyToClipboard } from '../utils/clipboard';
 import { showToast } from './Toast';
 import GroupInfoPanel from './GroupInfoPanel';
+import { getAvatarColor, getInitials, formatLastSeen } from '../utils/avatar';
+import { ArrowLeft, Bookmark, Phone, Search, Lock, Link, ChevronUp, ChevronDown, X, Pin, Paperclip, MessageSquare, Check, CheckCheck, Reply, Forward, Clipboard, Pencil, Trash2, Clock, Mic, Video, SendHorizontal, FolderOpen, Smile, Unlock, Download, MoreVertical, Plus } from 'lucide-react';
 
 function formatFileSize(bytes) {
   if (bytes < 1024) return bytes + ' Б';
@@ -40,7 +42,7 @@ function linkifyContent(text, onJoinRoom, onJoinConference) {
               className="msg-link msg-link-join"
               onClick={(e) => { e.preventDefault(); onJoinRoom(joinId); }}
             >
-              🔗 Присоединиться к группе
+              <Link size={14} /> Присоединиться к группе
             </a>
           );
         }
@@ -52,7 +54,7 @@ function linkifyContent(text, onJoinRoom, onJoinConference) {
               className="msg-link msg-link-join"
               onClick={(e) => { e.preventDefault(); onJoinConference(confId); }}
             >
-              📞 Присоединиться к конференции
+              <Phone size={14} /> Присоединиться к конференции
             </a>
           );
         }
@@ -67,11 +69,6 @@ function linkifyContent(text, onJoinRoom, onJoinConference) {
   });
 }
 
-const AVATAR_COLORS = [
-  '#e94560', '#4ecca3', '#f0a500', '#a855f7',
-  '#3b82f6', '#ec4899', '#14b8a6', '#f97316',
-];
-
 /** Small wrapper for images that may need E2E decryption */
 function DecryptedImage({ fileUrl, fileKey, fileName, fileSize, formatFileSize }) {
   const url = useDecryptedUrl(fileUrl, fileKey, 'image/jpeg');
@@ -82,7 +79,7 @@ function DecryptedImage({ fileUrl, fileKey, fileName, fileSize, formatFileSize }
           <img src={url} alt={fileName || 'image'} />
         </a>
       ) : (
-        <div style={{ padding: 16, opacity: 0.5 }}>🔓 Расшифровка...</div>
+        <div style={{ padding: 16, opacity: 0.5 }}><Unlock size={14} /> Расшифровка...</div>
       )}
       <div className="file-info">
         <span className="file-name">{fileName}</span>
@@ -98,27 +95,15 @@ function DecryptedFile({ fileUrl, fileKey, fileName, fileSize, formatFileSize })
   return (
     <div className="file-attachment">
       <a href={url ? `${url}${fileKey ? '' : '?download=true'}` : '#'} className="file-download" download={fileName}>
-        <span className="file-icon">📎</span>
+        <span className="file-icon"><Paperclip size={16} /></span>
         <div className="file-info">
           <span className="file-name">{fileName}</span>
           <span className="file-size">{formatFileSize(fileSize)}</span>
         </div>
-        <span className="download-icon">{url ? '⬇️' : '🔓'}</span>
+        <span className="download-icon">{url ? <Download size={16} /> : <Unlock size={16} />}</span>
       </a>
     </div>
   );
-}
-
-function getAvatarColor(name) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
-
-function getInitials(name) {
-  return name.charAt(0).toUpperCase();
 }
 
 function formatDateDivider(dateStr) {
@@ -143,29 +128,7 @@ function parseTimestamp(ts) {
   return isNaN(d.getTime()) ? null : d.toDateString();
 }
 
-function formatLastSeenHeader(ts) {
-  if (!ts) return '● не в сети';
-  const d = new Date(ts.includes?.('T') ? ts : ts.replace(' ', 'T'));
-  if (isNaN(d.getTime())) return '● не в сети';
-  const now = new Date();
-  const diff = now - d;
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
-
-  if (diff < 60000) return 'был(а) только что';
-  if (diff < 3600000) return `был(а) ${Math.floor(diff / 60000)} мин. назад`;
-  if (d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) {
-    return `был(а) в ${d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
-  }
-  if (d.getDate() === yesterday.getDate() && d.getMonth() === yesterday.getMonth() && d.getFullYear() === yesterday.getFullYear()) {
-    return `был(а) вчера в ${d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
-  }
-  if (diff < 7 * 86400000) {
-    const days = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
-    return `был(а) в ${days[d.getDay()]}`;
-  }
-  return `был(а) ${d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}`;
-}
+const formatLastSeenHeader = formatLastSeen;
 
 /** Call log bubble displayed in chat history */
 function CallLogBubble({ msg, username }) {
@@ -177,10 +140,10 @@ function CallLogBubble({ msg, username }) {
   const isOutgoing = caller === username;
 
   const getIcon = () => {
-    if (status === 'completed') return isOutgoing ? '📞↗' : '📞↙';
-    if (status === 'missed' || status === 'unavailable') return '📞✖';
-    if (status === 'rejected') return '📞✖';
-    if (status === 'busy') return '📞⏳';
+    if (status === 'completed') return isOutgoing ? '↗' : '↙';
+    if (status === 'missed' || status === 'unavailable') return '✖';
+    if (status === 'rejected') return '✖';
+    if (status === 'busy') return '⏳';
     return '📞';
   };
 
@@ -246,6 +209,8 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [showUserProfile, setShowUserProfile] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [showHeaderMenu, setShowHeaderMenu] = useState(false);
+  const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searchIndex, setSearchIndex] = useState(0);
@@ -254,6 +219,8 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
   const messagesContainerRef = useRef(null);
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
+  const headerMenuRef = useRef(null);
+  const plusMenuRef = useRef(null);
   const dragCounter = useRef(0);
   const isAtBottom = useRef(true);
 
@@ -308,6 +275,26 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
     window.addEventListener('click', close);
     return () => window.removeEventListener('click', close);
   }, []);
+
+  // Close header overflow menu on click outside
+  useEffect(() => {
+    if (!showHeaderMenu) return;
+    const close = (e) => {
+      if (headerMenuRef.current && !headerMenuRef.current.contains(e.target)) setShowHeaderMenu(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [showHeaderMenu]);
+
+  // Close plus attach menu on click outside
+  useEffect(() => {
+    if (!showPlusMenu) return;
+    const close = (e) => {
+      if (plusMenuRef.current && !plusMenuRef.current.contains(e.target)) setShowPlusMenu(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [showPlusMenu]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -825,12 +812,12 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
     return (
       <div className="file-attachment">
         <a href={`${msg.fileUrl}?download=true`} className="file-download" download>
-          <span className="file-icon">📎</span>
+          <span className="file-icon"><Paperclip size={16} /></span>
           <div className="file-info">
             <span className="file-name">{msg.fileName}</span>
             <span className="file-size">{formatFileSize(msg.fileSize)}</span>
           </div>
-          <span className="download-icon">⬇️</span>
+          <span className="download-icon"><Download size={16} /></span>
         </a>
       </div>
     );
@@ -850,7 +837,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
       {dragging && (
         <div className="drag-overlay">
           <div className="drag-overlay-content">
-            <span className="drag-icon">📁</span>
+            <span className="drag-icon"><FolderOpen size={40} /></span>
             <span>Перетащите файл сюда</span>
           </div>
         </div>
@@ -858,12 +845,12 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
 
       <div className="chat-header">
         {/* Back button (mobile) */}
-        <button className="chat-header-back" onClick={onBack} aria-label="Назад">←</button>
+        <button className="chat-header-back" onClick={onBack} aria-label="Назад"><ArrowLeft size={20} /></button>
 
         {/* Header avatar */}
         {activeRoom?.type === 'SAVED_MESSAGES' && (
           <div className="chat-header-avatar sb-saved-avatar">
-            🔖
+            <Bookmark size={20} />
           </div>
         )}
         {activeRoom?.type === 'PRIVATE' && (() => {
@@ -924,20 +911,29 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
               disabled={callState !== 'idle' && callState !== undefined}
               title="Позвонить"
             >
-              📞
+              <Phone size={18} />
             </button>
           )}
-          <button className="search-header-btn" onClick={openSearch} title="Поиск по сообщениям">
-            🔍
-          </button>
-          {isE2E && (
-            <button className="e2e-badge" onClick={onShowSecurityCode} title="Сквозное шифрование — нажмите для проверки">
-              🔒 E2E
+          <div className="chat-header-menu-wrap" ref={headerMenuRef}>
+            <button className="chat-header-dots-btn" onClick={() => setShowHeaderMenu(!showHeaderMenu)} aria-label="Ещё">
+              <MoreVertical size={20} />
             </button>
-          )}
-          <button className="copy-link-btn" onClick={handleCopyLink} title="Скопировать ссылку на чат">
-            🔗 Поделиться
-          </button>
+            {showHeaderMenu && (
+              <div className="chat-header-dropdown">
+                <button onClick={() => { openSearch(); setShowHeaderMenu(false); }}>
+                  <Search size={16} /> Поиск
+                </button>
+                {isE2E && (
+                  <button onClick={() => { onShowSecurityCode(); setShowHeaderMenu(false); }}>
+                    <Lock size={16} /> E2E-шифрование
+                  </button>
+                )}
+                <button onClick={() => { handleCopyLink(); setShowHeaderMenu(false); }}>
+                  <Link size={16} /> Поделиться
+                </button>
+              </div>
+            )}
+          </div>
           {copyToast && <span className="copy-toast">Ссылка скопирована!</span>}
         </div>
       </div>
@@ -963,9 +959,9 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
               {searchResults.length > 0 ? `${searchIndex + 1} из ${searchResults.length}` : 'Не найдено'}
             </span>
           )}
-          <button className="search-nav-btn" onClick={searchPrev} disabled={searchResults.length === 0} title="Предыдущее">▲</button>
-          <button className="search-nav-btn" onClick={searchNext} disabled={searchResults.length === 0} title="Следующее">▼</button>
-          <button className="search-close-btn" onClick={closeSearch} title="Закрыть">✕</button>
+          <button className="search-nav-btn" onClick={searchPrev} disabled={searchResults.length === 0} title="Предыдущее"><ChevronUp size={16} /></button>
+          <button className="search-nav-btn" onClick={searchNext} disabled={searchResults.length === 0} title="Следующее"><ChevronDown size={16} /></button>
+          <button className="search-close-btn" onClick={closeSearch} title="Закрыть"><X size={16} /></button>
         </div>
       )}
 
@@ -973,7 +969,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
       {showAddMembers && activeRoom?.type === 'ROOM' && (
         <div className="add-members-banner">
           <span className="add-members-text" onClick={onAddMembers}>Добавить участников</span>
-          <button className="add-members-close" onClick={onDismissAddMembers}>✕</button>
+          <button className="add-members-close" onClick={onDismissAddMembers}><X size={16} /></button>
         </div>
       )}
 
@@ -984,19 +980,19 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
           if (!pinned) return null;
           return (
             <div className="pinned-bar" onClick={() => scrollToMessage(pinnedMsgId)}>
-              <span className="pinned-icon">📌</span>
+              <span className="pinned-icon"><Pin size={14} /></span>
               <div className="pinned-info">
                 <span className="pinned-label">Закреплённое сообщение</span>
-                <span className="pinned-text">{pinned.content?.slice(0, 60) || '📎 Файл'}</span>
+                <span className="pinned-text">{pinned.content?.slice(0, 60) || 'Файл'}</span>
               </div>
-              <button className="pinned-close" onClick={(e) => { e.stopPropagation(); setPinnedMsgId(null); }}>✕</button>
+              <button className="pinned-close" onClick={(e) => { e.stopPropagation(); setPinnedMsgId(null); }}><X size={14} /></button>
             </div>
           );
         })()}
         {messages.length === 0 && (
           <div className="empty-chat">
             <div className="empty-chat-content">
-              <span className="empty-chat-icon">💬</span>
+              <span className="empty-chat-icon"><MessageSquare size={40} /></span>
               <p>Нет сообщений</p>
               <span className="empty-chat-hint">Начните общение прямо сейчас!</span>
             </div>
@@ -1092,7 +1088,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
                             {msg.timestamp}
                             {isOwn && (msg.type === 'CHAT' || msg.type === 'VOICE' || msg.type === 'VIDEO_CIRCLE') && (
                               <span className={`msg-check ${msg.status === 'READ' ? 'read' : ''}`}>
-                                {msg.status === 'READ' ? ' ✓✓' : msg.status === 'DELIVERED' ? ' ✓✓' : ' ✓'}
+                                {msg.status === 'READ' ? <CheckCheck size={14} /> : msg.status === 'DELIVERED' ? <CheckCheck size={14} /> : <Check size={14} />}
                               </span>
                             )}
                           </span>
@@ -1107,7 +1103,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
                           {msg.timestamp}
                           {isOwn && (msg.type === 'CHAT' || msg.type === 'VOICE' || msg.type === 'VIDEO_CIRCLE') && (
                             <span className={`msg-check ${msg.status === 'READ' ? 'read' : ''}`}>
-                              {msg.status === 'READ' ? ' ✓✓' : msg.status === 'DELIVERED' ? ' ✓✓' : ' ✓'}
+                              {msg.status === 'READ' ? <CheckCheck size={14} /> : msg.status === 'DELIVERED' ? <CheckCheck size={14} /> : <Check size={14} />}
                             </span>
                           )}
                         </span>
@@ -1158,7 +1154,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
       {/* Scroll to Bottom */}
       {showScrollBtn && (
         <button className="scroll-to-bottom" onClick={scrollToBottom}>
-          ↓ {newMsgCount > 0 && <span className="new-msg-badge">{newMsgCount}</span>}
+          <ChevronDown size={18} /> {newMsgCount > 0 && <span className="new-msg-badge">{newMsgCount}</span>}
         </button>
       )}
 
@@ -1178,28 +1174,28 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
           {/* Menu items */}
           <div className="ctx-items">
             <button onClick={() => startReply(contextMenu.msg)}>
-              <span className="ctx-icon">↩</span> Ответить
+              <span className="ctx-icon"><Reply size={16} /></span> Ответить
             </button>
             <button onClick={() => handlePinMsg(contextMenu.msg)}>
-              <span className="ctx-icon">📌</span> {pinnedMsgId === contextMenu.msg.id ? 'Открепить' : 'Закрепить'}
+              <span className="ctx-icon"><Pin size={16} /></span> {pinnedMsgId === contextMenu.msg.id ? 'Открепить' : 'Закрепить'}
             </button>
             <button onClick={() => copyMessage(contextMenu.msg)}>
-              <span className="ctx-icon">📋</span> Копировать текст
+              <span className="ctx-icon"><Clipboard size={16} /></span> Копировать текст
             </button>
             <button onClick={() => handleForwardMsg(contextMenu.msg)}>
-              <span className="ctx-icon">↪</span> Переслать
+              <span className="ctx-icon"><Forward size={16} /></span> Переслать
             </button>
             <button onClick={() => { setContextMenu(null); if (onForwardToSaved) onForwardToSaved(contextMenu.msg); }}>
-              <span className="ctx-icon">🔖</span> В Избранное
+              <span className="ctx-icon"><Bookmark size={16} /></span> В Избранное
             </button>
             {contextMenu.msg.sender === username && (
               <button onClick={() => startEdit(contextMenu.msg)}>
-                <span className="ctx-icon">✏️</span> Редактировать
+                <span className="ctx-icon"><Pencil size={16} /></span> Редактировать
               </button>
             )}
             {contextMenu.msg.sender === username && (
               <button className="ctx-danger" onClick={() => handleDeleteMsg(contextMenu.msg)}>
-                <span className="ctx-icon">🗑</span> Удалить
+                <span className="ctx-icon"><Trash2 size={16} /></span> Удалить
               </button>
             )}
           </div>
@@ -1209,22 +1205,22 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
       {/* Selection Reply Popup */}
       {selectionPopup && (
         <div className="selection-popup" style={{ top: selectionPopup.y, left: selectionPopup.x }}>
-          <button onClick={replyToSelection}>↩️ Ответить</button>
+          <button onClick={replyToSelection}><Reply size={14} /> Ответить</button>
         </div>
       )}
 
       {/* Scheduled Messages Banner */}
       {scheduledMessages && scheduledMessages.length > 0 && (
         <div className="scheduled-banner">
-          ⏰ Отложенных: {scheduledMessages.length}
+          <Clock size={14} /> Отложенных: {scheduledMessages.length}
         </div>
       )}
 
       {/* Edit Mode Banner */}
       {editingMsg && (
         <div className="edit-banner">
-          <span>✏️ Редактирование: <em>{editingMsg.content?.slice(0, 40)}</em></span>
-          <button onClick={cancelEdit}>✕</button>
+          <span><Pencil size={14} /> Редактирование: <em>{editingMsg.content?.slice(0, 40)}</em></span>
+          <button onClick={cancelEdit}><X size={16} /></button>
         </div>
       )}
 
@@ -1232,13 +1228,13 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
       {replyingTo && (
         <div className="reply-banner">
           <div className="reply-banner-content">
-            <span className="reply-banner-icon">↩️</span>
+            <span className="reply-banner-icon"><Reply size={14} /></span>
             <div className="reply-banner-text">
               <span className="reply-banner-sender">{replyingTo.sender}</span>
               <span className="reply-banner-msg">{replyingTo.content?.slice(0, 60)}</span>
             </div>
           </div>
-          <button onClick={cancelReply}>✕</button>
+          <button onClick={cancelReply}><X size={16} /></button>
         </div>
       )}
 
@@ -1273,15 +1269,27 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
         ) : (
         <>
         <div className="input-wrapper">
-          <button
-            type="button"
-            className="attach-btn"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={!connected || uploading || !!editingMsg}
-            title="Прикрепить файл"
-          >
-            📎
-          </button>
+          <div className="plus-menu-wrap" ref={plusMenuRef}>
+            <button
+              type="button"
+              className="attach-btn"
+              onClick={() => setShowPlusMenu(!showPlusMenu)}
+              disabled={!connected || uploading || !!editingMsg}
+              title="Прикрепить"
+            >
+              <Plus size={22} className={showPlusMenu ? 'rotate-45' : ''} />
+            </button>
+            {showPlusMenu && (
+              <div className="plus-menu-dropdown">
+                <button type="button" onClick={() => { fileInputRef.current?.click(); setShowPlusMenu(false); }}>
+                  <Paperclip size={18} /> Файл
+                </button>
+                <button type="button" onClick={() => { setShowSchedule(!showSchedule); setEditingMsg(null); setShowPlusMenu(false); }}>
+                  <Clock size={18} /> Отложить
+                </button>
+              </div>
+            )}
+          </div>
           <input
             ref={fileInputRef}
             type="file"
@@ -1326,16 +1334,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
             onClick={() => setShowEmoji(!showEmoji)}
             title="Эмодзи"
           >
-            😊
-          </button>
-          <button
-            type="button"
-            className="action-btn schedule-btn"
-            onClick={() => { setShowSchedule(!showSchedule); setEditingMsg(null); }}
-            disabled={!connected || !!editingMsg}
-            title="Отложить сообщение"
-          >
-            ⏰
+            <Smile size={20} />
           </button>
           {/* Show mic + video buttons when no text, send button when text exists — Telegram style */}
           {!input.trim() && !editingMsg && !showSchedule ? (
@@ -1347,7 +1346,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
               disabled={!connected}
               title="Голосовое сообщение"
             >
-              🎤
+              <Mic size={20} />
             </button>
             <button
               type="button"
@@ -1356,12 +1355,12 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
               disabled={!connected}
               title="Видеокружок"
             >
-              📹
+              <Video size={20} />
             </button>
             </>
           ) : (
             <button type="submit" className="action-btn send-btn" disabled={!connected || (!input.trim() && !uploading)}>
-              {editingMsg ? '✏️' : showSchedule && scheduleDate ? '⏰' : '➤'}
+              {editingMsg ? <Pencil size={20} /> : showSchedule && scheduleDate ? <Clock size={20} /> : <SendHorizontal size={20} />}
             </button>
           )}
         </div>
@@ -1373,14 +1372,14 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
       {deleteConfirm && (
         <div className="delete-modal-overlay" onClick={() => setDeleteConfirm(null)}>
           <div className="delete-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="delete-modal-icon">🗑</div>
+            <div className="delete-modal-icon"><Trash2 size={32} /></div>
             <h3>Удалить сообщение?</h3>
             <p className="delete-modal-preview">
               {deleteConfirm.content
                 ? (deleteConfirm.content.length > 80
                     ? deleteConfirm.content.slice(0, 80) + '…'
                     : deleteConfirm.content)
-                : '📎 Файл'}
+                : 'Файл'}
             </p>
             <div className="delete-modal-actions">
               <button className="delete-modal-cancel" onClick={() => setDeleteConfirm(null)}>

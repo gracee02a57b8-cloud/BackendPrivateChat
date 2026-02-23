@@ -1,33 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-
-const AVATAR_COLORS = [
-  '#e94560', '#4ecca3', '#f0a500', '#a855f7',
-  '#3b82f6', '#ec4899', '#14b8a6', '#f97316',
-];
-function getAvatarColor(name) {
-  let hash = 0;
-  for (let i = 0; i < (name || '').length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
-
-function formatLastSeen(ts) {
-  if (!ts) return 'не в сети';
-  const d = new Date(ts.includes?.('T') ? ts : ts.replace(' ', 'T'));
-  if (isNaN(d.getTime())) return 'не в сети';
-  const now = new Date();
-  const diff = now - d;
-  if (diff < 60000) return 'был(а) только что';
-  if (diff < 3600000) return `был(а) ${Math.floor(diff / 60000)} мин. назад`;
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
-  if (d.toDateString() === now.toDateString()) {
-    return `был(а) в ${d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
-  }
-  if (d.toDateString() === yesterday.toDateString()) {
-    return `был(а) вчера в ${d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
-  }
-  return `был(а) ${d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}`;
-}
+import { getAvatarColor, formatLastSeen } from '../utils/avatar';
+import { ArrowLeft, MoreVertical, Minus, Plus, Ban, MessageSquare, Bell, BellOff, Phone, CheckCircle } from 'lucide-react';
 
 export default function UserProfilePage({ targetUsername, token, onBack, onStartChat, onStartCall, onlineUsers = [], avatarMap = {} }) {
   const [profile, setProfile] = useState(null);
@@ -131,7 +104,7 @@ export default function UserProfilePage({ targetUsername, token, onBack, onStart
     return (
       <div className="user-profile-page">
         <div className="user-profile-header-bar">
-          <button className="user-profile-back" onClick={onBack}>←</button>
+          <button className="user-profile-back" onClick={onBack}><ArrowLeft size={20} /></button>
           <div style={{ flex: 1 }} />
         </div>
         <div className="user-profile-loading">Загрузка...</div>
@@ -143,18 +116,18 @@ export default function UserProfilePage({ targetUsername, token, onBack, onStart
     <div className="user-profile-page">
       {/* Top bar */}
       <div className="user-profile-header-bar">
-        <button className="user-profile-back" onClick={onBack}>←</button>
+        <button className="user-profile-back" onClick={onBack}><ArrowLeft size={20} /></button>
         <div style={{ flex: 1 }} />
         <div className="user-profile-menu-wrap" ref={menuRef}>
-          <button className="user-profile-dots" onClick={() => setShowMenu(!showMenu)}>⋮</button>
+          <button className="user-profile-dots" onClick={() => setShowMenu(!showMenu)}><MoreVertical size={20} /></button>
           {showMenu && (
             <div className="user-profile-dropdown">
               <button onClick={handleToggleContact} disabled={actionLoading}>
-                <span className="upd-icon">{isContact ? '➖' : '➕'}</span>
+                <span className="upd-icon">{isContact ? <Minus size={16} /> : <Plus size={16} />}</span>
                 {isContact ? 'Удалить контакт' : 'Добавить контакт'}
               </button>
               <button onClick={handleToggleBlock} disabled={actionLoading}>
-                <span className="upd-icon">🚫</span>
+                <span className="upd-icon"><Ban size={16} /></span>
                 {iBlocked ? 'Разблокировать' : 'Заблокировать'}
               </button>
             </div>
@@ -178,15 +151,15 @@ export default function UserProfilePage({ targetUsername, token, onBack, onStart
       {/* Action buttons row */}
       <div className="user-profile-actions">
         <button className="user-profile-action-btn" onClick={() => { if (onStartChat) onStartChat(targetUsername); onBack(); }}>
-          <span className="user-profile-action-icon">💬</span>
+          <span className="user-profile-action-icon"><MessageSquare size={20} /></span>
           <span className="user-profile-action-label">Чат</span>
         </button>
         <button className="user-profile-action-btn" onClick={() => setMuteNotif(!muteNotif)}>
-          <span className="user-profile-action-icon">{muteNotif ? '🔕' : '🔔'}</span>
+          <span className="user-profile-action-icon">{muteNotif ? <BellOff size={20} /> : <Bell size={20} />}</span>
           <span className="user-profile-action-label">{muteNotif ? 'Откл.' : 'Звук'}</span>
         </button>
         <button className="user-profile-action-btn" onClick={() => { if (onStartCall) onStartCall(targetUsername, 'audio'); }}>
-          <span className="user-profile-action-icon">📞</span>
+          <span className="user-profile-action-icon"><Phone size={20} /></span>
           <span className="user-profile-action-label">Звонок</span>
         </button>
       </div>
@@ -194,7 +167,7 @@ export default function UserProfilePage({ targetUsername, token, onBack, onStart
       {/* Block banner */}
       {iBlocked && (
         <div className="user-profile-block-banner">
-          🚫 Пользователь заблокирован
+          <Ban size={16} /> Пользователь заблокирован
           <button onClick={handleToggleBlock} disabled={actionLoading}>Разблокировать</button>
         </div>
       )}
@@ -226,22 +199,9 @@ export default function UserProfilePage({ targetUsername, token, onBack, onStart
           onClick={handleToggleContact}
           disabled={actionLoading}
         >
-          <span className="upd-icon">{isContact ? '✅' : '➕'}</span>
+          <span className="upd-icon">{isContact ? <CheckCircle size={16} /> : <Plus size={16} />}</span>
           {isContact ? 'В контактах' : 'Добавить в контакты'}
         </button>
-      </div>
-
-      {/* Shared media tabs placeholder */}
-      <div className="user-profile-tabs">
-        <button className="user-profile-tab active">Медиа</button>
-        <button className="user-profile-tab">Файлы</button>
-        <button className="user-profile-tab">Ссылки</button>
-      </div>
-      <div className="user-profile-tab-content">
-        <div className="user-profile-empty-tab">
-          <span>📂</span>
-          <p>Пока ничего нет</p>
-        </div>
       </div>
     </div>
   );

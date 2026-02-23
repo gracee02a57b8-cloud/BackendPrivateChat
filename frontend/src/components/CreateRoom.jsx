@@ -1,15 +1,6 @@
 import { useState, useRef } from 'react';
-
-const AVATAR_COLORS = [
-  '#e94560', '#4ecca3', '#f0a500', '#a855f7',
-  '#3b82f6', '#ec4899', '#14b8a6', '#f97316',
-];
-function getAvatarColor(name) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
-function getInitials(name) { return name.charAt(0).toUpperCase(); }
+import { getAvatarColor, getInitials } from '../utils/avatar';
+import { ArrowLeft, X, Search, Check, Users, ArrowRight, Camera, Loader2 } from 'lucide-react';
 
 export default function CreateRoom({ onCreateRoom, onClose, allUsers = [], username, avatarMap = {}, wsRef, token }) {
   const [step, setStep] = useState(1); // 1 = select users, 2 = group details
@@ -78,7 +69,7 @@ export default function CreateRoom({ onCreateRoom, onClose, allUsers = [], usern
         {step === 1 && (
           <>
             <div className="edit-profile-header">
-              <button className="edit-profile-back" onClick={onClose}>←</button>
+              <button className="edit-profile-back" onClick={onClose}><ArrowLeft size={20} /></button>
               <div style={{ flex: 1 }}>
                 <h2 className="edit-profile-title" style={{ margin: 0 }}>Создать группу</h2>
               </div>
@@ -91,14 +82,14 @@ export default function CreateRoom({ onCreateRoom, onClose, allUsers = [], usern
                   {[...selected].map(u => (
                     <div key={u} className="create-group-chip" onClick={() => toggleUser(u)}>
                       <span>{u}</span>
-                      <span className="chip-remove">✕</span>
+                      <span className="chip-remove"><X size={12} /></span>
                     </div>
                   ))}
                 </div>
               )}
 
               <div className="sb-search" style={{ margin: '0 0 4px 0' }}>
-                <span className="sb-search-icon">🔍</span>
+                <span className="sb-search-icon"><Search size={16} /></span>
                 <input
                   type="text"
                   placeholder="Кого бы вы хотели пригласить?"
@@ -131,13 +122,13 @@ export default function CreateRoom({ onCreateRoom, onClose, allUsers = [], usern
                         </span>
                       </div>
                       <div className={`create-group-check ${isSelected ? 'checked' : ''}`}>
-                        {isSelected ? '✓' : ''}
+                        {isSelected ? <Check size={16} /> : ''}
                       </div>
                     </div>
                   );
                 })}
                 {filtered.length === 0 && (
-                  <div className="sb-empty"><span>👥</span><p>Нет пользователей</p></div>
+                  <div className="sb-empty"><span><Users size={32} /></span><p>Нет пользователей</p></div>
                 )}
               </div>
 
@@ -145,9 +136,10 @@ export default function CreateRoom({ onCreateRoom, onClose, allUsers = [], usern
               <button
                 className="create-group-fab"
                 onClick={() => setStep(2)}
-                title="Далее"
+                disabled={selected.size === 0}
+                title={selected.size === 0 ? 'Выберите хотя бы 1 участника' : 'Далее'}
               >
-                →
+                <ArrowRight size={24} />
               </button>
             </div>
           </>
@@ -157,7 +149,7 @@ export default function CreateRoom({ onCreateRoom, onClose, allUsers = [], usern
         {step === 2 && (
           <>
             <div className="edit-profile-header">
-              <button className="edit-profile-back" onClick={() => setStep(1)}>←</button>
+              <button className="edit-profile-back" onClick={() => setStep(1)}><ArrowLeft size={20} /></button>
               <h2 className="edit-profile-title" style={{ margin: 0 }}>Создать группу</h2>
               <div style={{ width: 40 }} />
             </div>
@@ -168,7 +160,7 @@ export default function CreateRoom({ onCreateRoom, onClose, allUsers = [], usern
                   {groupPhotoPreview ? (
                     <img src={groupPhotoPreview} alt="" className="create-group-photo-img" />
                   ) : (
-                    <span className="create-group-photo-placeholder">📷</span>
+                    <span className="create-group-photo-placeholder"><Camera size={24} /></span>
                   )}
                 </div>
                 <input
@@ -220,7 +212,7 @@ export default function CreateRoom({ onCreateRoom, onClose, allUsers = [], usern
                 disabled={!name.trim() || creating}
                 title="Создать"
               >
-                {creating ? '⏳' : '✓'}
+                {creating ? <Loader2 size={24} className="spin" /> : <Check size={24} />}
               </button>
             </div>
           </>

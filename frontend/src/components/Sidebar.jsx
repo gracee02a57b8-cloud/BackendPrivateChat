@@ -8,42 +8,8 @@ import EditProfilePage from './EditProfilePage';
 import RecentCalls from './RecentCalls';
 import { copyToClipboard } from '../utils/clipboard';
 import appSettings from '../utils/appSettings';
-
-const AVATAR_COLORS = [
-  '#e94560', '#4ecca3', '#f0a500', '#a855f7',
-  '#3b82f6', '#ec4899', '#14b8a6', '#f97316',
-];
-function getAvatarColor(name) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
-function getInitials(name) { return name.charAt(0).toUpperCase(); }
-
-function formatLastSeen(ts) {
-  if (!ts) return 'Не в сети';
-  const d = new Date(ts.includes?.('T') ? ts : ts.replace(' ', 'T'));
-  if (isNaN(d.getTime())) return 'Не в сети';
-  const now = new Date();
-  const diff = now - d;
-  const oneDay = 86400000;
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
-
-  if (diff < 60000) return 'был(а) только что';
-  if (diff < 3600000) return `был(а) ${Math.floor(diff / 60000)} мин. назад`;
-  if (d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) {
-    return `был(а) в ${d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
-  }
-  if (d.getDate() === yesterday.getDate() && d.getMonth() === yesterday.getMonth() && d.getFullYear() === yesterday.getFullYear()) {
-    return `был(а) вчера в ${d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
-  }
-  if (diff < 7 * oneDay) {
-    const days = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
-    return `был(а) ${days[d.getDay()]}`;
-  }
-  return `был(а) ${d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}`;
-}
+import { getAvatarColor, getInitials, formatLastSeen } from '../utils/avatar';
+import { ArrowLeft, MoreVertical, User, Mail, Plus, Bookmark, Download, X, Search, Users, MessageSquare, CheckCircle, Share2, Trash2, Phone, Star, Newspaper, ClipboardList, Link, Volume2, Bell, Settings, LogOut } from 'lucide-react';
 
 function formatTime(ts) {
   if (!ts) return '';
@@ -237,7 +203,7 @@ export default function Sidebar({
         <div className="sb-chat-avatar-wrap">
           {isSaved ? (
             <div className="sb-chat-avatar sb-saved-avatar">
-              🔖
+              <Bookmark size={20} />
             </div>
           ) : (
             <div className="sb-chat-avatar" style={{ background: avatarMap[displayName] ? 'transparent' : getAvatarColor(displayName) }}>
@@ -264,10 +230,10 @@ export default function Sidebar({
           {!isSaved && (
             <>
               <span className="sb-share-btn" onClick={(e) => copyShareLink(e, room.id)} title="Поделиться" role="button" aria-label="Поделиться ссылкой">
-                {shareCopied === room.id ? '✅' : '📤'}
+                {shareCopied === room.id ? <CheckCircle size={14} /> : <Share2 size={14} />}
               </span>
               <span className="sb-delete-btn" onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ id: room.id, name: displayName }); }} title="Удалить" role="button" aria-label="Удалить чат">
-                🗑
+                <Trash2 size={14} />
               </span>
             </>
           )}
@@ -282,11 +248,10 @@ export default function Sidebar({
       {mobileTab !== 'profile' && (
       <div className="sb-header">
         <div className="sb-header-left">
-          <button className="sb-close-btn" onClick={onCloseSidebar} aria-label="Закрыть меню">←</button>
+          <button className="sb-close-btn" onClick={onCloseSidebar} aria-label="Закрыть меню"><ArrowLeft size={20} /></button>
           <div className="sb-mobile-title">
             {mobileTab === 'chats' && 'BarsikChat'}
             {mobileTab === 'contacts' && 'Контакты'}
-            {mobileTab === 'settings' && 'Песочница'}
             {mobileTab === 'profile' && 'Профиль'}
           </div>
           <div className="sb-desktop-header-user">
@@ -304,15 +269,15 @@ export default function Sidebar({
           </div>
         </div>
         <div className="sb-header-right">
-          <button className="sb-menu-btn" onClick={() => setShowMenu(!showMenu)} aria-label="Меню" title="Меню">⋮</button>
+          <button className="sb-menu-btn" onClick={() => setShowMenu(!showMenu)} aria-label="Меню" title="Меню"><MoreVertical size={20} /></button>
           {showMenu && (
             <div className="sb-menu-dropdown" ref={menuRef}>
-              <button className="sb-desktop-only" onClick={() => { setShowMenu(false); setShowProfile(true); }}>👤 Профиль</button>
-              <button onClick={() => { setShowMenu(false); setShowSearch(!showSearch); }}>✉️ Написать</button>
-              <button onClick={() => { setShowMenu(false); setShowCreate(true); }}>➕ Создать группу</button>
-              <button onClick={() => { setShowMenu(false); if (onOpenSaved) onOpenSaved(); }}>🔖 Избранное</button>
+              <button className="sb-desktop-only" onClick={() => { setShowMenu(false); setShowProfile(true); }}><User size={16} /> Профиль</button>
+              <button onClick={() => { setShowMenu(false); setShowSearch(!showSearch); }}><Mail size={16} /> Написать</button>
+              <button onClick={() => { setShowMenu(false); setShowCreate(true); }}><Plus size={16} /> Создать группу</button>
+              <button onClick={() => { setShowMenu(false); if (onOpenSaved) onOpenSaved(); }}><Bookmark size={16} /> Избранное</button>
               {installPrompt && (
-                <button onClick={() => { setShowMenu(false); handleInstall(); }}>📲 Установить приложение</button>
+                <button onClick={() => { setShowMenu(false); handleInstall(); }}><Download size={16} /> Установить приложение</button>
               )}
             </div>
           )}
@@ -347,7 +312,7 @@ export default function Sidebar({
 
           {/* Search */}
           <div className="sb-search">
-            <span className="sb-search-icon">🔍</span>
+            <span className="sb-search-icon"><Search size={16} /></span>
             <input
               type="text"
               placeholder="Поиск чатов..."
@@ -371,7 +336,7 @@ export default function Sidebar({
             <div className="sb-chat-list">
               <div className="sb-section-header">
                 <span className="sb-section-label">КОНТАКТЫ ({allUsers.filter(u => u.username !== username).length})</span>
-                <button className="sb-section-add" onClick={() => setShowContacts(false)} title="Закрыть">✕</button>
+                <button className="sb-section-add" onClick={() => setShowContacts(false)} title="Закрыть"><X size={16} /></button>
               </div>
               {(() => {
                 const contacts = allUsers
@@ -436,7 +401,7 @@ export default function Sidebar({
                     ))}
                     {contacts.length === 0 && (
                       <div className="sb-empty">
-                        <span>👥</span>
+                        <span><Users size={32} /></span>
                         <p>{searchFilter ? 'Не найдено' : 'Нет пользователей'}</p>
                       </div>
                     )}
@@ -448,13 +413,13 @@ export default function Sidebar({
             <div className="sb-chat-list">
               {getSortedRooms().map((room) => renderChatItem(room))}
               {rooms.length === 0 && (
-                <div className="sb-empty"><span>💬</span><p>Нет чатов</p></div>
+                <div className="sb-empty"><span><MessageSquare size={32} /></span><p>Нет чатов</p></div>
               )}
               {rooms.length > 0 && getSortedRooms().length === 0 && chatFilter === 'unread' && (
-                <div className="sb-empty"><span>✅</span><p>Все прочитано</p></div>
+                <div className="sb-empty"><span><CheckCircle size={32} /></span><p>Все прочитано</p></div>
               )}
               {rooms.length > 0 && getSortedRooms().length === 0 && chatFilter !== 'unread' && searchFilter && (
-                <div className="sb-empty"><span>🔍</span><p>Не найдено</p></div>
+                <div className="sb-empty"><span><Search size={32} /></span><p>Не найдено</p></div>
               )}
             </div>
           )}
@@ -474,7 +439,7 @@ export default function Sidebar({
       {mobileTab === 'contacts' && contactsSubView === 'list' && !showContacts && (
         <>
           <div className="sb-search">
-            <span className="sb-search-icon">🔍</span>
+            <span className="sb-search-icon"><Search size={16} /></span>
             <input
               type="text"
               placeholder="Поиск контактов..."
@@ -489,10 +454,10 @@ export default function Sidebar({
               copyToClipboard(link).then(() => { setInviteCopied(true); setTimeout(() => setInviteCopied(false), 2000); });
             }}>
               <div className="contacts-action-icon" style={{ background: '#3b82f6' }}><svg viewBox="0 0 24 24" width="22" height="22" fill="white"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>
-              <span className="contacts-action-label">{inviteCopied ? '✅ Ссылка скопирована!' : 'Пригласить друзей'}</span>
+              <span className="contacts-action-label">{inviteCopied ? 'Ссылка скопирована!' : 'Пригласить друзей'}</span>
             </div>
             <div className="contacts-action-item" onClick={() => setContactsSubView('calls')}>
-              <div className="contacts-action-icon" style={{ background: '#4ecca3' }}>📞</div>
+              <div className="contacts-action-icon" style={{ background: '#4ecca3' }}><Phone size={20} color="white" /></div>
               <span className="contacts-action-label">Недавние звонки</span>
             </div>
 
@@ -510,7 +475,7 @@ export default function Sidebar({
                 const mcOffline = myContactUsers.filter(u => !u.online);
                 return (
                   <>
-                    <div className="contacts-sort-label">⭐ Мои контакты — {myContactUsers.length}</div>
+                    <div className="contacts-sort-label"><Star size={14} /> Мои контакты — {myContactUsers.length}</div>
                     {mcOnline.map(user => (
                       <div key={'mc-' + user.username} className="sb-contact-item" onClick={() => onStartPrivateChat(user.username)}>
                         <div className="sb-chat-avatar-wrap">
@@ -605,7 +570,7 @@ export default function Sidebar({
                     </div>
                   ))}
                   {contacts.length === 0 && (
-                    <div className="sb-empty"><span>👥</span><p>{searchFilter ? 'Не найдено' : 'Нет пользователей'}</p></div>
+                    <div className="sb-empty"><span><Users size={32} /></span><p>{searchFilter ? 'Не найдено' : 'Нет пользователей'}</p></div>
                   )}
                 </>
               );
@@ -614,54 +579,14 @@ export default function Sidebar({
         </>
       )}
 
-      {/* ══════════  TAB: SETTINGS (mobile)  ══════════ */}
-      {mobileTab === 'settings' && (
-        <div className="sb-settings-panel">
-          <div className="sb-settings-list">
-            <button className="sb-settings-item" onClick={onShowNews}>
-              <span className="sb-settings-icon">📰</span>
-              <span className="sb-settings-label">Новости</span>
-              <span className="sb-settings-arrow">›</span>
-            </button>
-            <button className="sb-settings-item" onClick={onShowTasks}>
-              <span className="sb-settings-icon">📋</span>
-              <span className="sb-settings-label">Задачи</span>
-              <span className="sb-settings-arrow">›</span>
-            </button>
-            <button className="sb-settings-item" onClick={() => { setShowSearch(!showSearch); }}>
-              <span className="sb-settings-icon">✉️</span>
-              <span className="sb-settings-label">Написать сообщение</span>
-              <span className="sb-settings-arrow">›</span>
-            </button>
-            <button className="sb-settings-item" onClick={() => setShowCreate(true)}>
-              <span className="sb-settings-icon">➕</span>
-              <span className="sb-settings-label">Создать группу</span>
-              <span className="sb-settings-arrow">›</span>
-            </button>
-            <button className="sb-settings-item" onClick={() => setShowJoin(true)}>
-              <span className="sb-settings-icon">🔗</span>
-              <span className="sb-settings-label">Войти по ссылке</span>
-              <span className="sb-settings-arrow">›</span>
-            </button>
-            {installPrompt && (
-              <button className="sb-settings-item" onClick={handleInstall}>
-                <span className="sb-settings-icon">📲</span>
-                <span className="sb-settings-label">Установить приложение</span>
-                <span className="sb-settings-arrow">›</span>
-              </button>
-            )}
-          </div>
-
-          {/* User Search Modal */}
-          {showSearch && (
-            <UserSearch
-              token={token}
-              username={username}
-              onStartChat={(user) => { onStartPrivateChat(user); setShowSearch(false); }}
-              onClose={() => setShowSearch(false)}
-            />
-          )}
-        </div>
+      {/* User Search Modal */}
+      {showSearch && (
+        <UserSearch
+          token={token}
+          username={username}
+          onStartChat={(user) => { onStartPrivateChat(user); setShowSearch(false); }}
+          onClose={() => setShowSearch(false)}
+        />
       )}
 
       {/* ══════════  TAB: PROFILE (mobile)  ══════════ */}
@@ -676,13 +601,13 @@ export default function Sidebar({
       {mobileTab === 'profile' && profileSubView === 'settings' && (
         <div className="sb-settings-panel">
           <div className="edit-profile-header">
-            <button className="edit-profile-back" onClick={() => setProfileSubView('main')}>←</button>
+            <button className="edit-profile-back" onClick={() => setProfileSubView('main')}><ArrowLeft size={20} /></button>
             <h2 className="edit-profile-title">Настройки</h2>
             <div style={{ width: 40 }} />
           </div>
           <div className="sb-settings-list">
             {/* ── Звук ── */}
-            <div className="settings-section-title">🔊 Звук</div>
+            <div className="settings-section-title"><Volume2 size={16} /> Звук</div>
             <div className="sb-settings-item sb-settings-toggle-row">
               <span className="sb-settings-label">Звук уведомлений</span>
               <button
@@ -705,7 +630,7 @@ export default function Sidebar({
             </div>
 
             {/* ── Уведомления ── */}
-            <div className="settings-section-title">🔔 Уведомления</div>
+            <div className="settings-section-title"><Bell size={16} /> Уведомления</div>
             <div className="sb-settings-item sb-settings-toggle-row">
               <span className="sb-settings-label">Push-уведомления</span>
               <button
@@ -727,17 +652,17 @@ export default function Sidebar({
             </div>
 
             {/* ── Другое ── */}
-            <div className="settings-section-title" style={{ marginTop: 8 }}>⚙️ Другое</div>
+            <div className="settings-section-title" style={{ marginTop: 8 }}><Settings size={16} /> Другое</div>
             {installPrompt && (
               <button className="sb-settings-item" onClick={handleInstall}>
-                <span className="sb-settings-icon">📲</span>
+                <span className="sb-settings-icon"><Download size={18} /></span>
                 <span className="sb-settings-label">Установить приложение</span>
                 <span className="sb-settings-arrow">›</span>
               </button>
             )}
 
             <button className="sb-settings-item sb-settings-logout" onClick={onLogout}>
-              <span className="sb-settings-icon">🚪</span>
+              <span className="sb-settings-icon"><LogOut size={18} /></span>
               <span className="sb-settings-label">Выйти</span>
               <span className="sb-settings-arrow">›</span>
             </button>
@@ -755,6 +680,13 @@ export default function Sidebar({
           onOpenEdit={() => setProfileSubView('edit')}
           onOpenSettings={() => setProfileSubView('settings')}
           onLogout={onLogout}
+          onShowNews={onShowNews}
+          onShowTasks={onShowTasks}
+          onShowSearch={() => setShowSearch(true)}
+          onShowCreate={() => setShowCreate(true)}
+          onShowJoin={() => setShowJoin(true)}
+          installPrompt={installPrompt}
+          onInstall={handleInstall}
         />
       )}
 
@@ -776,7 +708,7 @@ export default function Sidebar({
       {deleteConfirm && (
         <div className="delete-modal-overlay" onClick={() => setDeleteConfirm(null)}>
           <div className="delete-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="delete-modal-icon">🗑</div>
+            <div className="delete-modal-icon"><Trash2 size={32} /></div>
             <h3>Удалить «{deleteConfirm.name}»?</h3>
             <p className="delete-modal-preview">Чат и вся история будут удалены</p>
             <div className="delete-modal-actions">

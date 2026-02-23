@@ -1,17 +1,6 @@
 import { useEffect, useRef } from 'react';
-
-const AVATAR_COLORS = [
-  '#e94560', '#4ecca3', '#f0a500', '#a855f7',
-  '#3b82f6', '#ec4899', '#14b8a6', '#f97316',
-];
-
-function getAvatarColor(name) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
+import { getAvatarColor } from '../utils/avatar';
+import { Video, Phone, X } from 'lucide-react';
 
 /**
  * Incoming call modal — full-screen overlay with accept / reject buttons.
@@ -53,7 +42,7 @@ export default function IncomingCallModal({ caller, callType, avatarUrl, onAccep
 
   const isVideo = callType === 'video';
   const label = isVideo ? 'Видеозвонок' : 'Аудиозвонок';
-  const icon = isVideo ? '📹' : '📞';
+  const icon = isVideo ? <Video size={20} /> : <Phone size={20} />;
 
   return (
     <div className="incoming-call-overlay" role="dialog" aria-modal="true" aria-label={`Входящий ${label} от ${caller}`}>
@@ -78,10 +67,10 @@ export default function IncomingCallModal({ caller, callType, avatarUrl, onAccep
         </div>
         <div className="incoming-call-actions">
           <button className="call-btn call-btn-reject" onClick={onReject} title="Отклонить" aria-label="Отклонить звонок">
-            <span>✕</span>
+            <span><X size={24} /></span>
           </button>
           <button className="call-btn call-btn-accept" onClick={onAccept} title="Принять" aria-label="Принять звонок">
-            <span>📞</span>
+            <span><Phone size={24} /></span>
           </button>
         </div>
       </div>

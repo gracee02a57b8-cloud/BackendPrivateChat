@@ -1,17 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-
-const AVATAR_COLORS = [
-  '#e94560', '#4ecca3', '#f0a500', '#a855f7',
-  '#3b82f6', '#ec4899', '#14b8a6', '#f97316',
-];
-
-function getAvatarColor(name) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
+import { getAvatarColor } from '../utils/avatar';
+import { Lock } from 'lucide-react';
 
 function formatDuration(seconds) {
   const m = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -148,7 +137,7 @@ export default function CallScreen({
       {/* Security code (Bug 5) */}
       {securityCode && callState === 'active' && (
         <div className="call-security-code">
-          <span className="call-security-icon">🔒</span>
+          <span className="call-security-icon"><Lock size={12} /></span>
           <span className="call-security-label">Код безопасности</span>
           <span className="call-security-digits">{securityCode}</span>
         </div>

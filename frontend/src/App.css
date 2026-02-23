@@ -233,6 +233,10 @@
   to { transform: rotate(360deg); }
 }
 
+.spin {
+  animation: spin 0.8s linear infinite;
+}
+
 .login-features {
   display: flex;
   justify-content: center;
@@ -1243,8 +1247,8 @@
 
 /* ===== Messages ===== */
 .message {
-  max-width: 65%;
-  padding: 0.35rem 0.55rem;
+  max-width: 70%;
+  padding: 8px 12px;
   border-radius: 12px;
   animation: fadeIn 0.2s ease;
   position: relative;
@@ -1660,6 +1664,51 @@
 .attach-btn:disabled {
   opacity: 0.3;
   cursor: not-allowed;
+}
+
+/* ===== Plus Attach Menu ===== */
+.plus-menu-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+.attach-btn .rotate-45 {
+  transform: rotate(45deg);
+  transition: transform 0.2s ease;
+}
+.attach-btn svg {
+  transition: transform 0.2s ease;
+  color: #8a9bb0;
+}
+.plus-menu-dropdown {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 8px;
+  background: #1e2c3a;
+  border: 1px solid #2b3a4a;
+  border-radius: 10px;
+  padding: 4px 0;
+  min-width: 160px;
+  z-index: 100;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+  animation: fadeIn 0.12s ease-out;
+}
+.plus-menu-dropdown button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  background: none;
+  color: #c8d4e0;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.12s;
+  text-align: left;
+}
+.plus-menu-dropdown button:hover {
+  background: rgba(106, 179, 243, 0.12);
 }
 
 /* ===== Upload Progress ===== */
@@ -2350,6 +2399,58 @@
   align-items: center;
   gap: 0.5rem;
   position: relative;
+}
+
+/* ===== Chat Header Overflow Menu ===== */
+.chat-header-menu-wrap {
+  position: relative;
+}
+.chat-header-dots-btn {
+  background: none;
+  border: none;
+  color: #8a9bb0;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+.chat-header-dots-btn:hover {
+  background: rgba(106, 179, 243, 0.12);
+  color: #e0e8f0;
+}
+.chat-header-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: #1e2c3a;
+  border: 1px solid #2b3a4a;
+  border-radius: 10px;
+  padding: 4px 0;
+  min-width: 180px;
+  z-index: 100;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+  animation: fadeIn 0.12s ease-out;
+}
+.chat-header-dropdown button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  background: none;
+  color: #c8d4e0;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.12s;
+  text-align: left;
+}
+.chat-header-dropdown button:hover {
+  background: rgba(106, 179, 243, 0.12);
 }
 
 /* ===== Copy Link Button ===== */
@@ -7794,6 +7895,20 @@
 }
 .my-profile-logout-btn:active {
   background: rgba(239, 83, 80, 0.32);
+}
+
+/* Quick actions section in profile */
+.my-profile-quick-actions {
+  margin: 16px 16px 0;
+  background: #1a2533;
+  border-radius: 14px;
+  overflow: hidden;
+}
+.my-profile-quick-actions .sb-settings-item {
+  border-bottom: 1px solid #232e3c;
+}
+.my-profile-quick-actions .sb-settings-item:last-child {
+  border-bottom: none;
 }
 
 /* Name modal */

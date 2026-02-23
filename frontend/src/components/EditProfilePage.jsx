@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { ArrowLeft, Check, Phone as PhoneIcon, Cake } from 'lucide-react';
 
 export default function EditProfilePage({ token, username, onBack, onProfileUpdate }) {
   const [profile, setProfile] = useState(null);
@@ -68,10 +69,10 @@ export default function EditProfilePage({ token, username, onBack, onProfileUpda
     <div className="edit-profile-page">
       {/* Header */}
       <div className="edit-profile-header">
-        <button className="edit-profile-back" onClick={onBack}>←</button>
+        <button className="edit-profile-back" onClick={onBack}><ArrowLeft size={20} /></button>
         <h2 className="edit-profile-title">Аккаунт</h2>
         <button className="edit-profile-save-btn" onClick={handleSave} disabled={saving}>
-          {saving ? '...' : '✓'}
+          {saving ? '...' : <Check size={20} />}
         </button>
       </div>
 
@@ -80,7 +81,7 @@ export default function EditProfilePage({ token, username, onBack, onProfileUpda
         <div className="edit-profile-section-title">Информация о Вас</div>
         <div className="edit-profile-info-card">
           <div className="edit-profile-info-row edit-profile-info-row-editable">
-            <span className="edit-profile-info-icon">📞</span>
+            <span className="edit-profile-info-icon"><PhoneIcon size={16} /></span>
             <div className="edit-profile-info-content">
               <input
                 type="tel"
@@ -101,7 +102,7 @@ export default function EditProfilePage({ token, username, onBack, onProfileUpda
             </div>
           </div>
           <div className="edit-profile-info-row edit-profile-info-row-editable">
-            <span className="edit-profile-info-icon">🎂</span>
+            <span className="edit-profile-info-icon"><Cake size={16} /></span>
             <div className="edit-profile-info-content">
               <input
                 type="date"

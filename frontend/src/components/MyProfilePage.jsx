@@ -1,17 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { copyToClipboard } from '../utils/clipboard';
+import { getAvatarColor } from '../utils/avatar';
+import { MoreVertical, Link, Camera, Pencil, Settings, LogOut, Newspaper, ClipboardList, Mail, Plus, Link2, Download } from 'lucide-react';
 
-const AVATAR_COLORS = [
-  '#e94560', '#4ecca3', '#f0a500', '#a855f7',
-  '#3b82f6', '#ec4899', '#14b8a6', '#f97316',
-];
-function getAvatarColor(name) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
-
-export default function MyProfilePage({ username, avatarUrl, token, wsRef, onAvatarChange, connected, onOpenEdit, onOpenSettings, onLogout }) {
+export default function MyProfilePage({ username, avatarUrl, token, wsRef, onAvatarChange, connected, onOpenEdit, onOpenSettings, onLogout, onShowNews, onShowTasks, onShowSearch, onShowCreate, onShowJoin, installPrompt, onInstall }) {
   const [profile, setProfile] = useState(null);
   const [showMenu, setShowMenu] = useState(false);
   const [showNameModal, setShowNameModal] = useState(false);
@@ -174,7 +166,7 @@ export default function MyProfilePage({ username, avatarUrl, token, wsRef, onAva
       <div className="my-profile-header">
         <h2 className="my-profile-title">Профиль</h2>
         <div className="my-profile-menu-wrap" ref={menuRef}>
-          <button className="my-profile-dots-btn" onClick={() => setShowMenu(!showMenu)} aria-label="Меню">⋮</button>
+          <button className="my-profile-dots-btn" onClick={() => setShowMenu(!showMenu)} aria-label="Меню"><MoreVertical size={20} /></button>
           {showMenu && (
             <div className="my-profile-dropdown">
               <button onClick={handleOpenNameModal}>
@@ -182,7 +174,7 @@ export default function MyProfilePage({ username, avatarUrl, token, wsRef, onAva
                 Изменить имя
               </button>
               <button onClick={handleCopyLink}>
-                <span className="my-profile-dropdown-icon">🔗</span>
+                <span className="my-profile-dropdown-icon"><Link size={16} /></span>
                 {copied ? 'Скопировано!' : 'Копировать ссылку'}
               </button>
             </div>
@@ -206,15 +198,15 @@ export default function MyProfilePage({ username, avatarUrl, token, wsRef, onAva
       {/* Action buttons */}
       <div className="my-profile-actions">
         <button className="my-profile-action-btn" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
-          <span className="my-profile-action-icon">📷</span>
+          <span className="my-profile-action-icon"><Camera size={20} /></span>
           <span className="my-profile-action-label">Выбрать фото</span>
         </button>
         <button className="my-profile-action-btn" onClick={onOpenEdit}>
-          <span className="my-profile-action-icon">✏️</span>
+          <span className="my-profile-action-icon"><Pencil size={20} /></span>
           <span className="my-profile-action-label">Изменить</span>
         </button>
         <button className="my-profile-action-btn" onClick={onOpenSettings}>
-          <span className="my-profile-action-icon">⚙️</span>
+          <span className="my-profile-action-icon"><Settings size={20} /></span>
           <span className="my-profile-action-label">Настройка</span>
         </button>
         <input
@@ -254,10 +246,46 @@ export default function MyProfilePage({ username, avatarUrl, token, wsRef, onAva
         )}
       </div>
 
+      {/* Quick Actions */}
+      <div className="my-profile-quick-actions">
+        <button className="sb-settings-item" onClick={onShowNews}>
+          <span className="sb-settings-icon"><Newspaper size={18} /></span>
+          <span className="sb-settings-label">Новости</span>
+          <span className="sb-settings-arrow">›</span>
+        </button>
+        <button className="sb-settings-item" onClick={onShowTasks}>
+          <span className="sb-settings-icon"><ClipboardList size={18} /></span>
+          <span className="sb-settings-label">Задачи</span>
+          <span className="sb-settings-arrow">›</span>
+        </button>
+        <button className="sb-settings-item" onClick={onShowSearch}>
+          <span className="sb-settings-icon"><Mail size={18} /></span>
+          <span className="sb-settings-label">Написать сообщение</span>
+          <span className="sb-settings-arrow">›</span>
+        </button>
+        <button className="sb-settings-item" onClick={onShowCreate}>
+          <span className="sb-settings-icon"><Plus size={18} /></span>
+          <span className="sb-settings-label">Создать группу</span>
+          <span className="sb-settings-arrow">›</span>
+        </button>
+        <button className="sb-settings-item" onClick={onShowJoin}>
+          <span className="sb-settings-icon"><Link2 size={18} /></span>
+          <span className="sb-settings-label">Войти по ссылке</span>
+          <span className="sb-settings-arrow">›</span>
+        </button>
+        {installPrompt && (
+          <button className="sb-settings-item" onClick={onInstall}>
+            <span className="sb-settings-icon"><Download size={18} /></span>
+            <span className="sb-settings-label">Установить приложение</span>
+            <span className="sb-settings-arrow">›</span>
+          </button>
+        )}
+      </div>
+
       {/* Logout */}
       {onLogout && (
         <button className="my-profile-logout-btn" onClick={onLogout}>
-          🚪 Выйти из аккаунта
+          <LogOut size={16} /> Выйти из аккаунта
         </button>
       )}
 
