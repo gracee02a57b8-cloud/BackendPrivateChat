@@ -34,6 +34,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   const [messageNotification, setMessageNotification] = useState(null);
   const [typingUsers, setTypingUsers] = useState({});
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mobileTab, setMobileTab] = useState('chats');
   const [e2eReady, setE2eReady] = useState(false);
   const [securityCode, setSecurityCode] = useState(null);
   const [securityCodePeer, setSecurityCodePeer] = useState(null);
@@ -967,7 +968,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   }, [webrtc.callState, webrtc.callPeer, e2eReady, token]);
 
   return (
-    <div className={`chat-container${sidebarOpen ? ' sidebar-active' : ''}`}>
+    <div className={`chat-container${sidebarOpen ? ' sidebar-active' : ''}${!activeRoomId ? ' mobile-sidebar-view' : ''}`}>
       {/* Skip navigation */}
       <a href="#chat-main" className="skip-nav">Перейти к чату</a>
 
@@ -982,12 +983,12 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
       {/* Toast container */}
       <ToastContainer />
 
-      {/* Mobile hamburger — hidden when sidebar is open */}
+      {/* Desktop: hamburger for sidebar drawer */}
       {!sidebarOpen && (
-        <button className="mobile-hamburger" onClick={() => setSidebarOpen(true)} aria-label="Открыть меню">☰</button>
+        <button className="mobile-hamburger desktop-only-hamburger" onClick={() => setSidebarOpen(true)} aria-label="Открыть меню">☰</button>
       )}
 
-      {/* Mobile sidebar overlay — must be OUTSIDE sidebar to avoid transform stacking context */}
+      {/* Desktop: sidebar overlay */}
       {sidebarOpen && (
         <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
       )}
@@ -1016,6 +1017,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
         avatarUrl={avatarUrl}
         wsRef={wsRef}
         onAvatarChange={onAvatarChange}
+        mobileTab={mobileTab}
       />
       {showTasks ? (
         <TaskPanel token={token} username={username} onClose={() => setShowTasks(false)} />
@@ -1160,6 +1162,31 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           onCopyLink={conference.copyShareLink}
         />
       )}
+
+      {/* ── Mobile Bottom Navigation (Telegram-style) ── */}
+      <nav className="mobile-bottom-nav">
+        <button className={`bottom-nav-item${mobileTab === 'chats' ? ' active' : ''}`} onClick={() => { setMobileTab('chats'); if (activeRoomId) setActiveRoomId(null); }}>
+          <span className="bottom-nav-icon">💬</span>
+          <span className="bottom-nav-label">Чаты</span>
+          {(() => { const t = Object.values(unreadCounts).reduce((s,v) => s+v, 0); return t > 0 ? <span className="bottom-nav-badge">{t > 99 ? '99+' : t}</span> : null; })()}
+        </button>
+        <button className={`bottom-nav-item${mobileTab === 'contacts' ? ' active' : ''}`} onClick={() => { setMobileTab('contacts'); if (activeRoomId) setActiveRoomId(null); }}>
+          <span className="bottom-nav-icon">👥</span>
+          <span className="bottom-nav-label">Контакты</span>
+        </button>
+        <button className={`bottom-nav-item${mobileTab === 'settings' ? ' active' : ''}`} onClick={() => { setMobileTab('settings'); if (activeRoomId) setActiveRoomId(null); }}>
+          <span className="bottom-nav-icon">⚙️</span>
+          <span className="bottom-nav-label">Настройки</span>
+        </button>
+        <button className={`bottom-nav-item${mobileTab === 'profile' ? ' active' : ''}`} onClick={() => { setMobileTab('profile'); if (activeRoomId) setActiveRoomId(null); }}>
+          <span className="bottom-nav-icon">
+            {avatarUrl
+              ? <img src={avatarUrl} alt="" className="bottom-nav-avatar" />
+              : '👤'}
+          </span>
+          <span className="bottom-nav-label">Профиль</span>
+        </button>
+      </nav>
     </div>
   );
 }

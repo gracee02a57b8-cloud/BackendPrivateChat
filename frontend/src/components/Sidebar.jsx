@@ -88,6 +88,7 @@ export default function Sidebar({
   avatarUrl,
   wsRef,
   onAvatarChange,
+  mobileTab = 'chats',
 }) {
   const [chatFilter, setChatFilter] = useState('all');
   const [showSearch, setShowSearch] = useState(false);
@@ -245,30 +246,38 @@ export default function Sidebar({
 
   return (
     <div className={`chat-sidebar${sidebarOpen ? ' open' : ''}`}>
-      {/* ── Header: Avatar + Name + Status + Quick actions ── */}
+      {/* ── Header ── */}
       <div className="sb-header">
         <div className="sb-header-left">
           <button className="sb-close-btn" onClick={onCloseSidebar} aria-label="Закрыть меню">←</button>
-          <div className="sb-user-avatar" style={{ background: avatarUrl ? 'transparent' : getAvatarColor(username) }} onClick={() => setShowProfile(true)} title="Открыть профиль">
-            {avatarUrl
-              ? <img src={avatarUrl} alt="" className="sb-avatar-img" />
-              : getInitials(username)}
+          <div className="sb-mobile-title">
+            {mobileTab === 'chats' && 'BarsikChat'}
+            {mobileTab === 'contacts' && 'Контакты'}
+            {mobileTab === 'settings' && 'Настройки'}
+            {mobileTab === 'profile' && 'Профиль'}
           </div>
-          <div className="sb-user-meta">
-            <span className="sb-user-name">{username}</span>
-            <span className={`sb-user-status ${connected ? 'online' : ''}`}>
-              {connected ? '● В сети' : '● Офлайн'}
-            </span>
+          <div className="sb-desktop-header-user">
+            <div className="sb-user-avatar" style={{ background: avatarUrl ? 'transparent' : getAvatarColor(username) }} onClick={() => setShowProfile(true)} title="Открыть профиль">
+              {avatarUrl
+                ? <img src={avatarUrl} alt="" className="sb-avatar-img" />
+                : getInitials(username)}
+            </div>
+            <div className="sb-user-meta">
+              <span className="sb-user-name">{username}</span>
+              <span className={`sb-user-status ${connected ? 'online' : ''}`}>
+                {connected ? '● В сети' : '● Офлайн'}
+              </span>
+            </div>
           </div>
         </div>
         <div className="sb-header-right">
-          <button className="sb-icon-btn" onClick={() => setShowContacts(!showContacts)} title="Контакты" aria-label="Контакты">👥</button>
+          <button className="sb-icon-btn sb-desktop-only" onClick={() => setShowContacts(!showContacts)} title="Контакты" aria-label="Контакты">👥</button>
           <button className="sb-icon-btn" onClick={onShowNews} title="Новости" aria-label="Новости">📰</button>
           <button className="sb-icon-btn" onClick={onShowTasks} title="Задачи" aria-label="Задачи">📋</button>
           <button className="sb-menu-btn" onClick={() => setShowMenu(!showMenu)} aria-label="Меню" title="Меню">⋮</button>
           {showMenu && (
             <div className="sb-menu-dropdown" ref={menuRef}>
-              <button onClick={() => { setShowMenu(false); setShowProfile(true); }}>👤 Профиль</button>
+              <button className="sb-desktop-only" onClick={() => { setShowMenu(false); setShowProfile(true); }}>👤 Профиль</button>
               <button onClick={() => { setShowMenu(false); setShowSearch(!showSearch); }}>✉️ Написать</button>
               <button onClick={() => { setShowMenu(false); setShowCreate(true); }}>➕ Создать группу</button>
               <button onClick={() => { setShowMenu(false); setShowJoin(true); }}>🔗 Войти по ссылке</button>
@@ -281,152 +290,300 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* ── Filter Tabs (Telegram-like folders) ── */}
-      <div className="sb-filters">
-        {[
-          { key: 'all', label: 'Все' },
-          { key: 'private', label: 'Личные' },
-          { key: 'groups', label: 'Группы' },
-          { key: 'unread', label: 'Непрочитанные' },
-        ].map(f => (
-          <button
-            key={f.key}
-            className={`sb-filter${chatFilter === f.key ? ' active' : ''}`}
-            onClick={() => setChatFilter(f.key)}
-          >
-            {f.label}
-            {f.key === 'unread' && (() => {
-              const total = Object.values(unreadCounts).reduce((s, v) => s + v, 0);
-              return total > 0 ? <span className="sb-filter-badge">{total}</span> : null;
-            })()}
-          </button>
-        ))}
-      </div>
+      {/* ══════════  TAB: CHATS  ══════════ */}
+      {(mobileTab === 'chats' || showContacts) && (
+        <>
+          {/* Filter tabs */}
+          <div className="sb-filters">
+            {[
+              { key: 'all', label: 'Все' },
+              { key: 'private', label: 'Личные' },
+              { key: 'groups', label: 'Группы' },
+              { key: 'unread', label: 'Непрочитанные' },
+            ].map(f => (
+              <button
+                key={f.key}
+                className={`sb-filter${chatFilter === f.key ? ' active' : ''}`}
+                onClick={() => setChatFilter(f.key)}
+              >
+                {f.label}
+                {f.key === 'unread' && (() => {
+                  const total = Object.values(unreadCounts).reduce((s, v) => s + v, 0);
+                  return total > 0 ? <span className="sb-filter-badge">{total}</span> : null;
+                })()}
+              </button>
+            ))}
+          </div>
 
-      {/* ── Search ── */}
-      <div className="sb-search">
-        <span className="sb-search-icon">🔍</span>
-        <input
-          type="text"
-          placeholder="Поиск чатов..."
-          value={searchFilter}
-          onChange={(e) => setSearchFilter(e.target.value)}
-        />
-      </div>
+          {/* Search */}
+          <div className="sb-search">
+            <span className="sb-search-icon">🔍</span>
+            <input
+              type="text"
+              placeholder="Поиск чатов..."
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
+            />
+          </div>
 
-      {/* User Search Modal */}
-      {showSearch && (
-        <UserSearch
-          token={token}
-          username={username}
-          onStartChat={(user) => { onStartPrivateChat(user); setShowSearch(false); }}
-          onClose={() => setShowSearch(false)}
-        />
+          {/* User Search Modal */}
+          {showSearch && (
+            <UserSearch
+              token={token}
+              username={username}
+              onStartChat={(user) => { onStartPrivateChat(user); setShowSearch(false); }}
+              onClose={() => setShowSearch(false)}
+            />
+          )}
+
+          {/* Chat List / Contacts (desktop toggle) */}
+          {showContacts ? (
+            <div className="sb-chat-list">
+              <div className="sb-section-header">
+                <span className="sb-section-label">КОНТАКТЫ ({allUsers.filter(u => u.username !== username).length})</span>
+                <button className="sb-section-add" onClick={() => setShowContacts(false)} title="Закрыть">✕</button>
+              </div>
+              {(() => {
+                const contacts = allUsers
+                  .filter(u => u.username !== username)
+                  .filter(u => {
+                    if (!searchFilter.trim()) return true;
+                    return u.username.toLowerCase().includes(searchFilter.toLowerCase());
+                  });
+                const online = contacts.filter(u => u.online);
+                const offline = contacts.filter(u => !u.online);
+                return (
+                  <>
+                    {online.length > 0 && (
+                      <div className="sb-section-header">
+                        <span className="sb-section-label">В СЕТИ — {online.length}</span>
+                      </div>
+                    )}
+                    {online.map(user => (
+                      <div
+                        key={user.username}
+                        className="sb-contact-item"
+                        onClick={() => { onStartPrivateChat(user.username); setShowContacts(false); }}
+                      >
+                        <div className="sb-chat-avatar-wrap">
+                          <div className="sb-chat-avatar" style={{ background: (avatarMap[user.username] || user.avatarUrl) ? 'transparent' : getAvatarColor(user.username) }}>
+                            {(avatarMap[user.username] || user.avatarUrl)
+                              ? <img src={avatarMap[user.username] || user.avatarUrl} alt="" className="sb-avatar-img" />
+                              : getInitials(user.username)}
+                          </div>
+                          <span className="sb-online-dot online" />
+                        </div>
+                        <div className="sb-contact-info">
+                          <span className="sb-contact-name">{user.username}</span>
+                          <span className="sb-contact-status online">В сети</span>
+                        </div>
+                      </div>
+                    ))}
+                    {offline.length > 0 && (
+                      <div className="sb-section-header">
+                        <span className="sb-section-label">НЕ В СЕТИ — {offline.length}</span>
+                      </div>
+                    )}
+                    {offline.map(user => (
+                      <div
+                        key={user.username}
+                        className="sb-contact-item"
+                        onClick={() => { onStartPrivateChat(user.username); setShowContacts(false); }}
+                      >
+                        <div className="sb-chat-avatar-wrap">
+                          <div className="sb-chat-avatar" style={{ background: (avatarMap[user.username] || user.avatarUrl) ? 'transparent' : getAvatarColor(user.username) }}>
+                            {(avatarMap[user.username] || user.avatarUrl)
+                              ? <img src={avatarMap[user.username] || user.avatarUrl} alt="" className="sb-avatar-img" />
+                              : getInitials(user.username)}
+                          </div>
+                          <span className="sb-online-dot offline" />
+                        </div>
+                        <div className="sb-contact-info">
+                          <span className="sb-contact-name">{user.username}</span>
+                          <span className="sb-contact-status offline">{user.lastSeen ? formatLastSeen(user.lastSeen) : 'Не в сети'}</span>
+                        </div>
+                      </div>
+                    ))}
+                    {contacts.length === 0 && (
+                      <div className="sb-empty">
+                        <span>👥</span>
+                        <p>{searchFilter ? 'Не найдено' : 'Нет пользователей'}</p>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          ) : (
+            <div className="sb-chat-list">
+              {getSortedRooms().map((room) => renderChatItem(room))}
+              {rooms.length === 0 && (
+                <div className="sb-empty"><span>💬</span><p>Нет чатов</p></div>
+              )}
+              {rooms.length > 0 && getSortedRooms().length === 0 && chatFilter === 'unread' && (
+                <div className="sb-empty"><span>✅</span><p>Все прочитано</p></div>
+              )}
+              {rooms.length > 0 && getSortedRooms().length === 0 && chatFilter !== 'unread' && searchFilter && (
+                <div className="sb-empty"><span>🔍</span><p>Не найдено</p></div>
+              )}
+            </div>
+          )}
+        </>
       )}
 
-      {/* ── Chat List / Contacts ── */}
-      {showContacts ? (
-        <div className="sb-chat-list">
-          <div className="sb-section-header">
-            <span className="sb-section-label">КОНТАКТЫ ({allUsers.filter(u => u.username !== username).length})</span>
-            <button className="sb-section-add" onClick={() => setShowContacts(false)} title="Закрыть">✕</button>
+      {/* ══════════  TAB: CONTACTS (mobile)  ══════════ */}
+      {mobileTab === 'contacts' && !showContacts && (
+        <>
+          <div className="sb-search">
+            <span className="sb-search-icon">🔍</span>
+            <input
+              type="text"
+              placeholder="Поиск контактов..."
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
+            />
           </div>
-          {(() => {
-            const contacts = allUsers
-              .filter(u => u.username !== username)
-              .filter(u => {
-                if (!searchFilter.trim()) return true;
-                return u.username.toLowerCase().includes(searchFilter.toLowerCase());
-              });
-            const online = contacts.filter(u => u.online);
-            const offline = contacts.filter(u => !u.online);
-            return (
-              <>
-                {online.length > 0 && (
-                  <div className="sb-section-header">
-                    <span className="sb-section-label">В СЕТИ — {online.length}</span>
-                  </div>
-                )}
-                {online.map(user => (
-                  <div
-                    key={user.username}
-                    className="sb-contact-item"
-                    onClick={() => { onStartPrivateChat(user.username); setShowContacts(false); }}
-                  >
-                    <div className="sb-chat-avatar-wrap">
-                      <div className="sb-chat-avatar" style={{ background: (avatarMap[user.username] || user.avatarUrl) ? 'transparent' : getAvatarColor(user.username) }}>
-                        {(avatarMap[user.username] || user.avatarUrl)
-                          ? <img src={avatarMap[user.username] || user.avatarUrl} alt="" className="sb-avatar-img" />
-                          : getInitials(user.username)}
+          <div className="sb-chat-list">
+            {(() => {
+              const contacts = allUsers
+                .filter(u => u.username !== username)
+                .filter(u => {
+                  if (!searchFilter.trim()) return true;
+                  return u.username.toLowerCase().includes(searchFilter.toLowerCase());
+                });
+              const online = contacts.filter(u => u.online);
+              const offline = contacts.filter(u => !u.online);
+              return (
+                <>
+                  {online.length > 0 && (
+                    <div className="sb-section-header">
+                      <span className="sb-section-label">В СЕТИ — {online.length}</span>
+                    </div>
+                  )}
+                  {online.map(user => (
+                    <div key={user.username} className="sb-contact-item" onClick={() => onStartPrivateChat(user.username)}>
+                      <div className="sb-chat-avatar-wrap">
+                        <div className="sb-chat-avatar" style={{ background: (avatarMap[user.username] || user.avatarUrl) ? 'transparent' : getAvatarColor(user.username) }}>
+                          {(avatarMap[user.username] || user.avatarUrl)
+                            ? <img src={avatarMap[user.username] || user.avatarUrl} alt="" className="sb-avatar-img" />
+                            : getInitials(user.username)}
+                        </div>
+                        <span className="sb-online-dot online" />
                       </div>
-                      <span className="sb-online-dot online" />
-                    </div>
-                    <div className="sb-contact-info">
-                      <span className="sb-contact-name">{user.username}</span>
-                      <span className="sb-contact-status online">В сети</span>
-                    </div>
-                  </div>
-                ))}
-                {offline.length > 0 && (
-                  <div className="sb-section-header">
-                    <span className="sb-section-label">НЕ В СЕТИ — {offline.length}</span>
-                  </div>
-                )}
-                {offline.map(user => (
-                  <div
-                    key={user.username}
-                    className="sb-contact-item"
-                    onClick={() => { onStartPrivateChat(user.username); setShowContacts(false); }}
-                  >
-                    <div className="sb-chat-avatar-wrap">
-                      <div className="sb-chat-avatar" style={{ background: (avatarMap[user.username] || user.avatarUrl) ? 'transparent' : getAvatarColor(user.username) }}>
-                        {(avatarMap[user.username] || user.avatarUrl)
-                          ? <img src={avatarMap[user.username] || user.avatarUrl} alt="" className="sb-avatar-img" />
-                          : getInitials(user.username)}
+                      <div className="sb-contact-info">
+                        <span className="sb-contact-name">{user.username}</span>
+                        <span className="sb-contact-status online">В сети</span>
                       </div>
-                      <span className="sb-online-dot offline" />
                     </div>
-                    <div className="sb-contact-info">
-                      <span className="sb-contact-name">{user.username}</span>
-                      <span className="sb-contact-status offline">{user.lastSeen ? formatLastSeen(user.lastSeen) : 'Не в сети'}</span>
+                  ))}
+                  {offline.length > 0 && (
+                    <div className="sb-section-header">
+                      <span className="sb-section-label">НЕ В СЕТИ — {offline.length}</span>
                     </div>
-                  </div>
-                ))}
-                {contacts.length === 0 && (
-                  <div className="sb-empty">
-                    <span>👥</span>
-                    <p>{searchFilter ? 'Не найдено' : 'Нет пользователей'}</p>
-                  </div>
-                )}
-              </>
-            );
-          })()}
+                  )}
+                  {offline.map(user => (
+                    <div key={user.username} className="sb-contact-item" onClick={() => onStartPrivateChat(user.username)}>
+                      <div className="sb-chat-avatar-wrap">
+                        <div className="sb-chat-avatar" style={{ background: (avatarMap[user.username] || user.avatarUrl) ? 'transparent' : getAvatarColor(user.username) }}>
+                          {(avatarMap[user.username] || user.avatarUrl)
+                            ? <img src={avatarMap[user.username] || user.avatarUrl} alt="" className="sb-avatar-img" />
+                            : getInitials(user.username)}
+                        </div>
+                        <span className="sb-online-dot offline" />
+                      </div>
+                      <div className="sb-contact-info">
+                        <span className="sb-contact-name">{user.username}</span>
+                        <span className="sb-contact-status offline">{user.lastSeen ? formatLastSeen(user.lastSeen) : 'Не в сети'}</span>
+                      </div>
+                    </div>
+                  ))}
+                  {contacts.length === 0 && (
+                    <div className="sb-empty"><span>👥</span><p>{searchFilter ? 'Не найдено' : 'Нет пользователей'}</p></div>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+        </>
+      )}
+
+      {/* ══════════  TAB: SETTINGS (mobile)  ══════════ */}
+      {mobileTab === 'settings' && (
+        <div className="sb-settings-panel">
+          <div className="sb-settings-list">
+            <button className="sb-settings-item" onClick={onShowNews}>
+              <span className="sb-settings-icon">📰</span>
+              <span className="sb-settings-label">Новости</span>
+              <span className="sb-settings-arrow">›</span>
+            </button>
+            <button className="sb-settings-item" onClick={onShowTasks}>
+              <span className="sb-settings-icon">📋</span>
+              <span className="sb-settings-label">Задачи</span>
+              <span className="sb-settings-arrow">›</span>
+            </button>
+            <button className="sb-settings-item" onClick={() => { setShowSearch(!showSearch); }}>
+              <span className="sb-settings-icon">✉️</span>
+              <span className="sb-settings-label">Написать сообщение</span>
+              <span className="sb-settings-arrow">›</span>
+            </button>
+            <button className="sb-settings-item" onClick={() => setShowCreate(true)}>
+              <span className="sb-settings-icon">➕</span>
+              <span className="sb-settings-label">Создать группу</span>
+              <span className="sb-settings-arrow">›</span>
+            </button>
+            <button className="sb-settings-item" onClick={() => setShowJoin(true)}>
+              <span className="sb-settings-icon">🔗</span>
+              <span className="sb-settings-label">Войти по ссылке</span>
+              <span className="sb-settings-arrow">›</span>
+            </button>
+            {installPrompt && (
+              <button className="sb-settings-item" onClick={handleInstall}>
+                <span className="sb-settings-icon">📲</span>
+                <span className="sb-settings-label">Установить приложение</span>
+                <span className="sb-settings-arrow">›</span>
+              </button>
+            )}
+            <button className="sb-settings-item sb-settings-logout" onClick={onLogout}>
+              <span className="sb-settings-icon">🚪</span>
+              <span className="sb-settings-label">Выйти</span>
+              <span className="sb-settings-arrow">›</span>
+            </button>
+          </div>
+
+          {/* User Search Modal */}
+          {showSearch && (
+            <UserSearch
+              token={token}
+              username={username}
+              onStartChat={(user) => { onStartPrivateChat(user); setShowSearch(false); }}
+              onClose={() => setShowSearch(false)}
+            />
+          )}
         </div>
-      ) : (
-      <div className="sb-chat-list">
-        {getSortedRooms().map((room) => renderChatItem(room))}
+      )}
 
-        {rooms.length === 0 && (
-          <div className="sb-empty">
-            <span>💬</span>
-            <p>Нет чатов</p>
+      {/* ══════════  TAB: PROFILE (mobile)  ══════════ */}
+      {mobileTab === 'profile' && (
+        <div className="sb-profile-panel">
+          <div className="sb-profile-card">
+            <div className="sb-profile-avatar" style={{ background: avatarUrl ? 'transparent' : getAvatarColor(username) }}>
+              {avatarUrl
+                ? <img src={avatarUrl} alt="" className="sb-avatar-img" />
+                : getInitials(username)}
+            </div>
+            <div className="sb-profile-name">{username}</div>
+            <div className={`sb-profile-status ${connected ? 'online' : ''}`}>
+              {connected ? '● В сети' : '● Офлайн'}
+            </div>
           </div>
-        )}
-
-        {rooms.length > 0 && getSortedRooms().length === 0 && chatFilter === 'unread' && (
-          <div className="sb-empty">
-            <span>✅</span>
-            <p>Все прочитано</p>
+          <div className="sb-settings-list">
+            <button className="sb-settings-item" onClick={() => setShowProfile(true)}>
+              <span className="sb-settings-icon">✏️</span>
+              <span className="sb-settings-label">Редактировать профиль</span>
+              <span className="sb-settings-arrow">›</span>
+            </button>
           </div>
-        )}
-
-        {rooms.length > 0 && getSortedRooms().length === 0 && chatFilter !== 'unread' && searchFilter && (
-          <div className="sb-empty">
-            <span>🔍</span>
-            <p>Не найдено</p>
-          </div>
-        )}
-      </div>
+        </div>
       )}
 
       {showCreate && <CreateRoom onCreateRoom={onCreateRoom} onClose={() => setShowCreate(false)} />}
