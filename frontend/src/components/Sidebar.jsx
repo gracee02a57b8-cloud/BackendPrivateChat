@@ -6,6 +6,7 @@ import ProfileModal from './ProfileModal';
 import MyProfilePage from './MyProfilePage';
 import EditProfilePage from './EditProfilePage';
 import RecentCalls from './RecentCalls';
+import AiChatPage from './AiChatPage';
 import { copyToClipboard } from '../utils/clipboard';
 import appSettings from '../utils/appSettings';
 import { getAvatarColor, getInitials, formatLastSeen } from '../utils/avatar';
@@ -245,7 +246,7 @@ export default function Sidebar({
   return (
     <div className={`chat-sidebar${sidebarOpen ? ' open' : ''}`}>
       {/* ── Header (hidden in profile tab) ── */}
-      {mobileTab !== 'profile' && (
+      {mobileTab !== 'profile' && mobileTab !== 'ai' && (
       <div className="sb-header">
         <div className="sb-header-left">
           <button className="sb-close-btn" onClick={onCloseSidebar} aria-label="Закрыть меню"><ArrowLeft size={20} /></button>
@@ -253,6 +254,7 @@ export default function Sidebar({
             {mobileTab === 'chats' && 'BarsikChat'}
             {mobileTab === 'contacts' && 'Контакты'}
             {mobileTab === 'settings' && 'Песочница'}
+            {mobileTab === 'ai' && 'AI Помощник'}
             {mobileTab === 'profile' && 'Профиль'}
           </div>
           <div className="sb-desktop-header-user">
@@ -628,6 +630,11 @@ export default function Sidebar({
             />
           )}
         </div>
+      )}
+
+      {/* ══════════  TAB: AI (mobile)  ══════════ */}
+      {mobileTab === 'ai' && (
+        <AiChatPage />
       )}
 
       {/* ══════════  TAB: PROFILE (mobile)  ══════════ */}

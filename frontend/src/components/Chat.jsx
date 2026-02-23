@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MessageSquare, Users, User, FlaskConical } from 'lucide-react';
+import { MessageSquare, Users, User, FlaskConical, Bot } from 'lucide-react';
 import Sidebar from './Sidebar';
 import ChatRoom from './ChatRoom';
 import TaskPanel from './TaskPanel';
@@ -1489,6 +1489,10 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
         <button className={`bottom-nav-item${mobileTab === 'settings' ? ' active' : ''}`} onClick={() => { setMobileTab('settings'); if (activeRoomId) setActiveRoomId(null); }}>
           <span className="bottom-nav-icon"><FlaskConical size={22} /></span>
           <span className="bottom-nav-label">Песочница</span>
+        </button>
+        <button className={`bottom-nav-item${mobileTab === 'ai' ? ' active' : ''}`} onClick={() => { setMobileTab('ai'); if (activeRoomId) setActiveRoomId(null); }}>
+          <span className="bottom-nav-icon"><Bot size={22} /></span>
+          <span className="bottom-nav-label">AI</span>
         </button>
         <button className={`bottom-nav-item${mobileTab === 'profile' ? ' active' : ''}`} onClick={() => { setMobileTab('profile'); if (activeRoomId) setActiveRoomId(null); }}>
           <span className="bottom-nav-icon">
