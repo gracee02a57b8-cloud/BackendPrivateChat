@@ -45,6 +45,7 @@ class ChatWebSocketHandlerTest {
     @Mock private CallLogRepository callLogRepository;
     @Mock private WebPushService webPushService;
     @Mock private BlockedUserRepository blockedUserRepository;
+    @Mock private com.example.webrtcchat.service.StoryService storyService;
     @Mock private WebSocketSession session;
 
     private ChatWebSocketHandler handler;
@@ -52,7 +53,7 @@ class ChatWebSocketHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new ChatWebSocketHandler(chatService, jwtService, roomService, schedulerService, taskService, conferenceService, callLogRepository, webPushService, blockedUserRepository);
+        handler = new ChatWebSocketHandler(chatService, jwtService, roomService, schedulerService, taskService, conferenceService, callLogRepository, webPushService, blockedUserRepository, storyService);
     }
 
     // === Connection ===
