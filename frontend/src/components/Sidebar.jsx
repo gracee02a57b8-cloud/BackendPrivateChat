@@ -99,7 +99,27 @@ export default function Sidebar({
   const [showContacts, setShowContacts] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState(null);
   const menuRef = useRef(null);
+
+  // PWA install prompt
+  useEffect(() => {
+    const handler = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    // Hide button once installed
+    window.addEventListener('appinstalled', () => setInstallPrompt(null));
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const result = await installPrompt.userChoice;
+    if (result.outcome === 'accepted') setInstallPrompt(null);
+  };
 
   // Click-outside handler for three-dot menu (Bug 3 fix)
   useEffect(() => {
@@ -252,6 +272,9 @@ export default function Sidebar({
               <button onClick={() => { setShowMenu(false); setShowSearch(!showSearch); }}>✉️ Написать</button>
               <button onClick={() => { setShowMenu(false); setShowCreate(true); }}>➕ Создать группу</button>
               <button onClick={() => { setShowMenu(false); setShowJoin(true); }}>🔗 Войти по ссылке</button>
+              {installPrompt && (
+                <button onClick={() => { setShowMenu(false); handleInstall(); }}>📲 Установить приложение</button>
+              )}
               <button onClick={() => { setShowMenu(false); onLogout(); }}>🚪 Выйти</button>
             </div>
           )}
