@@ -39,7 +39,7 @@ export default function CallScreen({
   securityCode,
   onUpgradeToConference,
 }) {
-  const isVideo = callType === 'video';
+  const isVideo = callType === 'video' && !isVideoOff;
 
   // Attach ref to video elements
   const localVidEl = useRef(null);
@@ -50,9 +50,9 @@ export default function CallScreen({
     if (localVideoRef) localVideoRef.current = localVidEl.current;
     if (remoteVideoRef) {
       // For video calls → use <video>; for audio calls → use hidden <audio>
-      remoteVideoRef.current = isVideo ? remoteVidEl.current : remoteAudioEl.current;
+      remoteVideoRef.current = callType === 'video' ? remoteVidEl.current : remoteAudioEl.current;
     }
-  }, [localVideoRef, remoteVideoRef, isVideo]);
+  }, [localVideoRef, remoteVideoRef, callType]);
 
   const statusLabel =
     callState === 'outgoing' ? 'Вызываем...' :
@@ -62,7 +62,7 @@ export default function CallScreen({
   return (
     <div className={`call-screen ${isVideo ? 'call-screen-video' : 'call-screen-audio'}`}>
       {/* Remote video (full background) */}
-      {isVideo && (
+      {callType === 'video' && (
         <video
           ref={remoteVidEl}
           className="call-remote-video"
@@ -100,7 +100,7 @@ export default function CallScreen({
       )}
 
       {/* Local video (picture-in-picture) */}
-      {isVideo && (
+      {callType === 'video' && (
         <video
           ref={localVidEl}
           className="call-local-video"
@@ -132,15 +132,13 @@ export default function CallScreen({
           {isMuted ? '🔇' : '🎤'}
         </button>
 
-        {isVideo && (
-          <button
-            className={`call-control-btn ${isVideoOff ? 'active' : ''}`}
-            onClick={onToggleVideo}
-            title={isVideoOff ? 'Включить камеру' : 'Выключить камеру'}
-          >
-            {isVideoOff ? '📷' : '📹'}
-          </button>
-        )}
+        <button
+          className={`call-control-btn ${callType === 'video' && isVideoOff ? 'active' : ''}`}
+          onClick={onToggleVideo}
+          title={callType === 'video' && !isVideoOff ? 'Выключить камеру' : 'Включить камеру'}
+        >
+          {callType === 'video' && !isVideoOff ? '📹' : '📷'}
+        </button>
 
         {callState === 'active' && onUpgradeToConference && (
           <button

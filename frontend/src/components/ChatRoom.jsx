@@ -141,6 +141,11 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
   const [isRecording, setIsRecording] = useState(false);
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchIndex, setSearchIndex] = useState(0);
+  const searchInputRef = useRef(null);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const inputRef = useRef(null);
@@ -187,6 +192,10 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
     setSelectionPopup(null);
     setMentionQuery(null);
     setShowGroupInfo(false);
+    setShowSearch(false);
+    setSearchQuery('');
+    setSearchResults([]);
+    setSearchIndex(0);
   }, [roomName]);
 
   // Close context menu on any click
@@ -508,6 +517,52 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
     }
   };
 
+  // ──── Search logic ────
+  const handleSearchChange = (e) => {
+    const q = e.target.value;
+    setSearchQuery(q);
+    if (!q.trim()) {
+      setSearchResults([]);
+      setSearchIndex(0);
+      return;
+    }
+    const lower = q.toLowerCase();
+    const results = messages.filter(
+      m => m.content && m.type !== 'JOIN' && m.type !== 'LEAVE' && m.content.toLowerCase().includes(lower)
+    );
+    setSearchResults(results);
+    setSearchIndex(results.length > 0 ? results.length - 1 : 0);
+    if (results.length > 0) {
+      scrollToMessage(results[results.length - 1].id);
+    }
+  };
+
+  const searchPrev = () => {
+    if (searchResults.length === 0) return;
+    const newIdx = searchIndex > 0 ? searchIndex - 1 : searchResults.length - 1;
+    setSearchIndex(newIdx);
+    scrollToMessage(searchResults[newIdx].id);
+  };
+
+  const searchNext = () => {
+    if (searchResults.length === 0) return;
+    const newIdx = searchIndex < searchResults.length - 1 ? searchIndex + 1 : 0;
+    setSearchIndex(newIdx);
+    scrollToMessage(searchResults[newIdx].id);
+  };
+
+  const closeSearch = () => {
+    setShowSearch(false);
+    setSearchQuery('');
+    setSearchResults([]);
+    setSearchIndex(0);
+  };
+
+  const openSearch = () => {
+    setShowSearch(true);
+    setTimeout(() => searchInputRef.current?.focus(), 50);
+  };
+
   const startReply = (msg) => {
     setReplyingTo(msg);
     setEditingMsg(null);
@@ -732,25 +787,18 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
         </div>
         <div className="chat-header-actions">
           {activeRoom?.type === 'PRIVATE' && onStartCall && (
-            <>
-              <button
-                className="call-header-btn"
-                onClick={() => onStartCall('audio')}
-                disabled={callState !== 'idle' && callState !== undefined}
-                title="Аудиозвонок"
-              >
-                📞
-              </button>
-              <button
-                className="call-header-btn"
-                onClick={() => onStartCall('video')}
-                disabled={callState !== 'idle' && callState !== undefined}
-                title="Видеозвонок"
-              >
-                📹
-              </button>
-            </>
+            <button
+              className="call-header-btn"
+              onClick={() => onStartCall('audio')}
+              disabled={callState !== 'idle' && callState !== undefined}
+              title="Позвонить"
+            >
+              📞
+            </button>
           )}
+          <button className="search-header-btn" onClick={openSearch} title="Поиск по сообщениям">
+            🔍
+          </button>
           {isE2E && (
             <button className="e2e-badge" onClick={onShowSecurityCode} title="Сквозное шифрование — нажмите для проверки">
               🔒 E2E
@@ -762,6 +810,33 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
           {copyToast && <span className="copy-toast">Ссылка скопирована!</span>}
         </div>
       </div>
+
+      {/* Search bar */}
+      {showSearch && (
+        <div className="chat-search-bar">
+          <input
+            ref={searchInputRef}
+            type="text"
+            className="chat-search-input"
+            placeholder="Поиск по сообщениям..."
+            value={searchQuery}
+            onChange={handleSearchChange}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') closeSearch();
+              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); searchNext(); }
+              if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); searchPrev(); }
+            }}
+          />
+          {searchQuery && (
+            <span className="chat-search-count">
+              {searchResults.length > 0 ? `${searchIndex + 1} из ${searchResults.length}` : 'Не найдено'}
+            </span>
+          )}
+          <button className="search-nav-btn" onClick={searchPrev} disabled={searchResults.length === 0} title="Предыдущее">▲</button>
+          <button className="search-nav-btn" onClick={searchNext} disabled={searchResults.length === 0} title="Следующее">▼</button>
+          <button className="search-close-btn" onClick={closeSearch} title="Закрыть">✕</button>
+        </div>
+      )}
 
       <div className="messages" ref={messagesContainerRef}>
         {/* Pinned message banner */}
@@ -822,13 +897,16 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
           else if (isGrouped && isLastInGroup) msgClass += ' grouped last';
           else if (!isGrouped && !isLastInGroup) msgClass += ' first';
 
+          const isSearchMatch = searchResults.some(r => r.id === msg.id);
+          const isCurrentSearch = searchResults[searchIndex]?.id === msg.id;
+
           return (
             <div key={msg.id || i}>
               {dateSep}
               <div
                 id={`msg-${msg.id}`}
                 data-msg-id={msg.id}
-                className={msgClass}
+                className={`${msgClass}${isSearchMatch ? ' search-match' : ''}${isCurrentSearch ? ' search-current' : ''}`}
                 onContextMenu={(e) => handleContextMenu(e, msg)}
               >
                 {isSys ? (

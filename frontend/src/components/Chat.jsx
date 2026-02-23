@@ -9,7 +9,7 @@ import SecurityCodeModal from './SecurityCodeModal';
 import IncomingCallModal from './IncomingCallModal';
 import CallScreen from './CallScreen';
 import ConferenceScreen from './ConferenceScreen';
-import ToastContainer from './Toast';
+import ToastContainer, { showToast } from './Toast';
 import useWebRTC from '../hooks/useWebRTC';
 import useConference from '../hooks/useConference';
 import useMediaPermissions from '../hooks/useMediaPermissions';
@@ -884,6 +884,13 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
     await new Promise(r => setTimeout(r, 300));
     // Create conference — the current user becomes the creator
     await conference.createConference(type);
+    // Auto-copy conference link and notify user
+    const copied = await conference.copyShareLink();
+    if (copied) {
+      showToast('Конференция создана! Ссылка скопирована 📋', 'success');
+    } else {
+      showToast('Конференция создана!', 'success');
+    }
   }, [webrtc, conference]);
 
   // Compute security code when call becomes active (Bug 5)

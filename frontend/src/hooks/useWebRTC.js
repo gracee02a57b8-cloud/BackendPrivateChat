@@ -309,6 +309,27 @@ export default function useWebRTC({ wsRef, username, token }) {
     const from = msg.sender;
     const type = extra.callType || 'audio';
 
+    // Mid-call renegotiation (e.g. peer toggled video on) — handle inline
+    if (extra.renegotiate && pcRef.current && typeof pcRef.current.setRemoteDescription === 'function' && callState === 'active') {
+      try {
+        const offer = JSON.parse(extra.sdp);
+        await pcRef.current.setRemoteDescription(new RTCSessionDescription(offer));
+
+        const answer = await pcRef.current.createAnswer();
+        await pcRef.current.setLocalDescription(answer);
+
+        await sendSignal('CALL_ANSWER', from, {
+          sdp: JSON.stringify(answer),
+          renegotiate: true,
+        });
+
+        if (type === 'video') setCallType('video');
+      } catch (err) {
+        console.error('[WebRTC] renegotiation error:', err);
+      }
+      return;
+    }
+
     // If already in a call → send BUSY
     if (callState !== 'idle') {
       sendSignal('CALL_BUSY', from, {});
@@ -408,8 +429,8 @@ export default function useWebRTC({ wsRef, username, token }) {
     const extra = await decryptExtra(msg);
     if (!extra.sdp || !pcRef.current || typeof pcRef.current.setRemoteDescription !== 'function') return;
 
-    // E2E media: set peer's key for decryption (or disable encryption if peer doesn't support)
-    if (callCryptoRef.current) {
+    // E2E media: set peer's key for decryption (skip for renegotiation — key already set)
+    if (!extra.renegotiate && callCryptoRef.current) {
       if (extra.mediaKey) {
         await callCryptoRef.current.setDecryptKey(extra.mediaKey);
       } else {
@@ -426,7 +447,8 @@ export default function useWebRTC({ wsRef, username, token }) {
         await pcRef.current.addIceCandidate(new RTCIceCandidate(c)).catch(() => {});
       }
       pendingCandidates.current = [];
-      setCallState('connecting');
+      // Don't reset callState during mid-call renegotiation
+      if (!extra.renegotiate) setCallState('connecting');
     } catch (err) {
       console.error('[WebRTC] handleAnswer error:', err);
     }
@@ -465,13 +487,55 @@ export default function useWebRTC({ wsRef, username, token }) {
     setIsMuted(prev => !prev);
   }, []);
 
-  /** Toggle video */
-  const toggleVideo = useCallback(() => {
+  /** Toggle video — add video track dynamically if audio-only call, or toggle existing */
+  const toggleVideo = useCallback(async () => {
     const stream = localStreamRef.current;
-    if (!stream) return;
-    stream.getVideoTracks().forEach(t => { t.enabled = !t.enabled; });
-    setIsVideoOff(prev => !prev);
-  }, []);
+    const pc = pcRef.current;
+    if (!stream || !pc || typeof pc.addTrack !== 'function') return;
+
+    const existingVideoTracks = stream.getVideoTracks();
+
+    if (existingVideoTracks.length > 0) {
+      // Already have video tracks — just toggle enabled
+      existingVideoTracks.forEach(t => { t.enabled = !t.enabled; });
+      setIsVideoOff(prev => !prev);
+    } else {
+      // Audio-only call — dynamically add video track + renegotiate
+      try {
+        const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const videoTrack = videoStream.getVideoTracks()[0];
+        if (!videoTrack) return;
+
+        // Add to local stream so CallScreen can display it
+        stream.addTrack(videoTrack);
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+        }
+
+        // Add to peer connection
+        const sender = pc.addTrack(videoTrack, stream);
+        if (callCryptoRef.current) callCryptoRef.current.setupSenderEncryption(sender);
+
+        // Renegotiate — create new offer and send to peer
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+
+        await sendSignal('CALL_OFFER', callPeer, {
+          callType: 'video',
+          sdp: JSON.stringify(offer),
+          renegotiate: true,
+        });
+
+        setCallType('video');
+        setIsVideoOff(false);
+      } catch (err) {
+        console.error('[WebRTC] toggleVideo add track error:', err);
+        if (err.name === 'NotAllowedError' || err.name === 'NotFoundError') {
+          alert('Нет доступа к камере. Проверьте разрешения браузера.');
+        }
+      }
+    }
+  }, [sendSignal, callPeer]);
 
   // Cleanup on unmount
   useEffect(() => {

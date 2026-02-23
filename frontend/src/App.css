@@ -3342,6 +3342,27 @@
     font-size: 1rem;
   }
 
+  .search-header-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+
+  .chat-search-bar {
+    padding: 5px 10px;
+    gap: 4px;
+  }
+
+  .chat-search-input {
+    font-size: 0.85rem;
+    padding: 5px 10px;
+  }
+
+  .chat-search-count {
+    font-size: 0.75rem;
+    min-width: 60px;
+  }
+
   .copy-link-btn {
     font-size: 0.75rem;
     padding: 0.25rem 0.5rem;
@@ -5275,6 +5296,124 @@
 .call-header-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* ===== Search Header Button ===== */
+.search-header-btn {
+  background: none;
+  border: 1px solid #232e3c;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  padding: 0;
+}
+
+.search-header-btn:hover {
+  background: #232e3c;
+  border-color: #6ab3f3;
+  transform: scale(1.1);
+}
+
+/* ===== Chat Search Bar ===== */
+.chat-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  background: #1a2332;
+  border-bottom: 1px solid #232e3c;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.chat-search-input {
+  flex: 1;
+  background: #0d1520;
+  border: 1px solid #232e3c;
+  border-radius: 8px;
+  padding: 7px 12px;
+  color: #e4e6ea;
+  font-size: 0.92rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.chat-search-input:focus {
+  border-color: #6ab3f3;
+}
+
+.chat-search-input::placeholder {
+  color: #5a6270;
+}
+
+.chat-search-count {
+  font-size: 0.82rem;
+  color: #8a9bb0;
+  white-space: nowrap;
+  min-width: 72px;
+  text-align: center;
+}
+
+.search-nav-btn {
+  background: none;
+  border: 1px solid #232e3c;
+  border-radius: 6px;
+  color: #8a9bb0;
+  width: 28px;
+  height: 28px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.search-nav-btn:hover:not(:disabled) {
+  background: #232e3c;
+  color: #6ab3f3;
+}
+
+.search-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.search-close-btn {
+  background: none;
+  border: none;
+  color: #8a9bb0;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.search-close-btn:hover {
+  color: #e94560;
+  background: rgba(233, 69, 96, 0.1);
+}
+
+/* Search result highlights */
+.message.search-match .message-bubble {
+  box-shadow: 0 0 0 1px rgba(106, 179, 243, 0.3);
+}
+
+.message.search-current .message-bubble {
+  box-shadow: 0 0 0 2px #6ab3f3;
+  background: rgba(106, 179, 243, 0.08);
 }
 
 /* ===== Incoming Call Modal ===== */
