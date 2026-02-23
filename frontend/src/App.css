@@ -3341,37 +3341,22 @@
 
 /* ===== Responsive: Mobile / Tablets portrait (max-width: 768px) ===== */
 @media (max-width: 768px) {
-  /* --- Hamburger menu (only shows when inside a chat room, via desktop-only-hamburger) --- */
+  /* --- Hamburger: completely hidden on mobile (back button replaces it) --- */
   .mobile-hamburger {
-    display: block;
+    display: none !important;
   }
 
-  /* --- Sidebar: slide-in drawer (when inside a chat room) --- */
+  /* --- Sidebar: hidden when inside a chat (no drawer, no overlay) --- */
   .chat-container:not(.mobile-sidebar-view) .chat-sidebar {
-    position: fixed;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 280px;
-    transform: translateX(-100%);
-    box-shadow: 5px 0 30px rgba(0, 0, 0, 0.5);
-  }
-
-  .chat-container:not(.mobile-sidebar-view) .chat-sidebar.open {
-    transform: translateX(0);
+    display: none;
   }
 
   .sidebar-overlay {
-    display: block;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: calc(var(--z-sidebar, 1000) - 1);
-    animation: fadeIn 0.2s ease;
+    display: none !important;
   }
 
   .sb-close-btn {
-    display: flex;
+    display: none;
   }
 
   /* Prevent body scroll when sidebar is open */
@@ -7147,13 +7132,9 @@
     display: none !important;
   }
 
-  /* Desktop-only hamburger: hidden on mobile unless in a chat */
+  /* Hamburger fully hidden on mobile */
   .desktop-only-hamburger {
-    display: none;
-  }
-
-  .chat-container:not(.mobile-sidebar-view) .desktop-only-hamburger {
-    display: block;
+    display: none !important;
   }
 
   /* Hide bottom nav when viewing a chat room */
