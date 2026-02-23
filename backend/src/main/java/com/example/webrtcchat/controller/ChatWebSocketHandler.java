@@ -4,6 +4,7 @@ import com.example.webrtcchat.dto.MessageDto;
 import com.example.webrtcchat.dto.RoomDto;
 import com.example.webrtcchat.dto.TaskDto;
 import com.example.webrtcchat.entity.CallLogEntity;
+import com.example.webrtcchat.repository.BlockedUserRepository;
 import com.example.webrtcchat.repository.CallLogRepository;
 import com.example.webrtcchat.service.ChatService;
 import com.example.webrtcchat.service.ConferenceService;
@@ -49,6 +50,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final ConferenceService conferenceService;
     private final CallLogRepository callLogRepository;
     private final WebPushService webPushService;
+    private final BlockedUserRepository blockedUserRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // Track active call start times: "caller:callee" → epoch millis
@@ -59,7 +61,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     public ChatWebSocketHandler(ChatService chatService, JwtService jwtService, RoomService roomService,
                                 SchedulerService schedulerService, TaskService taskService,
                                 ConferenceService conferenceService, CallLogRepository callLogRepository,
-                                WebPushService webPushService) {
+                                WebPushService webPushService, BlockedUserRepository blockedUserRepository) {
         this.chatService = chatService;
         this.jwtService = jwtService;
         this.roomService = roomService;
@@ -68,6 +70,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         this.conferenceService = conferenceService;
         this.callLogRepository = callLogRepository;
         this.webPushService = webPushService;
+        this.blockedUserRepository = blockedUserRepository;
     }
 
     @Override
@@ -218,6 +221,22 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
+        // Block check for PRIVATE rooms
+        RoomDto senderRoom = roomService.getRoomById(roomId);
+        if (senderRoom != null && senderRoom.getType() == RoomType.PRIVATE) {
+            String otherUser = senderRoom.getMembers().stream()
+                    .filter(m -> !m.equals(username)).findFirst().orElse(null);
+            if (otherUser != null && isBlocked(username, otherUser)) {
+                log.info("Message from '{}' to '{}' blocked (user block)", username, otherUser);
+                MessageDto err = new MessageDto();
+                err.setType(MessageType.ERROR);
+                err.setContent("blocked");
+                err.setTimestamp(now());
+                sendSafe(session, serialize(err));
+                return;
+            }
+        }
+
         chatService.send(roomId, incoming);
         broadcastToRoom(roomId, incoming);
 
@@ -248,6 +267,14 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         if (room == null) return false;
         if (room.getType() == RoomType.GENERAL) return true;
         return room.getMembers().contains(username);
+    }
+
+    /**
+     * Check if either user has blocked the other.
+     */
+    private boolean isBlocked(String userA, String userB) {
+        return blockedUserRepository.existsByBlockerAndBlocked(userA, userB)
+                || blockedUserRepository.existsByBlockerAndBlocked(userB, userA);
     }
 
     private void handleEdit(String username, MessageDto incoming) {
@@ -420,6 +447,22 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         if (extra == null) return;
         String target = extra.get("target");
         if (target == null || target.isEmpty()) return;
+
+        // Block check: if either user blocked the other, reject calls
+        if (incoming.getType() == MessageType.CALL_OFFER && isBlocked(username, target)) {
+            log.info("Call from '{}' to '{}' blocked (user block)", username, target);
+            MessageDto blocked = new MessageDto();
+            blocked.setType(MessageType.CALL_END);
+            blocked.setSender(target);
+            blocked.setTimestamp(now());
+            Map<String, String> endExtra = new HashMap<>();
+            endExtra.put("reason", "unavailable");
+            endExtra.put("target", username);
+            blocked.setExtra(endExtra);
+            WebSocketSession callerSession = userSessions.get(username);
+            if (callerSession != null) sendSafe(callerSession, serialize(blocked));
+            return;
+        }
 
         // Set sender and timestamp
         incoming.setSender(username);

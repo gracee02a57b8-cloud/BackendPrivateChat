@@ -48,6 +48,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   const [isConfMinimized, setIsConfMinimized] = useState(false);
   const [newlyCreatedRoomId, setNewlyCreatedRoomId] = useState(null);
   const [showAddMembersPanel, setShowAddMembersPanel] = useState(false);
+  const [myContacts, setMyContacts] = useState([]);
   const wsRef = useRef(null);
   const loadedRooms = useRef(new Set());
   const activeRoomIdRef = useRef(null);
@@ -719,6 +720,14 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
         setAvatarMap(prev => ({ ...prev, ...map }));
       })
       .catch(console.error);
+
+    // Also fetch personal contacts list
+    fetch('/api/contacts', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setMyContacts(data))
+      .catch(() => {});
   };
 
   const selectRoom = (roomId) => {
@@ -1170,6 +1179,8 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
         wsRef={wsRef}
         onAvatarChange={onAvatarChange}
         mobileTab={mobileTab}
+        myContacts={myContacts}
+        onRefreshContacts={fetchContacts}
         onStartCall={async (peer, type) => {
           await startPrivateChat(peer);
           webrtc.startCall(peer, type);
@@ -1217,6 +1228,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           showAddMembers={newlyCreatedRoomId === activeRoomId && newlyCreatedRoomId !== null}
           onAddMembers={() => setShowAddMembersPanel(true)}
           onDismissAddMembers={() => setNewlyCreatedRoomId(null)}
+          onStartPrivateChat={startPrivateChat}
         />
       )}
       {showAddMembersPanel && (

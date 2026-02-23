@@ -2,6 +2,7 @@ package com.example.webrtcchat.controller;
 
 import com.example.webrtcchat.dto.MessageDto;
 import com.example.webrtcchat.dto.RoomDto;
+import com.example.webrtcchat.repository.BlockedUserRepository;
 import com.example.webrtcchat.repository.CallLogRepository;
 import com.example.webrtcchat.service.*;
 import com.example.webrtcchat.types.MessageType;
@@ -43,6 +44,7 @@ class ChatWebSocketHandlerTest {
     @Mock private ConferenceService conferenceService;
     @Mock private CallLogRepository callLogRepository;
     @Mock private WebPushService webPushService;
+    @Mock private BlockedUserRepository blockedUserRepository;
     @Mock private WebSocketSession session;
 
     private ChatWebSocketHandler handler;
@@ -50,7 +52,7 @@ class ChatWebSocketHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new ChatWebSocketHandler(chatService, jwtService, roomService, schedulerService, taskService, conferenceService, callLogRepository, webPushService);
+        handler = new ChatWebSocketHandler(chatService, jwtService, roomService, schedulerService, taskService, conferenceService, callLogRepository, webPushService, blockedUserRepository);
     }
 
     // === Connection ===

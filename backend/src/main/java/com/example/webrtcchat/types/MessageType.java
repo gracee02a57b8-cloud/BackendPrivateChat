@@ -44,5 +44,7 @@ public enum MessageType {
     CONF_PEERS,     // server → new joiner: list of existing peers
     CONF_OFFER,     // peer-to-peer SDP offer within conference
     CONF_ANSWER,    // peer-to-peer SDP answer within conference
-    CONF_ICE        // peer-to-peer ICE candidate within conference
+    CONF_ICE,       // peer-to-peer ICE candidate within conference
+
+    ERROR           // server → client error notification
 }

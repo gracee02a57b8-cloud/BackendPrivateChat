@@ -5,6 +5,7 @@ import VoiceRecorder from './VoiceRecorder';
 import VoiceMessage from './VoiceMessage';
 import VideoCircleRecorder from './VideoCircleRecorder';
 import VideoCircleMessage from './VideoCircleMessage';
+import UserProfilePage from './UserProfilePage';
 import e2eManager from '../crypto/E2EManager';
 import useDecryptedUrl from '../hooks/useDecryptedUrl';
 import { copyToClipboard } from '../utils/clipboard';
@@ -220,7 +221,7 @@ function CallLogBubble({ msg, username }) {
   );
 }
 
-export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, onDeleteMessage, onScheduleMessage, scheduledMessages, roomName, username, connected, token, activeRoom, onlineUsers, allUsers = [], typingUsers = [], onTyping, isE2E, onShowSecurityCode, avatarMap = {}, onStartCall, callState, onLeaveRoom, onBack, onForwardToSaved, onJoinRoom, onJoinConference, showAddMembers, onAddMembers, onDismissAddMembers }) {
+export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, onDeleteMessage, onScheduleMessage, scheduledMessages, roomName, username, connected, token, activeRoom, onlineUsers, allUsers = [], typingUsers = [], onTyping, isE2E, onShowSecurityCode, avatarMap = {}, onStartCall, callState, onLeaveRoom, onBack, onForwardToSaved, onJoinRoom, onJoinConference, showAddMembers, onAddMembers, onDismissAddMembers, onStartPrivateChat }) {
   const [input, setInput] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
@@ -243,6 +244,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
   const [isRecording, setIsRecording] = useState(false);
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
+  const [showUserProfile, setShowUserProfile] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -868,7 +870,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
           const otherUser = getOtherUserInPM();
           const av = avatarMap[otherUser];
           return (
-            <div className="chat-header-avatar" style={{ background: av ? 'transparent' : getAvatarColor(otherUser || '') }}>
+            <div className="chat-header-avatar chat-header-clickable" onClick={() => setShowUserProfile(true)} style={{ background: av ? 'transparent' : getAvatarColor(otherUser || '') }}>
               {av ? <img src={av} alt="" className="chat-header-avatar-img" /> : getInitials(otherUser || '?')}
             </div>
           );
@@ -880,12 +882,12 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
         )}
 
         <div
-          className={`chat-header-info${activeRoom?.type === 'ROOM' ? ' chat-header-clickable' : ''}`}
-          onClick={activeRoom?.type === 'ROOM' ? () => setShowGroupInfo(true) : undefined}
+          className={`chat-header-info${(activeRoom?.type === 'ROOM' || activeRoom?.type === 'PRIVATE') ? ' chat-header-clickable' : ''}`}
+          onClick={activeRoom?.type === 'ROOM' ? () => setShowGroupInfo(true) : activeRoom?.type === 'PRIVATE' ? () => setShowUserProfile(true) : undefined}
         >
           <div className="chat-header-title-row">
             <h3>{roomName}</h3>
-            {activeRoom?.type === 'ROOM' && <span className="chat-header-chevron">›</span>}
+            {(activeRoom?.type === 'ROOM' || activeRoom?.type === 'PRIVATE') && <span className="chat-header-chevron">›</span>}
           </div>
           {activeRoom?.type === 'PRIVATE' && (() => {
             const otherUser = getOtherUserInPM();
@@ -1402,6 +1404,19 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
           onClose={() => setShowGroupInfo(false)}
           onLeaveRoom={onLeaveRoom}
         />
+      )}
+      {showUserProfile && activeRoom?.type === 'PRIVATE' && (
+        <div className="user-profile-overlay">
+          <UserProfilePage
+            targetUsername={getOtherUserInPM()}
+            token={token}
+            onBack={() => setShowUserProfile(false)}
+            onStartChat={onStartPrivateChat}
+            onStartCall={(peer, type) => { setShowUserProfile(false); if (onStartCall) onStartCall(type); }}
+            onlineUsers={onlineUsers}
+            avatarMap={avatarMap}
+          />
+        </div>
       )}
     </div>
   );

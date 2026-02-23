@@ -95,6 +95,8 @@ export default function Sidebar({
   mobileTab = 'chats',
   onOpenSaved,
   onStartCall,
+  myContacts = [],
+  onRefreshContacts,
 }) {
   const [chatFilter, setChatFilter] = useState('all');
   const [showSearch, setShowSearch] = useState(false);
@@ -493,7 +495,62 @@ export default function Sidebar({
               <div className="contacts-action-icon" style={{ background: '#4ecca3' }}>📞</div>
               <span className="contacts-action-label">Недавние звонки</span>
             </div>
-            <div className="contacts-sort-label">Сортировка по времени захода</div>
+
+            {/* My Contacts section */}
+            {(() => {
+              const myContactNames = new Set(myContacts.map(c => c.contact || c.username || c));
+              const myContactUsers = allUsers
+                .filter(u => myContactNames.has(u.username) && u.username !== username)
+                .filter(u => {
+                  if (!searchFilter.trim()) return true;
+                  return u.username.toLowerCase().includes(searchFilter.toLowerCase());
+                });
+              if (myContactUsers.length > 0) {
+                const mcOnline = myContactUsers.filter(u => u.online);
+                const mcOffline = myContactUsers.filter(u => !u.online);
+                return (
+                  <>
+                    <div className="contacts-sort-label">⭐ Мои контакты — {myContactUsers.length}</div>
+                    {mcOnline.map(user => (
+                      <div key={'mc-' + user.username} className="sb-contact-item" onClick={() => onStartPrivateChat(user.username)}>
+                        <div className="sb-chat-avatar-wrap">
+                          <div className="sb-chat-avatar" style={{ background: (avatarMap[user.username] || user.avatarUrl) ? 'transparent' : getAvatarColor(user.username) }}>
+                            {(avatarMap[user.username] || user.avatarUrl)
+                              ? <img src={avatarMap[user.username] || user.avatarUrl} alt="" className="sb-avatar-img" />
+                              : getInitials(user.username)}
+                          </div>
+                          <span className="sb-online-dot online" />
+                        </div>
+                        <div className="sb-contact-info">
+                          <span className="sb-contact-name">{user.username}</span>
+                          <span className="sb-contact-status online">В сети</span>
+                        </div>
+                      </div>
+                    ))}
+                    {mcOffline.map(user => (
+                      <div key={'mc-' + user.username} className="sb-contact-item" onClick={() => onStartPrivateChat(user.username)}>
+                        <div className="sb-chat-avatar-wrap">
+                          <div className="sb-chat-avatar" style={{ background: (avatarMap[user.username] || user.avatarUrl) ? 'transparent' : getAvatarColor(user.username) }}>
+                            {(avatarMap[user.username] || user.avatarUrl)
+                              ? <img src={avatarMap[user.username] || user.avatarUrl} alt="" className="sb-avatar-img" />
+                              : getInitials(user.username)}
+                          </div>
+                          <span className="sb-online-dot offline" />
+                        </div>
+                        <div className="sb-contact-info">
+                          <span className="sb-contact-name">{user.username}</span>
+                          <span className="sb-contact-status offline">{user.lastSeen ? formatLastSeen(user.lastSeen) : 'Не в сети'}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                );
+              }
+              return null;
+            })()}
+
+            {/* All Users section */}
+            <div className="contacts-sort-label">Все пользователи</div>
             {(() => {
               const contacts = allUsers
                 .filter(u => u.username !== username)
