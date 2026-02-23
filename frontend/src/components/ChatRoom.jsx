@@ -18,6 +18,41 @@ function formatFileSize(bytes) {
   return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' ГБ';
 }
 
+const URL_REGEX = /(https?:\/\/[^\s<>"']+)/gi;
+
+function linkifyContent(text, onJoinRoom) {
+  if (!text) return text;
+  const parts = text.split(URL_REGEX);
+  if (parts.length === 1) return text;
+  return parts.map((part, i) => {
+    if (URL_REGEX.lastIndex = 0, URL_REGEX.test(part)) {
+      // Check if it's an in-app join link
+      try {
+        const url = new URL(part);
+        const joinId = url.searchParams.get('join');
+        if (joinId && url.origin === window.location.origin && onJoinRoom) {
+          return (
+            <a
+              key={i}
+              href={part}
+              className="msg-link msg-link-join"
+              onClick={(e) => { e.preventDefault(); onJoinRoom(joinId); }}
+            >
+              🔗 Присоединиться к группе
+            </a>
+          );
+        }
+      } catch (_) {}
+      return (
+        <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="msg-link">
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+}
+
 const AVATAR_COLORS = [
   '#e94560', '#4ecca3', '#f0a500', '#a855f7',
   '#3b82f6', '#ec4899', '#14b8a6', '#f97316',
@@ -118,7 +153,7 @@ function formatLastSeenHeader(ts) {
   return `был(а) ${d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}`;
 }
 
-export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, onDeleteMessage, onScheduleMessage, scheduledMessages, roomName, username, connected, token, activeRoom, onlineUsers, allUsers = [], typingUsers = [], onTyping, isE2E, onShowSecurityCode, avatarMap = {}, onStartCall, callState, onLeaveRoom, onBack, onForwardToSaved }) {
+export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, onDeleteMessage, onScheduleMessage, scheduledMessages, roomName, username, connected, token, activeRoom, onlineUsers, allUsers = [], typingUsers = [], onTyping, isE2E, onShowSecurityCode, avatarMap = {}, onStartCall, callState, onLeaveRoom, onBack, onForwardToSaved, onJoinRoom }) {
   const [input, setInput] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
@@ -971,7 +1006,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
                       )}
                       {msg.content && (
                         <div className="message-body">
-                          {msg.content}
+                          {linkifyContent(msg.content, onJoinRoom)}
                           <span className="msg-meta">
                             {msg.edited && <span className="edited-badge">ред. </span>}
                             {msg.timestamp}

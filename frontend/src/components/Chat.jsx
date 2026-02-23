@@ -1169,6 +1169,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           callState={webrtc.callState}
           onLeaveRoom={deleteRoom}
           onForwardToSaved={forwardToSaved}
+          onJoinRoom={joinRoom}
         />
       )}
       {taskNotification && (

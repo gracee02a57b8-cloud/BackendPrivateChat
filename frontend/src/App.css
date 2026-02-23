@@ -8125,3 +8125,33 @@
   color: #5a6a7a;
   font-size: 0.95rem;
 }
+
+/* ══════════  MESSAGE LINKS  ══════════ */
+.msg-link {
+  color: #5b9cf5;
+  text-decoration: none;
+  word-break: break-all;
+  transition: color 0.15s;
+}
+.msg-link:hover {
+  color: #82b5ff;
+  text-decoration: underline;
+}
+.msg-link-join {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(78, 204, 163, 0.12);
+  color: #4ecca3;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  margin: 2px 0;
+  word-break: normal;
+}
+.msg-link-join:hover {
+  background: rgba(78, 204, 163, 0.22);
+  color: #4ecca3;
+  text-decoration: none;
+}
