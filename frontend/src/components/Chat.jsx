@@ -16,6 +16,7 @@ import useMediaPermissions from '../hooks/useMediaPermissions';
 import e2eManager from '../crypto/E2EManager';
 import cryptoStore from '../crypto/CryptoStore';
 import groupCrypto from '../crypto/GroupCrypto';
+import appSettings from '../utils/appSettings';
 
 const WS_URL = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
 
@@ -133,11 +134,27 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
 
-  // Request browser notification permission
+  // Request browser notification permission & save it
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
+      Notification.requestPermission().then(perm => {
+        appSettings.savePermission('notification', perm);
+      });
+    } else if ('Notification' in window) {
+      appSettings.savePermission('notification', Notification.permission);
     }
+  }, []);
+
+  // Listen for Service Worker notification clicks (navigate to room)
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const handler = (event) => {
+      if (event.data?.type === 'PUSH_NAVIGATE' && event.data?.roomId) {
+        setActiveRoomId(event.data.roomId);
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', handler);
+    return () => navigator.serviceWorker.removeEventListener('message', handler);
   }, []);
 
   const showBrowserNotification = (title, body, roomId) => {
@@ -147,9 +164,28 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
       document.title = `(${totalUnread}) 🐱 BarsikChat`;
     }
 
+    if (!appSettings.pushEnabled) return;
     if (!('Notification' in window)) return;
     if (Notification.permission !== 'granted') return;
     if (documentVisible.current && roomId === activeRoomIdRef.current) return;
+
+    // Use Service Worker notification when available (works in background / mobile PWA)
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.ready.then(reg => {
+        reg.showNotification(title, {
+          body: body.length > 100 ? body.slice(0, 100) + '…' : body,
+          icon: '/barsik-icon.png',
+          badge: '/icon-192.png',
+          tag: 'barsik-msg-' + roomId,
+          renotify: true,
+          data: { roomId, url: window.location.origin },
+          vibrate: [200, 100, 200],
+        });
+      }).catch(() => {});
+      return;
+    }
+
+    // Fallback: Notification API
     try {
       const n = new Notification(title, {
         body: body.length > 100 ? body.slice(0, 100) + '…' : body,
@@ -334,7 +370,24 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
       if (msg.type === 'CONF_LEAVE') { confRef.current.handleConfLeave(msg); return; }
 
       // Handle WebRTC call signaling (use refs to avoid stale closure — Bug 1 fix)
-      if (msg.type === 'CALL_OFFER') { webrtcRef.current.handleOffer(msg); return; }
+      if (msg.type === 'CALL_OFFER') {
+        webrtcRef.current.handleOffer(msg);
+        // Push notification for incoming call (important on mobile when app is in foreground but screen is off)
+        if (appSettings.pushEnabled && 'serviceWorker' in navigator && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.ready.then(reg => {
+            reg.showNotification('📞 Входящий звонок', {
+              body: `${msg.sender} звонит вам`,
+              icon: '/barsik-icon.png',
+              badge: '/icon-192.png',
+              tag: 'barsik-call',
+              requireInteraction: true,
+              vibrate: [300, 200, 300, 200, 300],
+              data: { type: 'call', url: window.location.origin },
+            });
+          }).catch(() => {});
+        }
+        return;
+      }
       if (msg.type === 'CALL_ANSWER') { webrtcRef.current.handleAnswer(msg); return; }
       if (msg.type === 'ICE_CANDIDATE') { webrtcRef.current.handleIceCandidate(msg); return; }
       if (msg.type === 'CALL_REJECT' || msg.type === 'CALL_END' || msg.type === 'CALL_BUSY') {
@@ -460,7 +513,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
 
         // Play sound if not active tab or not current room
         if (document.hidden || roomId !== activeRoomIdRef.current) {
-          try { notifSound.current?.(); } catch (e) {}
+          try { if (appSettings.notifSound) notifSound.current?.(); } catch (e) {}
         }
       }
 

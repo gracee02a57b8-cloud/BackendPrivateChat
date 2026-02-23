@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import appSettings from '../utils/appSettings';
 
 /**
  * useMediaPermissions — proactively requests camera + microphone permissions
@@ -155,6 +156,8 @@ export default function useMediaPermissions() {
       // Immediately stop all tracks — we just needed the permission grant
       stream.getTracks().forEach(t => t.stop());
       localStorage.setItem(STORAGE_KEY, 'true');
+      appSettings.savePermission('camera', 'granted');
+      appSettings.savePermission('microphone', 'granted');
       setPermissionsGranted(true);
       setPermissionsDenied(false);
       setShowBanner(false);
@@ -162,6 +165,8 @@ export default function useMediaPermissions() {
       console.warn('[MediaPermissions] Permission denied:', err.name);
       if (err.name === 'NotAllowedError') {
         setPermissionsDenied(true);
+        appSettings.savePermission('camera', 'denied');
+        appSettings.savePermission('microphone', 'denied');
       }
       // Don't hide the banner so user can retry or see hint
     }

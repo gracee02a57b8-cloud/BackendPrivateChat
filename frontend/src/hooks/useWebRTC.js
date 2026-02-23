@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import e2eManager from '../crypto/E2EManager';
 import { CallCrypto, supportsInsertableStreams } from '../crypto/CallCrypto';
+import appSettings from '../utils/appSettings';
 
 /**
  * useWebRTC – manages RTCPeerConnection, media streams and call state.
@@ -251,7 +252,7 @@ export default function useWebRTC({ wsRef, username, token }) {
     setCallState('outgoing');
     setCallPeer(target);
     setCallType(type);
-    startRingtone();
+    if (appSettings.callSound) startRingtone();
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -333,7 +334,7 @@ export default function useWebRTC({ wsRef, username, token }) {
     setCallState('incoming');
     setCallPeer(from);
     setCallType(type);
-    startRingtone();
+    if (appSettings.callSound) startRingtone();
 
     // Store offer SDP and peer's media key in ref for when user accepts
     pcRef.current = { _pendingOffer: extra.sdp, _from: from, _type: type, _peerMediaKey: extra.mediaKey };

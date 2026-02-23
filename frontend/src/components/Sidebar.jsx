@@ -6,6 +6,7 @@ import ProfileModal from './ProfileModal';
 import MyProfilePage from './MyProfilePage';
 import EditProfilePage from './EditProfilePage';
 import { copyToClipboard } from '../utils/clipboard';
+import appSettings from '../utils/appSettings';
 
 const AVATAR_COLORS = [
   '#e94560', '#4ecca3', '#f0a500', '#a855f7',
@@ -104,6 +105,9 @@ export default function Sidebar({
   const [showProfile, setShowProfile] = useState(false);
   const [profileSubView, setProfileSubView] = useState('main'); // 'main' | 'edit' | 'settings'
   const [installPrompt, setInstallPrompt] = useState(null);
+  const [notifSoundOn, setNotifSoundOn] = useState(() => appSettings.notifSound);
+  const [callSoundOn, setCallSoundOn] = useState(() => appSettings.callSound);
+  const [pushOn, setPushOn] = useState(() => appSettings.pushEnabled);
   const menuRef = useRef(null);
 
   // PWA install prompt
@@ -589,16 +593,53 @@ export default function Sidebar({
             <div style={{ width: 40 }} />
           </div>
           <div className="sb-settings-list">
-            <button className="sb-settings-item" onClick={onShowNews}>
-              <span className="sb-settings-icon">📰</span>
-              <span className="sb-settings-label">Новости</span>
-              <span className="sb-settings-arrow">›</span>
-            </button>
-            <button className="sb-settings-item" onClick={onShowTasks}>
-              <span className="sb-settings-icon">📋</span>
-              <span className="sb-settings-label">Задачи</span>
-              <span className="sb-settings-arrow">›</span>
-            </button>
+            {/* ── Звук ── */}
+            <div className="settings-section-title">🔊 Звук</div>
+            <div className="sb-settings-item sb-settings-toggle-row">
+              <span className="sb-settings-label">Звук уведомлений</span>
+              <button
+                className={`settings-toggle ${notifSoundOn ? 'on' : ''}`}
+                onClick={() => { const v = !notifSoundOn; setNotifSoundOn(v); appSettings.notifSound = v; }}
+                aria-label="Звук уведомлений"
+              >
+                <span className="settings-toggle-thumb" />
+              </button>
+            </div>
+            <div className="sb-settings-item sb-settings-toggle-row">
+              <span className="sb-settings-label">Звук звонка</span>
+              <button
+                className={`settings-toggle ${callSoundOn ? 'on' : ''}`}
+                onClick={() => { const v = !callSoundOn; setCallSoundOn(v); appSettings.callSound = v; }}
+                aria-label="Звук звонка"
+              >
+                <span className="settings-toggle-thumb" />
+              </button>
+            </div>
+
+            {/* ── Уведомления ── */}
+            <div className="settings-section-title">🔔 Уведомления</div>
+            <div className="sb-settings-item sb-settings-toggle-row">
+              <span className="sb-settings-label">Push-уведомления</span>
+              <button
+                className={`settings-toggle ${pushOn ? 'on' : ''}`}
+                onClick={async () => {
+                  const v = !pushOn;
+                  setPushOn(v);
+                  appSettings.pushEnabled = v;
+                  // Request notification permission when enabling
+                  if (v && 'Notification' in window && Notification.permission === 'default') {
+                    const perm = await Notification.requestPermission();
+                    appSettings.savePermission('notification', perm);
+                  }
+                }}
+                aria-label="Push-уведомления"
+              >
+                <span className="settings-toggle-thumb" />
+              </button>
+            </div>
+
+            {/* ── Другое ── */}
+            <div className="settings-section-title" style={{ marginTop: 8 }}>⚙️ Другое</div>
             {installPrompt && (
               <button className="sb-settings-item" onClick={handleInstall}>
                 <span className="sb-settings-icon">📲</span>
