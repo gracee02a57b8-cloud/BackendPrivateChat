@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { getAvatarColor } from '../utils/avatar';
-import { Lock } from 'lucide-react';
+import { Lock, ChevronDown, ChevronUp, SwitchCamera, Maximize2 } from 'lucide-react';
 
 function formatDuration(seconds) {
   const m = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -30,6 +30,7 @@ export default function CallScreen({
   isMinimized,
   onMinimize,
   onRestore,
+  onSwitchCamera,
 }) {
   const isVideo = callType === 'video' && !isVideoOff;
 
@@ -38,19 +39,68 @@ export default function CallScreen({
   const remoteVidEl = useRef(null);
   const remoteAudioEl = useRef(null);
 
-  // Always keep remoteVideoRef pointing to the <video> element
-  // The ontrack handler routes the stream to it regardless of callType
+  // Feature #3: expandable security code
+  const [securityExpanded, setSecurityExpanded] = useState(false);
+
+  // Feature #5: swap local/remote video
+  const [videoSwapped, setVideoSwapped] = useState(false);
+
+  // Store stream refs locally so we can re-attach after minimize/restore
+  const localStreamCache = useRef(null);
+  const remoteStreamCache = useRef(null);
+
+  // Always keep refs pointing to the <video> elements
   useEffect(() => {
     if (localVideoRef) localVideoRef.current = localVidEl.current;
     if (remoteVideoRef) remoteVideoRef.current = remoteVidEl.current;
   }, [localVideoRef, remoteVideoRef]);
 
-  // Sync remote stream to audio element for audio-only playback
+  // Bug #1 fix: Re-attach streams when switching between minimized and full view
   useEffect(() => {
-    if (remoteVidEl.current && remoteVidEl.current.srcObject) {
-      remoteAudioEl.current.srcObject = remoteVidEl.current.srcObject;
+    // Cache any existing streams
+    if (localVidEl.current?.srcObject) {
+      localStreamCache.current = localVidEl.current.srcObject;
     }
-  }, [callType]);
+    if (remoteVidEl.current?.srcObject) {
+      remoteStreamCache.current = remoteVidEl.current.srcObject;
+    }
+
+    const reattach = () => {
+      if (localVidEl.current && localStreamCache.current) {
+        if (localVidEl.current.srcObject !== localStreamCache.current) {
+          localVidEl.current.srcObject = localStreamCache.current;
+        }
+      }
+      if (remoteVidEl.current && remoteStreamCache.current) {
+        if (remoteVidEl.current.srcObject !== remoteStreamCache.current) {
+          remoteVidEl.current.srcObject = remoteStreamCache.current;
+        }
+        if (remoteAudioEl.current) {
+          remoteAudioEl.current.srcObject = remoteStreamCache.current;
+        }
+      }
+      if (localVideoRef) localVideoRef.current = localVidEl.current;
+      if (remoteVideoRef) remoteVideoRef.current = remoteVidEl.current;
+    };
+
+    reattach();
+    const timer = setTimeout(reattach, 100);
+    return () => clearTimeout(timer);
+  }, [isMinimized, localVideoRef, remoteVideoRef]);
+
+  // Keep stream cache up-to-date
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (localVidEl.current?.srcObject) localStreamCache.current = localVidEl.current.srcObject;
+      if (remoteVidEl.current?.srcObject) {
+        remoteStreamCache.current = remoteVidEl.current.srcObject;
+        if (remoteAudioEl.current && remoteAudioEl.current.srcObject !== remoteVidEl.current.srcObject) {
+          remoteAudioEl.current.srcObject = remoteVidEl.current.srcObject;
+        }
+      }
+    }, 500);
+    return () => clearInterval(interval);
+  }, []);
 
   const statusLabel =
     callState === 'outgoing' ? 'Вызываем...' :
@@ -84,13 +134,15 @@ export default function CallScreen({
   // ── Full-screen call view ──
   return (
     <div className={`call-screen ${isVideo ? 'call-screen-video' : 'call-screen-audio'}`}>
-      {/* Remote video — always rendered, hidden when audio-only */}
+      {/* Main video area — remote (or local if swapped) */}
       <video
-        ref={remoteVidEl}
+        ref={videoSwapped ? localVidEl : remoteVidEl}
         className="call-remote-video"
         autoPlay
         playsInline
+        muted={videoSwapped}
         style={{ display: isVideo ? 'block' : 'none' }}
+        onClick={() => isVideo && videoSwapped && setVideoSwapped(false)}
       />
 
       {/* Audio call: show peer avatar */}
@@ -121,25 +173,59 @@ export default function CallScreen({
         </div>
       )}
 
-      {/* Local video — always rendered, hidden when audio-only */}
-      <video
-        ref={localVidEl}
-        className="call-local-video"
-        autoPlay
-        playsInline
-        muted
-        style={{ display: isVideo ? 'block' : 'none' }}
-      />
+      {/* Feature #5: Local video PiP — tap to swap with main */}
+      {isVideo && (
+        <div className="call-local-pip-wrapper" onClick={() => setVideoSwapped(v => !v)}>
+          <video
+            ref={videoSwapped ? remoteVidEl : localVidEl}
+            className="call-local-video"
+            autoPlay
+            playsInline
+            muted={!videoSwapped}
+          />
+          <span className="call-pip-swap-hint" title="Нажмите, чтобы поменять">
+            <Maximize2 size={14} />
+          </span>
+          {/* Feature #6: switch camera button */}
+          {onSwitchCamera && !videoSwapped && (
+            <button
+              className="call-pip-switch-cam"
+              onClick={(e) => { e.stopPropagation(); onSwitchCamera(); }}
+              title="Сменить камеру"
+            >
+              <SwitchCamera size={16} />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Hidden audio element – plays remote audio always */}
       <audio ref={remoteAudioEl} autoPlay playsInline />
 
-      {/* Security code (Bug 5) */}
+      {/* Hidden video refs for audio-only mode */}
+      {!isVideo && (
+        <>
+          <video ref={remoteVidEl} style={{ display: 'none' }} autoPlay playsInline />
+          <video ref={localVidEl} style={{ display: 'none' }} autoPlay playsInline muted />
+        </>
+      )}
+
+      {/* Feature #3: Expandable security code */}
       {securityCode && callState === 'active' && (
-        <div className="call-security-code">
+        <div
+          className={`call-security-code ${securityExpanded ? 'expanded' : ''}`}
+          onClick={() => setSecurityExpanded(v => !v)}
+        >
           <span className="call-security-icon"><Lock size={12} /></span>
-          <span className="call-security-label">Код безопасности</span>
-          <span className="call-security-digits">{securityCode}</span>
+          {securityExpanded ? (
+            <>
+              <span className="call-security-label">Код безопасности</span>
+              <span className="call-security-digits">{securityCode}</span>
+              <ChevronUp size={14} className="call-security-chevron" />
+            </>
+          ) : (
+            <ChevronDown size={14} className="call-security-chevron" />
+          )}
         </div>
       )}
 

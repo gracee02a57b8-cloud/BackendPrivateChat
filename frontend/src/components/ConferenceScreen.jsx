@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { getAvatarColor } from '../utils/avatar';
-import { Phone, MicOff, CameraOff } from 'lucide-react';
+import { Phone, MicOff, CameraOff, ArrowLeft, Maximize2 } from 'lucide-react';
 
 function formatDuration(seconds) {
   const m = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -39,6 +39,7 @@ export default function ConferenceScreen({
   const localVidEl = useRef(null);
   const [linkCopied, setLinkCopied] = useState(false);
   const [localHasVideo, setLocalHasVideo] = useState(false);
+  const [focusedPeer, setFocusedPeer] = useState(null); // null = grid view, 'self' or peerId = fullscreen
 
   // Attach local video ref — re-attach when switching between minimized and full views
   useEffect(() => {
@@ -123,10 +124,46 @@ export default function ConferenceScreen({
         <span className="conf-timer">{statusLabel}</span>
       </div>
 
-      {/* Participant grid */}
+      {/* Participant grid or focused peer view */}
+      {focusedPeer ? (
+        <div className="conf-focused-view">
+          <button className="conf-focused-back" onClick={() => setFocusedPeer(null)}>
+            <ArrowLeft size={22} /> Назад
+          </button>
+          {focusedPeer === 'self' ? (
+            <div className="conf-focused-tile">
+              <video
+                ref={localVidEl}
+                className="conf-focused-video"
+                autoPlay
+                playsInline
+                muted
+                style={{ display: showSelfVideo ? undefined : 'none' }}
+              />
+              {!showSelfVideo && (
+                <div className="conf-tile-avatar conf-focused-avatar">
+                  <AvatarDisplay name={username} avatarUrl={avatarMap?.[username]} />
+                </div>
+              )}
+              <div className="conf-focused-label">
+                <span className="conf-tile-name">Вы</span>
+                {isMuted && <span className="conf-tile-muted"><MicOff size={14} /></span>}
+              </div>
+            </div>
+          ) : (
+            <FocusedPeerTile
+              peerId={focusedPeer}
+              isVideo={isVideo}
+              avatarUrl={avatarMap?.[focusedPeer]}
+              setRemoteVideoRef={setRemoteVideoRef}
+              getRemoteStream={getRemoteStream}
+            />
+          )}
+        </div>
+      ) : (
       <div className={`conf-grid ${getGridClass()}`}>
         {/* Self tile — video always rendered so ref stays valid when toggling */}
-        <div className="conf-tile conf-tile-self">
+        <div className="conf-tile conf-tile-self" onClick={() => setFocusedPeer('self')}>
           <video
             ref={localVidEl}
             className="conf-tile-video"
@@ -145,6 +182,7 @@ export default function ConferenceScreen({
             {isMuted && <span className="conf-tile-muted"><MicOff size={14} /></span>}
             {isVideoOff && <span className="conf-tile-muted"><CameraOff size={14} /></span>}
           </div>
+          <span className="conf-tile-expand-hint"><Maximize2 size={14} /></span>
         </div>
 
         {/* Remote peer tiles */}
@@ -156,9 +194,11 @@ export default function ConferenceScreen({
             avatarUrl={avatarMap?.[peerId]}
             setRemoteVideoRef={setRemoteVideoRef}
             getRemoteStream={getRemoteStream}
+            onFocus={() => setFocusedPeer(peerId)}
           />
         ))}
       </div>
+      )}
 
       {/* Controls */}
       <div className="conf-controls">
@@ -218,7 +258,7 @@ export default function ConferenceScreen({
 }
 
 /** Individual peer video/avatar tile */
-function PeerTile({ peerId, isVideo, avatarUrl, setRemoteVideoRef, getRemoteStream }) {
+function PeerTile({ peerId, isVideo, avatarUrl, setRemoteVideoRef, getRemoteStream, onFocus }) {
   const videoRef = useRef(null);
   const [hasStream, setHasStream] = useState(false);
   const [hasVideoTrack, setHasVideoTrack] = useState(false);
@@ -257,7 +297,7 @@ function PeerTile({ peerId, isVideo, avatarUrl, setRemoteVideoRef, getRemoteStre
   const showVideo = hasStream && (isVideo || hasVideoTrack);
 
   return (
-    <div className="conf-tile">
+    <div className="conf-tile" onClick={onFocus}>
       <video
         ref={videoRef}
         className="conf-tile-video"
@@ -271,6 +311,60 @@ function PeerTile({ peerId, isVideo, avatarUrl, setRemoteVideoRef, getRemoteStre
         </div>
       )}
       <div className="conf-tile-label">
+        <span className="conf-tile-name">{peerId}</span>
+      </div>
+      <span className="conf-tile-expand-hint"><Maximize2 size={14} /></span>
+    </div>
+  );
+}
+
+/** Focused (fullscreen) peer video tile */
+function FocusedPeerTile({ peerId, isVideo, avatarUrl, setRemoteVideoRef, getRemoteStream }) {
+  const videoRef = useRef(null);
+  const [hasStream, setHasStream] = useState(false);
+  const [hasVideoTrack, setHasVideoTrack] = useState(false);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      setRemoteVideoRef(peerId, videoRef.current);
+      const stream = getRemoteStream(peerId);
+      if (stream) {
+        videoRef.current.srcObject = stream;
+        setHasStream(true);
+        setHasVideoTrack(stream.getVideoTracks().some(t => t.enabled && t.readyState === 'live'));
+      }
+    }
+  }, [peerId, setRemoteVideoRef, getRemoteStream]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const stream = getRemoteStream(peerId);
+      if (stream && videoRef.current) {
+        if (videoRef.current.srcObject !== stream) videoRef.current.srcObject = stream;
+        if (!hasStream) setHasStream(true);
+        setHasVideoTrack(stream.getVideoTracks().some(t => t.enabled && t.readyState === 'live'));
+      }
+    }, 500);
+    return () => clearInterval(interval);
+  }, [peerId, getRemoteStream, hasStream]);
+
+  const showVideo = hasStream && (isVideo || hasVideoTrack);
+
+  return (
+    <div className="conf-focused-tile">
+      <video
+        ref={videoRef}
+        className="conf-focused-video"
+        autoPlay
+        playsInline
+        style={{ display: showVideo ? undefined : 'none' }}
+      />
+      {!showVideo && (
+        <div className="conf-tile-avatar conf-focused-avatar">
+          <AvatarDisplay name={peerId} avatarUrl={avatarUrl} />
+        </div>
+      )}
+      <div className="conf-focused-label">
         <span className="conf-tile-name">{peerId}</span>
       </div>
     </div>

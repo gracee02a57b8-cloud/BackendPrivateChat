@@ -1448,6 +1448,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           isMinimized={isCallMinimized}
           onMinimize={() => setIsCallMinimized(true)}
           onRestore={() => setIsCallMinimized(false)}
+          onSwitchCamera={webrtc.switchCamera}
         />
       )}
       {conference.confState !== 'idle' && (
