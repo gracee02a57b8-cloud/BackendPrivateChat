@@ -225,6 +225,15 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
     // Initialize E2E encryption
     e2eManager.initialize(token).then(() => {
       setE2eReady(e2eManager.isReady());
+      // Clean up old pending sent entries (older than 1 hour)
+      cryptoStore.getAll('sentMessages').then(all => {
+        const cutoff = Date.now() - 60 * 60 * 1000;
+        for (const s of all) {
+          if (s.id && s.id.startsWith('pending_') && (s.savedAt || 0) < cutoff) {
+            cryptoStore.delete('sentMessages', s.id).catch(() => {});
+          }
+        }
+      }).catch(() => {});
     }).catch(err => console.warn('[E2E] Init error:', err));
 
     function connectWs() {
@@ -453,31 +462,47 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
 
       // Decrypt E2E message if encrypted
       if (msg.encrypted && msg.sender !== username) {
-        try {
-          let result;
-          if (msg.groupEncrypted) {
-            // Group E2E — decrypt with shared room key
-            result = await groupCrypto.decrypt(roomId, msg.encryptedContent, msg.iv);
-          } else {
-            // Private E2E — decrypt with Double Ratchet
-            result = await e2eManager.decrypt(msg.sender, msg);
-          }
-          if (result.error) {
+        let cacheHit = false;
+
+        // FIX #2: Check plaintext cache FIRST — prevents re-decryption on
+        // WebSocket reconnect / duplicate delivery, which would corrupt the
+        // Double Ratchet session (OTK consumed, ratchet advanced, etc.)
+        if (msg.id) {
+          try {
+            const cached = await cryptoStore.getDecryptedContent(msg.id);
+            if (cached) {
+              msg.content = cached.content;
+              if (cached.fileKey) msg._fileKey = cached.fileKey;
+              if (cached.thumbnailKey) msg._thumbnailKey = cached.thumbnailKey;
+              cacheHit = true;
+            }
+          } catch { /* cache miss */ }
+        }
+
+        if (!cacheHit) {
+          try {
+            let result;
+            if (msg.groupEncrypted) {
+              result = await groupCrypto.decrypt(roomId, msg.encryptedContent, msg.iv);
+            } else {
+              result = await e2eManager.decrypt(msg.sender, msg);
+            }
+            if (result.error) {
+              msg.content = '🔒 Не удалось расшифровать';
+              msg._decryptError = true;
+            } else {
+              msg.content = result.text;
+              if (result.fileKey) msg._fileKey = result.fileKey;
+              if (result.thumbnailKey) msg._thumbnailKey = result.thumbnailKey;
+              if (msg.id) {
+                cryptoStore.saveDecryptedContent(msg.id, result.text, result.fileKey, result.thumbnailKey).catch(() => {});
+              }
+            }
+          } catch (err) {
+            console.error('[E2E] Decrypt error:', err);
             msg.content = '🔒 Не удалось расшифровать';
             msg._decryptError = true;
-          } else {
-            msg.content = result.text;
-            if (result.fileKey) msg._fileKey = result.fileKey;
-            if (result.thumbnailKey) msg._thumbnailKey = result.thumbnailKey;
-            // Cache decrypted plaintext for future history loads
-            if (msg.id) {
-              cryptoStore.saveDecryptedContent(msg.id, result.text, result.fileKey, result.thumbnailKey).catch(() => {});
-            }
           }
-        } catch (err) {
-          console.error('[E2E] Decrypt error:', err);
-          msg.content = '🔒 Не удалось расшифровать';
-          msg._decryptError = true;
         }
       }
 
@@ -495,6 +520,45 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
             cryptoStore.saveSentContent(msg.id, pending.content, pending.fileKey, pending.thumbnailKey).catch(() => {});
             cryptoStore.saveDecryptedContent(msg.id, pending.content, pending.fileKey, pending.thumbnailKey).catch(() => {});
           }
+        } else if (msg.id) {
+          // FIX #4: pendingSent ref may be empty after component remount —
+          // fall back to IndexedDB caches (sentMessages / decryptedMessages)
+          try {
+            let found = false;
+            const cached = await cryptoStore.getSentContent(msg.id);
+            if (cached) {
+              msg.content = cached.content;
+              if (cached.fileKey) msg._fileKey = cached.fileKey;
+              if (cached.thumbnailKey) msg._thumbnailKey = cached.thumbnailKey;
+              found = true;
+            }
+            if (!found) {
+              const dcached = await cryptoStore.getDecryptedContent(msg.id);
+              if (dcached) {
+                msg.content = dcached.content;
+                if (dcached.fileKey) msg._fileKey = dcached.fileKey;
+                if (dcached.thumbnailKey) msg._thumbnailKey = dcached.thumbnailKey;
+                found = true;
+              }
+            }
+            // Last resort: search for pending_${roomId}_* entries saved before send
+            if (!found) {
+              const allSent = await cryptoStore.getAll('sentMessages');
+              const prefix = `pending_${msg.roomId}_`;
+              const pending = allSent
+                .filter(s => s.id && s.id.startsWith(prefix))
+                .sort((a, b) => (a.savedAt || 0) - (b.savedAt || 0))[0];
+              if (pending) {
+                msg.content = pending.content;
+                if (pending.fileKey) msg._fileKey = pending.fileKey;
+                if (pending.thumbnailKey) msg._thumbnailKey = pending.thumbnailKey;
+                // Migrate to real ID and clean up pending entry
+                cryptoStore.saveSentContent(msg.id, pending.content, pending.fileKey, pending.thumbnailKey).catch(() => {});
+                cryptoStore.saveDecryptedContent(msg.id, pending.content, pending.fileKey, pending.thumbnailKey).catch(() => {});
+                cryptoStore.delete('sentMessages', pending.id).catch(() => {});
+              }
+            }
+          } catch { /* best effort */ }
         }
       }
 
@@ -674,18 +738,38 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           } else {
             // Own messages — restore from local IndexedDB cache
             try {
+              let found = false;
               const cached = await cryptoStore.getSentContent(msg.id);
               if (cached) {
                 msg.content = cached.content;
                 msg._fileKey = cached.fileKey;
                 msg._thumbnailKey = cached.thumbnailKey;
-              } else {
-                // Fallback to decryptedMessages cache
+                found = true;
+              }
+              if (!found) {
                 const dcached = await cryptoStore.getDecryptedContent(msg.id);
                 if (dcached) {
                   msg.content = dcached.content;
                   msg._fileKey = dcached.fileKey;
                   msg._thumbnailKey = dcached.thumbnailKey;
+                  found = true;
+                }
+              }
+              // Last resort: search pending entries
+              if (!found && roomId) {
+                const allSent = await cryptoStore.getAll('sentMessages');
+                const prefix = `pending_${roomId}_`;
+                const pending = allSent
+                  .filter(s => s.id && s.id.startsWith(prefix))
+                  .sort((a, b) => (a.savedAt || 0) - (b.savedAt || 0))[0];
+                if (pending) {
+                  msg.content = pending.content;
+                  if (pending.fileKey) msg._fileKey = pending.fileKey;
+                  if (pending.thumbnailKey) msg._thumbnailKey = pending.thumbnailKey;
+                  // Migrate to real ID
+                  cryptoStore.saveSentContent(msg.id, pending.content, pending.fileKey, pending.thumbnailKey).catch(() => {});
+                  cryptoStore.saveDecryptedContent(msg.id, pending.content, pending.fileKey, pending.thumbnailKey).catch(() => {});
+                  cryptoStore.delete('sentMessages', pending.id).catch(() => {});
                 }
               }
             } catch { /* ignore */ }
@@ -794,12 +878,18 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
             msg.content = '\ud83d\udd12';
             if (msg.replyToContent) msg.replyToContent = '\ud83d\udd12';
             // Queue for restoring own message when server echoes it back
+            const sentText = content || '';
+            const sentFK = fileData?.fileKey || null;
+            const sentTK = fileData?.thumbnailKey || null;
             pendingSent.current.push({
               roomId: activeRoomId,
-              content: content || '',
-              fileKey: fileData?.fileKey || null,
-              thumbnailKey: fileData?.thumbnailKey || null,
+              content: sentText,
+              fileKey: sentFK,
+              thumbnailKey: sentTK,
             });
+            // FIX #4: Persist plaintext immediately (survives page refresh)
+            const pendingKey = `pending_${activeRoomId}_${Date.now()}`;
+            cryptoStore.saveSentContent(pendingKey, sentText, sentFK, sentTK).catch(() => {});
           }
         } catch (err) {
           console.warn('[E2E] Encrypt failed, sending plaintext:', err);
@@ -822,12 +912,18 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
         Object.assign(msg, encrypted);
         msg.content = '\ud83d\udd12';
         if (msg.replyToContent) msg.replyToContent = '\ud83d\udd12';
+        const gText = content || '';
+        const gFK = fileData?.fileKey || null;
+        const gTK = fileData?.thumbnailKey || null;
         pendingSent.current.push({
           roomId: activeRoomId,
-          content: content || '',
-          fileKey: fileData?.fileKey || null,
-          thumbnailKey: fileData?.thumbnailKey || null,
+          content: gText,
+          fileKey: gFK,
+          thumbnailKey: gTK,
         });
+        // FIX #4: Persist plaintext immediately (group messages)
+        const gPendingKey = `pending_${activeRoomId}_${Date.now()}`;
+        cryptoStore.saveSentContent(gPendingKey, gText, gFK, gTK).catch(() => {});
       } catch (err) {
         console.warn('[GroupE2E] Encrypt failed, sending plaintext:', err);
       }

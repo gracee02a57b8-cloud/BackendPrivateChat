@@ -24,6 +24,7 @@ class E2EManager {
     this._initialized = false;
     this._sessionLocks = new Map(); // Prevent concurrent session modifications
     this._initPromise = null; // Track ongoing initialization
+    this._processedInitials = new Set(); // Track processed X3DH ephemeral keys (prevent re-processing)
   }
 
   /** Initialize E2E — generate/load keys, register with server. */
@@ -164,19 +165,49 @@ class E2EManager {
     if (!this.isReady()) throw new Error('E2E not initialized');
     if (!msg.encrypted) return { text: msg.content };
 
+    // FIX #1: Check plaintext cache first — prevents session corruption when
+    // the same message is processed twice (history reload, WS reconnect, etc.)
+    if (msg.id) {
+      try {
+        const cached = await cryptoStore.getDecryptedContent(msg.id);
+        if (cached) {
+          const result = { text: cached.content };
+          if (cached.fileKey) result.fileKey = cached.fileKey;
+          if (cached.thumbnailKey) result.thumbnailKey = cached.thumbnailKey;
+          return result;
+        }
+      } catch { /* cache miss — proceed to decrypt */ }
+    }
+
     await this._acquireLock(peerUsername);
     try {
       let session = await loadSession(peerUsername);
 
       // X3DH responder side — initial message from peer (or session reset)
       if (msg.ephemeralKey && msg.senderIdentityKey) {
-        // If peer sent a new initial message, always accept it
-        // (they may have regenerated keys or lost their session)
-        if (session) {
-          console.warn(`[E2E] Received initial message from ${peerUsername} but session exists — resetting`);
-          await deleteSession(peerUsername);
+        const ephFingerprint = msg.ephemeralKey;
+
+        // FIX #1b: Check if we already processed THIS exact initial message
+        // (prevents session corruption from duplicate X3DH processing —
+        // the OTK is consumed on first use, so re-processing would compute
+        // a different shared secret and permanently break the session)
+        const alreadyProcessed =
+          this._processedInitials.has(ephFingerprint) ||
+          (session && session._lastEphemeralKey === ephFingerprint);
+
+        if (alreadyProcessed && session) {
+          console.log(`[E2E] Skipping duplicate X3DH initial from ${peerUsername}`);
+        } else {
+          // Genuinely new initial message — reset session and run X3DH
+          if (session) {
+            console.warn(`[E2E] New initial message from ${peerUsername} — resetting session`);
+            await deleteSession(peerUsername);
+          }
+          session = await this._handleInitialMessage(peerUsername, msg);
+          // Track this initial message to prevent future re-processing
+          session._lastEphemeralKey = ephFingerprint;
+          this._processedInitials.add(ephFingerprint);
         }
-        session = await this._handleInitialMessage(peerUsername, msg);
       }
 
       if (!session) {
@@ -190,6 +221,8 @@ class E2EManager {
       };
 
       const { plaintext, state } = await ratchetDecrypt(session, header, msg.encryptedContent, msg.iv);
+      // Preserve tracking data across ratchet state updates
+      if (session._lastEphemeralKey) state._lastEphemeralKey = session._lastEphemeralKey;
       await saveSession(peerUsername, state);
 
       // Parse payload (may contain fileKey for file encryption)
