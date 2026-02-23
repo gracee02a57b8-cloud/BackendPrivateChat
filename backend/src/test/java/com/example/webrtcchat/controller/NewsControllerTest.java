@@ -3,6 +3,7 @@ package com.example.webrtcchat.controller;
 import com.example.webrtcchat.dto.NewsDto;
 import com.example.webrtcchat.service.JwtService;
 import com.example.webrtcchat.service.NewsService;
+import com.example.webrtcchat.service.WebPushService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,6 +31,9 @@ class NewsControllerTest {
 
     @MockBean
     private NewsService newsService;
+
+    @MockBean
+    private WebPushService webPushService;
 
     @MockBean
     private JwtService jwtService;

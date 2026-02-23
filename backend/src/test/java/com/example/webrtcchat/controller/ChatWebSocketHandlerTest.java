@@ -42,6 +42,7 @@ class ChatWebSocketHandlerTest {
     @Mock private TaskService taskService;
     @Mock private ConferenceService conferenceService;
     @Mock private CallLogRepository callLogRepository;
+    @Mock private WebPushService webPushService;
     @Mock private WebSocketSession session;
 
     private ChatWebSocketHandler handler;
@@ -49,7 +50,7 @@ class ChatWebSocketHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new ChatWebSocketHandler(chatService, jwtService, roomService, schedulerService, taskService, conferenceService, callLogRepository);
+        handler = new ChatWebSocketHandler(chatService, jwtService, roomService, schedulerService, taskService, conferenceService, callLogRepository, webPushService);
     }
 
     // === Connection ===
