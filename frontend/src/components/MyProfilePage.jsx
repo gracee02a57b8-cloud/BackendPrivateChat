@@ -11,7 +11,7 @@ function getAvatarColor(name) {
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
-export default function MyProfilePage({ username, avatarUrl, token, wsRef, onAvatarChange, connected, onOpenEdit, onOpenSettings }) {
+export default function MyProfilePage({ username, avatarUrl, token, wsRef, onAvatarChange, connected, onOpenEdit, onOpenSettings, onLogout }) {
   const [profile, setProfile] = useState(null);
   const [showMenu, setShowMenu] = useState(false);
   const [showNameModal, setShowNameModal] = useState(false);
@@ -253,6 +253,13 @@ export default function MyProfilePage({ username, avatarUrl, token, wsRef, onAva
           </div>
         )}
       </div>
+
+      {/* Logout */}
+      {onLogout && (
+        <button className="my-profile-logout-btn" onClick={onLogout}>
+          🚪 Выйти из аккаунта
+        </button>
+      )}
 
       {/* Change name modal */}
       {showNameModal && (

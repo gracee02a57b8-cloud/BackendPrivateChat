@@ -678,6 +678,12 @@ export default function Sidebar({
                 <span className="sb-settings-arrow">›</span>
               </button>
             )}
+
+            <button className="sb-settings-item sb-settings-logout" onClick={onLogout}>
+              <span className="sb-settings-icon">🚪</span>
+              <span className="sb-settings-label">Выйти</span>
+              <span className="sb-settings-arrow">›</span>
+            </button>
           </div>
         </div>
       )}
@@ -691,6 +697,7 @@ export default function Sidebar({
           connected={connected}
           onOpenEdit={() => setProfileSubView('edit')}
           onOpenSettings={() => setProfileSubView('settings')}
+          onLogout={onLogout}
         />
       )}
 

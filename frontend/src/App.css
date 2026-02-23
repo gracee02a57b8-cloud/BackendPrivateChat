@@ -7775,6 +7775,27 @@
   padding: 8px 16px;
 }
 
+.my-profile-logout-btn {
+  display: block;
+  width: calc(100% - 32px);
+  margin: 24px auto 16px;
+  padding: 13px 0;
+  border: none;
+  border-radius: 14px;
+  background: rgba(239, 83, 80, 0.12);
+  color: #ef5350;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+.my-profile-logout-btn:hover {
+  background: rgba(239, 83, 80, 0.22);
+}
+.my-profile-logout-btn:active {
+  background: rgba(239, 83, 80, 0.32);
+}
+
 /* Name modal */
 .my-profile-modal-overlay {
   position: fixed;
