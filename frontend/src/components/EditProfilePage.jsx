@@ -75,15 +75,22 @@ export default function EditProfilePage({ token, username, onBack, onProfileUpda
         </button>
       </div>
 
-      {/* Info section */}
+      {/* Info section — editable */}
       <div className="edit-profile-section">
         <div className="edit-profile-section-title">Информация о Вас</div>
         <div className="edit-profile-info-card">
-          <div className="edit-profile-info-row">
+          <div className="edit-profile-info-row edit-profile-info-row-editable">
             <span className="edit-profile-info-icon">📞</span>
             <div className="edit-profile-info-content">
-              <div className="edit-profile-info-value">{phone || 'Не указан'}</div>
-              <div className="edit-profile-info-sublabel">Нажмите, чтобы изменить номер телефона</div>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+7 (___) ___-__-__"
+                maxLength={30}
+                className="edit-profile-inline-input"
+              />
+              <div className="edit-profile-info-sublabel">Телефон</div>
             </div>
           </div>
           <div className="edit-profile-info-row">
@@ -93,10 +100,15 @@ export default function EditProfilePage({ token, username, onBack, onProfileUpda
               <div className="edit-profile-info-sublabel">Имя пользователя</div>
             </div>
           </div>
-          <div className="edit-profile-info-row">
+          <div className="edit-profile-info-row edit-profile-info-row-editable">
             <span className="edit-profile-info-icon">🎂</span>
             <div className="edit-profile-info-content">
-              <div className="edit-profile-info-value">{birthday || 'Не указан'}</div>
+              <input
+                type="date"
+                value={birthday}
+                onChange={(e) => setBirthday(e.target.value)}
+                className="edit-profile-inline-input"
+              />
               <div className="edit-profile-info-sublabel">День рождения</div>
             </div>
           </div>
@@ -149,36 +161,6 @@ export default function EditProfilePage({ token, username, onBack, onProfileUpda
         </div>
         <div className="edit-profile-hint">
           Вы можете добавить несколько строк о себе.
-        </div>
-      </div>
-
-      {/* Phone edit section */}
-      <div className="edit-profile-section">
-        <div className="edit-profile-section-title">Телефон</div>
-        <div className="edit-profile-fields-card">
-          <div className="edit-profile-field">
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+7 (___) ___-__-__"
-              maxLength={30}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Birthday edit section */}
-      <div className="edit-profile-section">
-        <div className="edit-profile-section-title">День рождения</div>
-        <div className="edit-profile-fields-card">
-          <div className="edit-profile-field">
-            <input
-              type="date"
-              value={birthday}
-              onChange={(e) => setBirthday(e.target.value)}
-            />
-          </div>
         </div>
       </div>
 

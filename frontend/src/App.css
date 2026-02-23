@@ -7794,6 +7794,31 @@
   margin-top: 2px;
 }
 
+.edit-profile-inline-input {
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  color: #e0e8f0;
+  font-size: 0.95rem;
+  outline: none;
+  font-family: inherit;
+}
+.edit-profile-inline-input:focus {
+  color: #6ab3f3;
+}
+.edit-profile-inline-input[type="date"] {
+  color-scheme: dark;
+}
+
+.edit-profile-info-row-editable {
+  cursor: pointer;
+}
+.edit-profile-info-row-editable:hover {
+  background: rgba(255,255,255,0.03);
+}
+
 .edit-profile-hint {
   font-size: 0.78rem;
   color: #5a6a7a;
