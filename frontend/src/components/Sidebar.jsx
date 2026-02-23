@@ -280,23 +280,8 @@ export default function Sidebar({
       <div className="sb-header">
         <div className="sb-header-left">
           <button className="sb-close-btn" onClick={onCloseSidebar} aria-label="Закрыть меню"><ArrowLeft size={20} /></button>
-          {/* My story circle near "B" */}
-          {mobileTab === 'chats' && storiesHook && (() => {
-            const myGroup = storiesHook.groupedStories.find(g => g.author === username);
-            return (
-              <div
-                className={`sb-header-my-story${myGroup ? (myGroup.hasUnviewed ? ' unviewed' : ' viewed') : ' add'}`}
-                onClick={() => myGroup ? onOpenStoryViewer?.(username) : onOpenStoryUpload?.()}
-              >
-                <div className="sb-header-story-avatar" style={{ background: avatarUrl ? 'transparent' : getAvatarColor(username) }}>
-                  {avatarUrl ? <img src={avatarUrl} alt="" /> : getInitials(username)}
-                </div>
-                {!myGroup && <span className="sb-header-story-add-badge"><Plus size={8} /></span>}
-              </div>
-            );
-          })()}
           <div className="sb-mobile-title">
-            {mobileTab === 'chats' && 'BarsikChat 🐱'}
+            {mobileTab === 'chats' && <><span className="sb-cat-emoji">🐱</span>BarsikChat</>}
             {mobileTab === 'contacts' && 'Контакты'}
             {mobileTab === 'settings' && 'Песочница'}
             {mobileTab === 'ai' && 'AI Помощник'}
