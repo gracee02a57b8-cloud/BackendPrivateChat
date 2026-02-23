@@ -116,17 +116,17 @@ export default function ConferenceScreen({
 
       {/* Participant grid */}
       <div className={`conf-grid ${getGridClass()}`}>
-        {/* Self tile */}
+        {/* Self tile — video always rendered so ref stays valid when toggling */}
         <div className="conf-tile conf-tile-self">
-          {isVideo ? (
-            <video
-              ref={localVidEl}
-              className="conf-tile-video"
-              autoPlay
-              playsInline
-              muted
-            />
-          ) : (
+          <video
+            ref={localVidEl}
+            className="conf-tile-video"
+            autoPlay
+            playsInline
+            muted
+            style={{ display: (isVideo && !isVideoOff) ? undefined : 'none' }}
+          />
+          {(!isVideo || isVideoOff) && (
             <div className="conf-tile-avatar">
               <AvatarDisplay name={username} avatarUrl={avatarMap?.[username]} />
             </div>
@@ -134,13 +134,8 @@ export default function ConferenceScreen({
           <div className="conf-tile-label">
             <span className="conf-tile-name">Вы</span>
             {isMuted && <span className="conf-tile-muted">🔇</span>}
-            {isVideo && isVideoOff && <span className="conf-tile-muted">📷</span>}
+            {isVideoOff && <span className="conf-tile-muted">📷</span>}
           </div>
-          {isVideo && isVideoOff && (
-            <div className="conf-tile-avatar conf-tile-avatar-overlay">
-              <AvatarDisplay name={username} avatarUrl={avatarMap?.[username]} />
-            </div>
-          )}
         </div>
 
         {/* Remote peer tiles */}
@@ -221,7 +216,6 @@ function PeerTile({ peerId, isVideo, avatarUrl, setRemoteVideoRef, getRemoteStre
   useEffect(() => {
     if (videoRef.current) {
       setRemoteVideoRef(peerId, videoRef.current);
-      // Check if stream is already available
       const stream = getRemoteStream(peerId);
       if (stream) {
         videoRef.current.srcObject = stream;
@@ -231,43 +225,35 @@ function PeerTile({ peerId, isVideo, avatarUrl, setRemoteVideoRef, getRemoteStre
     return () => setRemoteVideoRef(peerId, null);
   }, [peerId, setRemoteVideoRef, getRemoteStream]);
 
-  // Poll for stream availability
+  // Poll for stream availability (handles late-arriving streams & renegotiation)
   useEffect(() => {
-    if (hasStream) return;
     const interval = setInterval(() => {
       const stream = getRemoteStream(peerId);
-      if (stream) {
-        if (videoRef.current) videoRef.current.srcObject = stream;
-        setHasStream(true);
-        clearInterval(interval);
+      if (stream && videoRef.current) {
+        if (videoRef.current.srcObject !== stream) {
+          videoRef.current.srcObject = stream;
+        }
+        if (!hasStream) setHasStream(true);
       }
     }, 500);
     return () => clearInterval(interval);
   }, [peerId, getRemoteStream, hasStream]);
 
+  const showVideo = isVideo && hasStream;
+
   return (
     <div className="conf-tile">
-      {isVideo ? (
-        <>
-          <video
-            ref={videoRef}
-            className="conf-tile-video"
-            autoPlay
-            playsInline
-          />
-          {!hasStream && (
-            <div className="conf-tile-avatar conf-tile-avatar-overlay">
-              <AvatarDisplay name={peerId} avatarUrl={avatarUrl} />
-            </div>
-          )}
-        </>
-      ) : (
-        <>
-          <audio ref={videoRef} autoPlay playsInline />
-          <div className="conf-tile-avatar">
-            <AvatarDisplay name={peerId} avatarUrl={avatarUrl} />
-          </div>
-        </>
+      <video
+        ref={videoRef}
+        className="conf-tile-video"
+        autoPlay
+        playsInline
+        style={{ display: showVideo ? undefined : 'none' }}
+      />
+      {!showVideo && (
+        <div className="conf-tile-avatar">
+          <AvatarDisplay name={peerId} avatarUrl={avatarUrl} />
+        </div>
       )}
       <div className="conf-tile-label">
         <span className="conf-tile-name">{peerId}</span>

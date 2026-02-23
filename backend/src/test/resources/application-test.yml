@@ -38,6 +38,11 @@ webrtc:
     url: turn:test-turn.example.com:3478
     secret: test-turn-secret-for-hmac-auth-min32!
 
+vapid:
+  public-key: ""
+  private-key: ""
+  subject: "mailto:test@test.com"
+
 logging:
   level:
     root: WARN

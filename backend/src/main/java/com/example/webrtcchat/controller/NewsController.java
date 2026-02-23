@@ -3,6 +3,7 @@ package com.example.webrtcchat.controller;
 import com.example.webrtcchat.dto.NewsCommentDto;
 import com.example.webrtcchat.dto.NewsDto;
 import com.example.webrtcchat.service.NewsService;
+import com.example.webrtcchat.service.WebPushService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,9 +16,11 @@ import java.util.Map;
 public class NewsController {
 
     private final NewsService newsService;
+    private final WebPushService webPushService;
 
-    public NewsController(NewsService newsService) {
+    public NewsController(NewsService newsService, WebPushService webPushService) {
         this.newsService = newsService;
+        this.webPushService = webPushService;
     }
 
     @GetMapping
@@ -41,6 +44,16 @@ public class NewsController {
                 content != null ? content.trim() : "",
                 imageUrl != null ? imageUrl.trim() : null
         );
+
+        // Send push notification to all subscribers about the new news post
+        webPushService.sendPushToAllAsync(
+                "📰 " + title.trim(),
+                content != null && !content.isBlank()
+                        ? content.trim().substring(0, Math.min(content.trim().length(), 100))
+                        : "Новая публикация в ленте новостей",
+                "news", null, principal.getName()
+        );
+
         return ResponseEntity.ok(news);
     }
 

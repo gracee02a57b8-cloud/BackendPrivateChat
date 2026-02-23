@@ -11,6 +11,7 @@ import com.example.webrtcchat.service.JwtService;
 import com.example.webrtcchat.service.RoomService;
 import com.example.webrtcchat.service.SchedulerService;
 import com.example.webrtcchat.service.TaskService;
+import com.example.webrtcchat.service.WebPushService;
 import com.example.webrtcchat.types.MessageType;
 import com.example.webrtcchat.types.RoomType;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -47,6 +48,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final TaskService taskService;
     private final ConferenceService conferenceService;
     private final CallLogRepository callLogRepository;
+    private final WebPushService webPushService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // Track active call start times: "caller:callee" → epoch millis
@@ -56,7 +58,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     public ChatWebSocketHandler(ChatService chatService, JwtService jwtService, RoomService roomService,
                                 SchedulerService schedulerService, TaskService taskService,
-                                ConferenceService conferenceService, CallLogRepository callLogRepository) {
+                                ConferenceService conferenceService, CallLogRepository callLogRepository,
+                                WebPushService webPushService) {
         this.chatService = chatService;
         this.jwtService = jwtService;
         this.roomService = roomService;
@@ -64,6 +67,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         this.taskService = taskService;
         this.conferenceService = conferenceService;
         this.callLogRepository = callLogRepository;
+        this.webPushService = webPushService;
     }
 
     @Override
@@ -219,6 +223,9 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
         // Check if any recipient is online → mark as DELIVERED
         sendDeliveryStatus(username, incoming, roomId);
+
+        // Push notifications to offline room members (not for GENERAL room — too noisy)
+        sendPushToOfflineMembers(username, roomId);
 
         // Send REPLY_NOTIFICATION to the original message author
         if (incoming.getReplyToSender() != null
@@ -428,10 +435,16 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             activeCallTypes.put(callKey, callType);
         }
 
-        // If CALL_OFFER and target is offline → send CALL_END back to caller + log
+        // If CALL_OFFER and target is offline → send CALL_END back to caller + log + push
         if (incoming.getType() == MessageType.CALL_OFFER && (targetSession == null || !targetSession.isOpen())) {
             saveCallLog(username, target, extra.getOrDefault("callType", "audio"), "unavailable", 0);
             cleanupCallTracking(username, target);
+
+            // Send push notification for the missed call
+            webPushService.sendPushToUserAsync(target,
+                    "📞 Пропущенный звонок",
+                    username + " звонил вам",
+                    "call", null);
 
             MessageDto unavailable = new MessageDto();
             unavailable.setType(MessageType.CALL_END);
@@ -781,6 +794,33 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 if (s != null) sendSafe(s, json);
             });
         }
+    }
+
+    /**
+     * Send Web Push notifications to room members who are currently offline.
+     * Skips the GENERAL room (too noisy). Messages are E2E encrypted, so we
+     * send a generic "Новое сообщение" body to preserve privacy.
+     */
+    private void sendPushToOfflineMembers(String senderUsername, String roomId) {
+        RoomDto room = roomService.getRoomById(roomId);
+        if (room == null || room.getType() == RoomType.GENERAL) return;
+
+        for (String member : room.getMembers()) {
+            if (member.equals(senderUsername)) continue;
+            WebSocketSession s = userSessions.get(member);
+            if (s == null || !s.isOpen()) {
+                webPushService.sendPushToUserAsync(member,
+                        senderUsername, "Новое сообщение", "message", roomId);
+            }
+        }
+    }
+
+    /**
+     * Check if a user is currently connected via WebSocket.
+     */
+    public boolean isUserOnline(String username) {
+        WebSocketSession s = userSessions.get(username);
+        return s != null && s.isOpen();
     }
 
     /**

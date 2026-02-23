@@ -6,7 +6,7 @@ import appSettings from './appSettings.js';
 
 // VAPID public key — must match the backend private key
 // Generated once; hardcoded here, private key on server
-const VAPID_PUBLIC_KEY = 'BNK2e0mE0mNMI2MkBGHqY7EPVCFVIRnFnLqFDOqJcO3TQWCRO5Fx-mHf5PUpiDdSgNFE2ywaUwjQHX25jZz_aw';
+const VAPID_PUBLIC_KEY = 'BFMRaclfNpBYf78fSmmhk40sdr4ZUMH0Rik2mpOzhLgIhLX4euX5CsUj1sScqNRm66FXqyRlF-cQhoTpPGFEoo0';
 
 let swRegistration = null;
 
