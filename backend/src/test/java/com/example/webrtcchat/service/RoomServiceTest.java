@@ -146,18 +146,44 @@ class RoomServiceTest {
         RoomEntity room = createRoom("room1", "Test", RoomType.ROOM, "alice");
         when(roomRepository.findById("room1")).thenReturn(Optional.of(room));
 
-        assertTrue(roomService.deleteRoom("room1", "alice"));
+        assertEquals("deleted", roomService.deleteRoom("room1", "alice"));
         verify(roomRepository).delete(room);
     }
 
     @Test
-    @DisplayName("deleteRoom fails for non-creator")
+    @DisplayName("deleteRoom fails for non-member non-creator")
     void deleteRoom_nonCreator() {
         RoomEntity room = createRoom("room1", "Test", RoomType.ROOM, "alice");
         when(roomRepository.findById("room1")).thenReturn(Optional.of(room));
 
-        assertFalse(roomService.deleteRoom("room1", "bob"));
+        assertNull(roomService.deleteRoom("room1", "bob"));
         verify(roomRepository, never()).delete(any());
+    }
+
+    @Test
+    @DisplayName("deleteRoom: group member (not creator) leaves the group")
+    void deleteRoom_memberLeavesGroup() {
+        RoomEntity room = createRoom("room1", "Test", RoomType.ROOM, "alice");
+        room.getMembers().add("alice");
+        room.getMembers().add("bob");
+        when(roomRepository.findById("room1")).thenReturn(Optional.of(room));
+
+        assertEquals("left", roomService.deleteRoom("room1", "bob"));
+        verify(roomRepository, never()).delete(any());
+        verify(roomRepository).save(room);
+        assertFalse(room.getMembers().contains("bob"));
+    }
+
+    @Test
+    @DisplayName("deleteRoom: private chat can be deleted by either member")
+    void deleteRoom_privateChatEitherMember() {
+        RoomEntity room = createRoom("pm_alice_bob", "alice & bob", RoomType.PRIVATE, "alice");
+        room.getMembers().add("alice");
+        room.getMembers().add("bob");
+        when(roomRepository.findById("pm_alice_bob")).thenReturn(Optional.of(room));
+
+        assertEquals("deleted", roomService.deleteRoom("pm_alice_bob", "bob"));
+        verify(roomRepository).delete(room);
     }
 
     @Test
@@ -166,7 +192,7 @@ class RoomServiceTest {
         RoomEntity room = createRoom("general", "General", RoomType.GENERAL, "system");
         when(roomRepository.findById("general")).thenReturn(Optional.of(room));
 
-        assertFalse(roomService.deleteRoom("general", "system"));
+        assertNull(roomService.deleteRoom("general", "system"));
         verify(roomRepository, never()).delete(any());
     }
 
@@ -174,7 +200,7 @@ class RoomServiceTest {
     @DisplayName("deleteRoom returns false for non-existent room")
     void deleteRoom_notFound() {
         when(roomRepository.findById("nonexistent")).thenReturn(Optional.empty());
-        assertFalse(roomService.deleteRoom("nonexistent", "alice"));
+        assertNull(roomService.deleteRoom("nonexistent", "alice"));
     }
 
     @Test

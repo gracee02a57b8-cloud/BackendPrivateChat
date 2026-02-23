@@ -206,7 +206,7 @@ class RoomControllerTest {
     @Test
     @DisplayName("DELETE /api/rooms/{id} - success for creator")
     void deleteRoom_success() throws Exception {
-        when(roomService.deleteRoom("room1", "alice")).thenReturn(true);
+        when(roomService.deleteRoom("room1", "alice")).thenReturn("deleted");
 
         mockMvc.perform(delete("/api/rooms/room1").principal(() -> "alice"))
                 .andExpect(status().isOk());
@@ -215,9 +215,9 @@ class RoomControllerTest {
     }
 
     @Test
-    @DisplayName("DELETE /api/rooms/{id} - returns 403 for non-creator")
+    @DisplayName("DELETE /api/rooms/{id} - returns 403 for non-member")
     void deleteRoom_nonCreator() throws Exception {
-        when(roomService.deleteRoom("room1", "bob")).thenReturn(false);
+        when(roomService.deleteRoom("room1", "bob")).thenReturn(null);
 
         mockMvc.perform(delete("/api/rooms/room1").principal(() -> "bob"))
                 .andExpect(status().isForbidden());
