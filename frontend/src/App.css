@@ -8312,7 +8312,7 @@
 /* ── Create Group FAB ── */
 .create-group-fab {
   position: absolute;
-  bottom: 24px;
+  bottom: 80px;
   right: 24px;
   width: 56px;
   height: 56px;
