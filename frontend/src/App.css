@@ -421,6 +421,22 @@
   position: relative;
   margin-left: auto;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ── Desktop brand name (left side of header) ── */
+.sb-desktop-brand {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.sb-brand-name {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #e8edf2;
+  letter-spacing: -0.01em;
 }
 
 /* ── Animated cat emoji in header ── */
@@ -574,6 +590,8 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   overflow-x: auto;
   scrollbar-width: none;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
 }
 .sb-filters::-webkit-scrollbar { display: none; }
 
@@ -622,29 +640,6 @@
 /* ===== Folder tab in filters ===== */
 .sb-folder-tab {
   position: relative;
-  padding-right: 24px !important;
-}
-.sb-folder-delete {
-  display: none;
-  position: absolute;
-  right: 4px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  align-items: center;
-  justify-content: center;
-  background: rgba(239,68,68,0.25);
-  color: #ff6b6b;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.sb-folder-tab:hover .sb-folder-delete {
-  display: flex;
-}
-.sb-folder-delete:hover {
-  background: rgba(239,68,68,0.5);
 }
 .sb-add-folder-btn {
   padding: 6px 10px !important;
@@ -673,6 +668,50 @@
   box-shadow: 0 4px 12px rgba(0,0,0,0.4);
   z-index: 100;
   pointer-events: none;
+}
+
+/* ===== Folder Context Menu ===== */
+.folder-ctx-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+}
+.folder-ctx-menu {
+  position: fixed;
+  background: #1a2233;
+  border-radius: 12px;
+  padding: 6px 0;
+  min-width: 190px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06);
+  z-index: 10002;
+  animation: ctxFadeIn 0.12s ease;
+}
+@keyframes ctxFadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+.folder-ctx-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  color: #d5e0ec;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: background 0.12s;
+  text-align: left;
+}
+.folder-ctx-menu button:hover {
+  background: rgba(255,255,255,0.06);
+}
+.folder-ctx-danger {
+  color: #f43f5e !important;
+}
+.folder-ctx-danger:hover {
+  background: rgba(244,63,94,0.1) !important;
 }
 
 /* ===== Folder Modal ===== */
@@ -837,6 +876,111 @@
 .folder-modal-save:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* ===== Settings: Folder Management ===== */
+.sb-settings-folder-row {
+  flex-wrap: wrap;
+}
+.settings-folder-edit-btn,
+.settings-folder-del-btn {
+  background: none;
+  border: none;
+  color: #7b8ca2;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.settings-folder-edit-btn:hover {
+  color: #6388ff;
+  background: rgba(99,136,255,0.1);
+}
+.settings-folder-del-btn:hover {
+  color: #f43f5e;
+  background: rgba(244,63,94,0.1);
+}
+.settings-folder-edit {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.settings-folder-name-input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  color: #fff;
+  font-size: 0.9rem;
+  outline: none;
+}
+.settings-folder-name-input:focus {
+  border-color: #6388ff;
+}
+.settings-folder-chats {
+  max-height: 200px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.settings-folder-chat-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #d5e0ec;
+  font-size: 0.85rem;
+  transition: background 0.12s;
+}
+.settings-folder-chat-item:hover {
+  background: rgba(255,255,255,0.05);
+}
+.settings-folder-chat-item.selected {
+  background: rgba(99,136,255,0.1);
+}
+.settings-folder-chat-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.settings-folder-actions {
+  display: flex;
+  gap: 8px;
+}
+.settings-folder-save {
+  padding: 8px 20px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #6388ff, #818cf8);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.settings-folder-save:hover {
+  box-shadow: 0 2px 10px rgba(99,136,255,0.3);
+}
+.settings-folder-cancel {
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: none;
+  color: #7b8ca2;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.settings-folder-cancel:hover {
+  background: rgba(255,255,255,0.05);
+  color: #d5e0ec;
 }
 
 /* ===== Search ===== */
@@ -8237,6 +8381,10 @@
   }
 
   .sb-desktop-header-user {
+    display: none;
+  }
+
+  .sb-desktop-brand {
     display: none;
   }
 

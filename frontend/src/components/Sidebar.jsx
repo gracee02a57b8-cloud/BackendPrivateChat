@@ -11,7 +11,7 @@ import StoriesBar from './StoriesBar';
 import { copyToClipboard } from '../utils/clipboard';
 import appSettings from '../utils/appSettings';
 import { getAvatarColor, getInitials, formatLastSeen } from '../utils/avatar';
-import { ArrowLeft, MoreVertical, User, Mail, Plus, Bookmark, Download, X, Search, Users, MessageSquare, Pin, Phone, Star, Newspaper, ClipboardList, Link, Volume2, Bell, Settings, LogOut, ChevronDown, ChevronUp, FolderPlus, Trash2, Check } from 'lucide-react';
+import { ArrowLeft, MoreVertical, User, Mail, Plus, Bookmark, Download, X, Search, Users, MessageSquare, Pin, Phone, Star, Newspaper, ClipboardList, Link, Volume2, Bell, BellOff, Settings, LogOut, ChevronDown, ChevronUp, FolderPlus, Trash2, Check, Edit3, ArrowUpDown, Folder } from 'lucide-react';
 
 function formatTime(ts) {
   if (!ts) return '';
@@ -96,7 +96,11 @@ export default function Sidebar({
   const [folderName, setFolderName] = useState('');
   const [folderSelectedRooms, setFolderSelectedRooms] = useState(new Set());
   const [editingFolderId, setEditingFolderId] = useState(null);
+  const [folderContextMenu, setFolderContextMenu] = useState(null);
+  const [settingsFolderView, setSettingsFolderView] = useState(null); // null | folderId
   const menuRef = useRef(null);
+  const filtersRef = useRef(null);
+  const contextMenuRef = useRef(null);
   const pullStartY = useRef(0);
   const pullActive = useRef(false);
   const chatListRef = useRef(null);
@@ -137,6 +141,30 @@ export default function Sidebar({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showMenu]);
+
+  // Click-outside handler for folder context menu
+  useEffect(() => {
+    if (!folderContextMenu) return;
+    const handleClick = (e) => {
+      if (contextMenuRef.current && !contextMenuRef.current.contains(e.target)) setFolderContextMenu(null);
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [folderContextMenu]);
+
+  // Horizontal wheel scroll on filter tabs
+  useEffect(() => {
+    const el = filtersRef.current;
+    if (!el) return;
+    const onWheel = (e) => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        e.preventDefault();
+        el.scrollLeft += e.deltaY;
+      }
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [mobileTab]);
 
   // Pull-to-reveal stories gesture
   const handlePullStart = useCallback((e) => {
@@ -183,7 +211,7 @@ export default function Sidebar({
   };
 
   const openEditFolder = (e, folder) => {
-    e.stopPropagation();
+    if (e) e.stopPropagation();
     setFolderName(folder.name);
     setFolderSelectedRooms(new Set(folder.roomIds));
     setEditingFolderId(folder.id);
@@ -218,6 +246,33 @@ export default function Sidebar({
       if (next.has(roomId)) next.delete(roomId); else next.add(roomId);
       return next;
     });
+  };
+
+  const handleFolderContextMenu = (e, folder) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setFolderContextMenu({ x: e.clientX, y: e.clientY, folder });
+  };
+
+  const moveFolderUp = (folderId) => {
+    const idx = chatFolders.findIndex(f => f.id === folderId);
+    if (idx <= 0) return;
+    const arr = [...chatFolders];
+    [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
+    saveFolders(arr);
+  };
+
+  const moveFolderDown = (folderId) => {
+    const idx = chatFolders.findIndex(f => f.id === folderId);
+    if (idx < 0 || idx >= chatFolders.length - 1) return;
+    const arr = [...chatFolders];
+    [arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]];
+    saveFolders(arr);
+  };
+
+  const markAllReadInFolder = (folder) => {
+    // No server-side API, just visual feedback
+    setFolderContextMenu(null);
   };
 
   const getPrivateDisplayName = (room) => {
@@ -355,21 +410,25 @@ export default function Sidebar({
             {mobileTab === 'ai' && 'AI Помощник'}
             {mobileTab === 'profile' && 'Профиль'}
           </div>
+          <div className="sb-desktop-brand">
+            <span className="sb-cat-emoji">🐱</span>
+            <span className="sb-brand-name">BarsikChat</span>
+          </div>
+        </div>
+        <div className="sb-header-right">
           <div className="sb-desktop-header-user">
-            <div className="sb-user-avatar" style={{ background: avatarUrl ? 'transparent' : getAvatarColor(username) }} onClick={() => setShowProfile(true)} title="Открыть профиль">
-              {avatarUrl
-                ? <img src={avatarUrl} alt="" className="sb-avatar-img" />
-                : getInitials(username)}
-            </div>
             <div className="sb-user-meta">
               <span className="sb-user-name">{username}</span>
               <span className={`sb-user-status ${connected ? 'online' : ''}`}>
                 {connected ? '● В сети' : '● Офлайн'}
               </span>
             </div>
+            <div className="sb-user-avatar" style={{ background: avatarUrl ? 'transparent' : getAvatarColor(username) }} onClick={() => setShowProfile(true)} title="Открыть профиль">
+              {avatarUrl
+                ? <img src={avatarUrl} alt="" className="sb-avatar-img" />
+                : getInitials(username)}
+            </div>
           </div>
-        </div>
-        <div className="sb-header-right">
           <button className="sb-menu-btn" onClick={() => setShowMenu(!showMenu)} aria-label="Меню" title="Меню"><MoreVertical size={20} /></button>
           {showMenu && (
             <div className="sb-menu-dropdown" ref={menuRef}>
@@ -402,7 +461,7 @@ export default function Sidebar({
           )}
 
           {/* Filter tabs */}
-          <div className="sb-filters">
+          <div className="sb-filters" ref={filtersRef}>
             {[
               { key: 'all', label: 'Все' },
               { key: 'private', label: 'Личные' },
@@ -421,17 +480,46 @@ export default function Sidebar({
                 key={folder.id}
                 className={`sb-filter sb-folder-tab${chatFilter === `folder_${folder.id}` ? ' active' : ''}`}
                 onClick={() => setChatFilter(`folder_${folder.id}`)}
+                onContextMenu={(e) => handleFolderContextMenu(e, folder)}
               >
                 {folder.name}
-                <span className="sb-folder-delete" onClick={(e) => deleteFolder(e, folder.id)} title="Удалить папку">
-                  <X size={12} />
-                </span>
               </button>
             ))}
             <button className="sb-filter sb-add-folder-btn" onClick={openCreateFolder} title="Создать папку">
               <Plus size={14} />
             </button>
           </div>
+
+          {/* Folder context menu */}
+          {folderContextMenu && (
+            <div className="folder-ctx-overlay" onClick={() => setFolderContextMenu(null)}>
+              <div
+                className="folder-ctx-menu"
+                ref={contextMenuRef}
+                style={{ top: folderContextMenu.y, left: Math.min(folderContextMenu.x, window.innerWidth - 200) }}
+                onClick={e => e.stopPropagation()}
+              >
+                <button onClick={() => { openEditFolder(null, folderContextMenu.folder); setFolderContextMenu(null); }}>
+                  <Edit3 size={15} /> Редактировать
+                </button>
+                <button onClick={() => { moveFolderUp(folderContextMenu.folder.id); setFolderContextMenu(null); }}>
+                  <ChevronUp size={15} /> Переместить выше
+                </button>
+                <button onClick={() => { moveFolderDown(folderContextMenu.folder.id); setFolderContextMenu(null); }}>
+                  <ChevronDown size={15} /> Переместить ниже
+                </button>
+                <button onClick={() => { openCreateFolder(); setFolderContextMenu(null); }}>
+                  <FolderPlus size={15} /> Добавить папку
+                </button>
+                <button onClick={() => { markAllReadInFolder(folderContextMenu.folder); }}>
+                  <Check size={15} /> Прочитать все
+                </button>
+                <button className="folder-ctx-danger" onClick={(e) => { deleteFolder(e, folderContextMenu.folder.id); setFolderContextMenu(null); }}>
+                  <Trash2 size={15} /> Удалить папку
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Search */}
           <div className="sb-search">
@@ -834,6 +922,68 @@ export default function Sidebar({
                 <span className="sb-settings-arrow">›</span>
               </button>
             )}
+
+            {/* ── Папки с чатами ── */}
+            <div className="settings-section-title" style={{ marginTop: 8 }}><Folder size={16} /> Папки с чатами</div>
+            {chatFolders.length === 0 && (
+              <div className="sb-settings-item" style={{ color: '#5a6a80', cursor: 'default' }}>
+                <span className="sb-settings-label">Нет папок</span>
+              </div>
+            )}
+            {chatFolders.map(folder => (
+              <div key={folder.id} className="sb-settings-item sb-settings-folder-row">
+                {settingsFolderView === folder.id ? (
+                  <div className="settings-folder-edit" onClick={e => e.stopPropagation()}>
+                    <input
+                      type="text"
+                      className="settings-folder-name-input"
+                      value={folderName}
+                      onChange={e => setFolderName(e.target.value)}
+                      maxLength={24}
+                      autoFocus
+                    />
+                    <div className="settings-folder-chats">
+                      {rooms.filter(r => r.type !== 'SAVED_MESSAGES').map(room => {
+                        const dn = getDisplayName(room);
+                        const sel = folderSelectedRooms.has(room.id);
+                        return (
+                          <div key={room.id} className={`settings-folder-chat-item${sel ? ' selected' : ''}`} onClick={() => toggleFolderRoom(room.id)}>
+                            <span className="settings-folder-chat-name">{dn}</span>
+                            {sel && <Check size={14} className="folder-modal-check" />}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="settings-folder-actions">
+                      <button className="settings-folder-save" onClick={() => {
+                        const name = folderName.trim();
+                        if (name && folderSelectedRooms.size > 0) {
+                          saveFolders(chatFolders.map(f => f.id === folder.id ? { ...f, name, roomIds: [...folderSelectedRooms] } : f));
+                        }
+                        setSettingsFolderView(null);
+                      }}>Сохранить</button>
+                      <button className="settings-folder-cancel" onClick={() => setSettingsFolderView(null)}>Отмена</button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <span className="sb-settings-icon"><Folder size={18} /></span>
+                    <span className="sb-settings-label">{folder.name} <span style={{ color: '#5a6a80', fontSize: '0.78rem' }}>({folder.roomIds.length})</span></span>
+                    <button className="settings-folder-edit-btn" onClick={() => {
+                      setFolderName(folder.name);
+                      setFolderSelectedRooms(new Set(folder.roomIds));
+                      setSettingsFolderView(folder.id);
+                    }} title="Редактировать"><Edit3 size={15} /></button>
+                    <button className="settings-folder-del-btn" onClick={(e) => deleteFolder(e, folder.id)} title="Удалить"><Trash2 size={15} /></button>
+                  </>
+                )}
+              </div>
+            ))}
+            <button className="sb-settings-item" onClick={openCreateFolder}>
+              <span className="sb-settings-icon"><FolderPlus size={18} /></span>
+              <span className="sb-settings-label">Создать папку</span>
+              <span className="sb-settings-arrow">›</span>
+            </button>
           </div>
         </div>
       )}
