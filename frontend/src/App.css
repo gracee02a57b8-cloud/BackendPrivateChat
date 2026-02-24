@@ -826,8 +826,7 @@
   opacity: 1;
 }
 
-.sb-delete-btn,
-.sb-share-btn {
+.sb-pin-btn {
   font-size: 1.15rem;
   cursor: pointer;
   padding: 5px;
@@ -837,13 +836,35 @@
   align-items: center;
   justify-content: center;
   border-radius: 6px;
-  transition: background 0.15s;
+  transition: background 0.15s, color 0.15s;
   line-height: 1;
+  color: rgba(255,255,255,0.5);
 }
 
-.sb-delete-btn:hover,
-.sb-share-btn:hover {
+.sb-pin-btn:hover {
   background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+
+.sb-pin-btn.pinned {
+  color: var(--accent, #7b5ffa);
+  opacity: 1;
+}
+
+.sb-pin-btn.pinned:hover {
+  color: #ff6b6b;
+}
+
+/* Always show pin icon on pinned items */
+.sb-chat-item.pinned .sb-chat-actions {
+  opacity: 1;
+}
+
+.sb-pin-indicator {
+  color: var(--accent, #7b5ffa);
+  margin-right: 4px;
+  vertical-align: middle;
+  flex-shrink: 0;
 }
 
 .sb-chat-avatar-wrap {
@@ -923,6 +944,9 @@
   color: #7b8ca2;
   flex-shrink: 0;
   margin-left: 8px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
 }
 
 .sb-chat-bottom-row {
@@ -7131,6 +7155,30 @@
   flex-shrink: 0;
 }
 
+/* Delete chat button in GroupInfoPanel */
+.grp-info-delete-wrap {
+  padding: 12px 16px 20px;
+}
+.grp-info-delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 0;
+  border-radius: 14px;
+  border: 1.5px solid rgba(239,68,68,0.3);
+  background: rgba(239,68,68,0.06);
+  color: #ef4444;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.grp-info-delete-btn:hover {
+  background: rgba(239,68,68,0.15);
+}
+
 /* Mobile */
 @media (max-width: 600px) {
   .grp-info-overlay {
@@ -9565,6 +9613,30 @@
   border-color: rgba(78,204,163,0.15);
   color: #6b7b8d;
   background: transparent;
+}
+
+/* Delete chat button in UserProfilePage */
+.user-profile-delete-wrap {
+  padding: 8px 16px 20px;
+}
+.user-profile-delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 0;
+  border-radius: 14px;
+  border: 1.5px solid rgba(239,68,68,0.3);
+  background: rgba(239,68,68,0.06);
+  color: #ef4444;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.user-profile-delete-btn:hover {
+  background: rgba(239,68,68,0.15);
 }
 
 /* Tabs (media/files/links) */

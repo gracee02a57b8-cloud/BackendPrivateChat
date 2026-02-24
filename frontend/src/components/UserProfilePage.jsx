@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { getAvatarColor, formatLastSeen } from '../utils/avatar';
-import { ArrowLeft, MoreVertical, Minus, Plus, Ban, MessageSquare, Bell, BellOff, Phone, CheckCircle } from 'lucide-react';
+import { ArrowLeft, MoreVertical, Minus, Plus, Ban, MessageSquare, Bell, BellOff, Phone, CheckCircle, Trash2 } from 'lucide-react';
 
-export default function UserProfilePage({ targetUsername, token, onBack, onStartChat, onStartCall, onlineUsers = [], avatarMap = {} }) {
+export default function UserProfilePage({ targetUsername, token, onBack, onStartChat, onStartCall, onDeleteChat, onlineUsers = [], avatarMap = {} }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isContact, setIsContact] = useState(false);
@@ -203,6 +203,16 @@ export default function UserProfilePage({ targetUsername, token, onBack, onStart
           {isContact ? 'В контактах' : 'Добавить в контакты'}
         </button>
       </div>
+
+      {/* Delete chat button */}
+      {onDeleteChat && (
+        <div className="user-profile-delete-wrap">
+          <button className="user-profile-delete-btn" onClick={() => { onDeleteChat(); onBack(); }}>
+            <Trash2 size={16} />
+            Удалить чат
+          </button>
+        </div>
+      )}
     </div>
   );
 }

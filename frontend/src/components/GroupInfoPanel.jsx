@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { copyToClipboard } from '../utils/clipboard';
 import { showToast } from './Toast';
 import { getAvatarColor, formatLastSeen } from '../utils/avatar';
-import { X, Link, LogOut, Image, Film, FolderOpen, Users } from 'lucide-react';
+import { X, Link, LogOut, Image, Film, FolderOpen, Users, Trash2 } from 'lucide-react';
 
 /**
  * GroupInfoPanel — Telegram-style overlay panel showing group info.
@@ -176,6 +176,14 @@ export default function GroupInfoPanel({
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Delete chat button */}
+        <div className="grp-info-delete-wrap">
+          <button className="grp-info-delete-btn" onClick={handleLeave}>
+            <Trash2 size={16} />
+            Удалить чат
+          </button>
         </div>
       </div>
     </div>

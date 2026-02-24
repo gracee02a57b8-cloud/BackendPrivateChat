@@ -1512,6 +1512,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
             onBack={() => setShowUserProfile(false)}
             onStartChat={onStartPrivateChat}
             onStartCall={(peer, type) => { setShowUserProfile(false); if (onStartCall) onStartCall(type); }}
+            onDeleteChat={() => { if (onLeaveRoom) onLeaveRoom(activeRoom.id); }}
             onlineUsers={onlineUsers}
             avatarMap={avatarMap}
           />

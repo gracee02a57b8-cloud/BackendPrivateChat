@@ -11,7 +11,7 @@ import StoriesBar from './StoriesBar';
 import { copyToClipboard } from '../utils/clipboard';
 import appSettings from '../utils/appSettings';
 import { getAvatarColor, getInitials, formatLastSeen } from '../utils/avatar';
-import { ArrowLeft, MoreVertical, User, Mail, Plus, Bookmark, Download, X, Search, Users, MessageSquare, CheckCircle, Share2, Trash2, Phone, Star, Newspaper, ClipboardList, Link, Volume2, Bell, Settings, LogOut, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, MoreVertical, User, Mail, Plus, Bookmark, Download, X, Search, Users, MessageSquare, Pin, Phone, Star, Newspaper, ClipboardList, Link, Volume2, Bell, Settings, LogOut, ChevronDown, ChevronUp } from 'lucide-react';
 
 function formatTime(ts) {
   if (!ts) return '';
@@ -48,7 +48,6 @@ export default function Sidebar({
   onStartPrivateChat,
   onCreateRoom,
   onJoinRoom,
-  onDeleteRoom,
   onShowNews,
   onShowTasks,
   token,
@@ -75,9 +74,11 @@ export default function Sidebar({
   const [showJoin, setShowJoin] = useState(false);
   const [searchFilter, setSearchFilter] = useState('');
   const [showMenu, setShowMenu] = useState(false);
-  const [shareCopied, setShareCopied] = useState(null);
   const [showContacts, setShowContacts] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [pinnedRooms, setPinnedRooms] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem(`pinnedRooms_${username}`) || '[]')); }
+    catch { return new Set(); }
+  });
   const [showProfile, setShowProfile] = useState(false);
   const [profileSubView, setProfileSubView] = useState('main');
   const [contactsSubView, setContactsSubView] = useState('list'); // 'list' | 'calls'
@@ -151,12 +152,13 @@ export default function Sidebar({
     pullActive.current = false;
   }, []);
 
-  const copyShareLink = (e, roomId) => {
+  const togglePin = (e, roomId) => {
     e.stopPropagation();
-    const url = `${window.location.origin}?join=${roomId}`;
-    copyToClipboard(url).then(() => {
-      setShareCopied(roomId);
-      setTimeout(() => setShareCopied(null), 1500);
+    setPinnedRooms(prev => {
+      const next = new Set(prev);
+      if (next.has(roomId)) next.delete(roomId); else next.add(roomId);
+      localStorage.setItem(`pinnedRooms_${username}`, JSON.stringify([...next]));
+      return next;
     });
   };
 
@@ -205,8 +207,14 @@ export default function Sidebar({
       list = list.filter(r => getDisplayName(r).toLowerCase().includes(q));
     }
 
-    // Sort by last message time (newest first), rooms without messages go last
-    list.sort((a, b) => getLastMessageTime(b.id) - getLastMessageTime(a.id));
+    // Sort: pinned first (by last message time), then non-pinned by last message time
+    list.sort((a, b) => {
+      const aPinned = pinnedRooms.has(a.id);
+      const bPinned = pinnedRooms.has(b.id);
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
+      return getLastMessageTime(b.id) - getLastMessageTime(a.id);
+    });
 
     return list;
   };
@@ -228,7 +236,7 @@ export default function Sidebar({
     return (
       <div
         key={room.id}
-        className={`sb-chat-item${activeRoomId === room.id ? ' active' : ''}`}
+        className={`sb-chat-item${activeRoomId === room.id ? ' active' : ''}${pinnedRooms.has(room.id) ? ' pinned' : ''}`}
         onClick={() => onSelectRoom(room.id)}
       >
         <div className="sb-chat-avatar-wrap">
@@ -250,7 +258,10 @@ export default function Sidebar({
         <div className="sb-chat-info">
           <div className="sb-chat-top-row">
             <span className="sb-chat-name">{displayName}</span>
-            <span className="sb-chat-time">{lastMsg ? formatTime(lastMsg.timestamp) : ''}</span>
+            <span className="sb-chat-time">
+              {pinnedRooms.has(room.id) && <Pin size={12} className="sb-pin-indicator" />}
+              {lastMsg ? formatTime(lastMsg.timestamp) : ''}
+            </span>
           </div>
           <div className="sb-chat-bottom-row">
             <span className="sb-chat-preview">{previewText}</span>
@@ -259,14 +270,9 @@ export default function Sidebar({
         </div>
         <div className="sb-chat-actions">
           {!isSaved && (
-            <>
-              <span className="sb-share-btn" onClick={(e) => copyShareLink(e, room.id)} title="Поделиться" role="button" aria-label="Поделиться ссылкой">
-                {shareCopied === room.id ? <CheckCircle size={14} /> : <Share2 size={14} />}
-              </span>
-              <span className="sb-delete-btn" onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ id: room.id, name: displayName }); }} title="Удалить" role="button" aria-label="Удалить чат">
-                <Trash2 size={14} />
-              </span>
-            </>
+            <span className={`sb-pin-btn${pinnedRooms.has(room.id) ? ' pinned' : ''}`} onClick={(e) => togglePin(e, room.id)} title={pinnedRooms.has(room.id) ? 'Открепить' : 'Закрепить'} role="button" aria-label="Закрепить чат">
+              <Pin size={14} />
+            </span>
           )}
         </div>
       </div>
@@ -787,24 +793,6 @@ export default function Sidebar({
         />
       )}
 
-      {/* Delete confirmation modal */}
-      {deleteConfirm && (
-        <div className="delete-modal-overlay" onClick={() => setDeleteConfirm(null)}>
-          <div className="delete-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="delete-modal-icon"><Trash2 size={32} /></div>
-            <h3>Удалить «{deleteConfirm.name}»?</h3>
-            <p className="delete-modal-preview">Чат и вся история будут удалены</p>
-            <div className="delete-modal-actions">
-              <button className="delete-modal-cancel" onClick={() => setDeleteConfirm(null)}>
-                Отмена
-              </button>
-              <button className="delete-modal-confirm" onClick={() => { onDeleteRoom(deleteConfirm.id); setDeleteConfirm(null); }}>
-                Удалить
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
