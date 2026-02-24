@@ -11,8 +11,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const resDir = join(__dirname, '..', 'android', 'app', 'src', 'main', 'res');
 const publicDir = join(__dirname, '..', 'public');
 
-// ── Cat Face SVG ──
-// A cute, friendly cat face with the BarsikChat purple/indigo brand colors
+// ── Orange/Ginger Cat Face SVG ──
+// A cute, warm ginger cat face (like 🐱 emoji) on indigo brand background
 const catSvg = `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
@@ -20,112 +20,162 @@ const catSvg = `
       <stop offset="0%" style="stop-color:#6366f1"/>
       <stop offset="100%" style="stop-color:#8b5cf6"/>
     </linearGradient>
-    <linearGradient id="ear" x1="0%" y1="100%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#a78bfa"/>
-      <stop offset="100%" style="stop-color:#c4b5fd"/>
+    <linearGradient id="fur" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f59e0b"/>
+      <stop offset="100%" style="stop-color:#ea580c"/>
+    </linearGradient>
+    <linearGradient id="furLight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fbbf24"/>
+      <stop offset="100%" style="stop-color:#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="earInner" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#fca5a5"/>
+      <stop offset="100%" style="stop-color:#fecaca"/>
     </linearGradient>
   </defs>
 
   <!-- Background circle -->
   <circle cx="256" cy="256" r="256" fill="url(#bg)"/>
 
-  <!-- Left ear (outer) -->
-  <path d="M110 220 L135 80 L210 180 Z" fill="#e0e7ff" opacity="0.95"/>
+  <!-- Left ear (outer orange) -->
+  <path d="M108 225 L128 72 L215 178 Z" fill="url(#fur)"/>
   <!-- Left ear (inner pink) -->
-  <path d="M130 200 L147 105 L195 175 Z" fill="url(#ear)"/>
+  <path d="M128 210 L142 100 L198 175 Z" fill="url(#earInner)"/>
 
-  <!-- Right ear (outer) -->
-  <path d="M402 220 L377 80 L302 180 Z" fill="#e0e7ff" opacity="0.95"/>
+  <!-- Right ear (outer orange) -->
+  <path d="M404 225 L384 72 L297 178 Z" fill="url(#fur)"/>
   <!-- Right ear (inner pink) -->
-  <path d="M382 200 L365 105 L317 175 Z" fill="url(#ear)"/>
+  <path d="M384 210 L370 100 L314 175 Z" fill="url(#earInner)"/>
 
-  <!-- Head -->
-  <ellipse cx="256" cy="280" rx="150" ry="140" fill="#e0e7ff"/>
+  <!-- Head (main orange fur) -->
+  <ellipse cx="256" cy="282" rx="155" ry="145" fill="url(#furLight)"/>
+
+  <!-- Forehead dark stripes (tabby markings) -->
+  <path d="M256 155 L250 200 L262 200 Z" fill="#d97706" opacity="0.5"/>
+  <path d="M220 165 L225 205 L235 200 Z" fill="#d97706" opacity="0.35"/>
+  <path d="M292 165 L287 205 L277 200 Z" fill="#d97706" opacity="0.35"/>
+
+  <!-- White muzzle area -->
+  <ellipse cx="256" cy="320" rx="80" ry="55" fill="#fef3c7"/>
+  <ellipse cx="256" cy="310" rx="68" ry="42" fill="white" opacity="0.7"/>
 
   <!-- Left eye -->
-  <ellipse cx="205" cy="260" rx="28" ry="32" fill="white"/>
-  <ellipse cx="210" cy="263" rx="16" ry="20" fill="#1e1b4b"/>
-  <ellipse cx="215" cy="256" rx="6" ry="7" fill="white"/>
+  <ellipse cx="200" cy="262" rx="30" ry="33" fill="white"/>
+  <ellipse cx="205" cy="265" rx="18" ry="22" fill="#166534"/>
+  <ellipse cx="205" cy="265" rx="10" ry="13" fill="#14532d"/>
+  <ellipse cx="211" cy="258" rx="6" ry="7" fill="white"/>
+  <ellipse cx="198" cy="270" rx="3" ry="3" fill="white" opacity="0.5"/>
 
   <!-- Right eye -->
-  <ellipse cx="307" cy="260" rx="28" ry="32" fill="white"/>
-  <ellipse cx="312" cy="263" rx="16" ry="20" fill="#1e1b4b"/>
-  <ellipse cx="317" cy="256" rx="6" ry="7" fill="white"/>
+  <ellipse cx="312" cy="262" rx="30" ry="33" fill="white"/>
+  <ellipse cx="307" cy="265" rx="18" ry="22" fill="#166534"/>
+  <ellipse cx="307" cy="265" rx="10" ry="13" fill="#14532d"/>
+  <ellipse cx="313" cy="258" rx="6" ry="7" fill="white"/>
+  <ellipse cx="300" cy="270" rx="3" ry="3" fill="white" opacity="0.5"/>
 
-  <!-- Nose -->
-  <path d="M248 310 L264 310 L256 322 Z" fill="#c084fc" stroke="#a855f7" stroke-width="1"/>
+  <!-- Nose (pink triangle) -->
+  <path d="M246 308 L266 308 L256 322 Z" fill="#fb7185" stroke="#e11d48" stroke-width="1"/>
 
   <!-- Mouth -->
-  <path d="M256 322 Q240 345 225 335" fill="none" stroke="#6d28d9" stroke-width="3" stroke-linecap="round"/>
-  <path d="M256 322 Q272 345 287 335" fill="none" stroke="#6d28d9" stroke-width="3" stroke-linecap="round"/>
+  <path d="M256 322 Q238 347 220 336" fill="none" stroke="#92400e" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M256 322 Q274 347 292 336" fill="none" stroke="#92400e" stroke-width="2.5" stroke-linecap="round"/>
 
   <!-- Whiskers left -->
-  <line x1="105" y1="290" x2="190" y2="300" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
-  <line x1="100" y1="315" x2="188" y2="315" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
-  <line x1="105" y1="340" x2="190" y2="330" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
+  <line x1="98" y1="288" x2="185" y2="298" stroke="#92400e" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+  <line x1="93" y1="315" x2="183" y2="315" stroke="#92400e" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+  <line x1="98" y1="342" x2="185" y2="332" stroke="#92400e" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
 
   <!-- Whiskers right -->
-  <line x1="407" y1="290" x2="322" y2="300" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
-  <line x1="412" y1="315" x2="324" y2="315" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
-  <line x1="407" y1="340" x2="322" y2="330" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
+  <line x1="414" y1="288" x2="327" y2="298" stroke="#92400e" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+  <line x1="419" y1="315" x2="329" y2="315" stroke="#92400e" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+  <line x1="414" y1="342" x2="327" y2="332" stroke="#92400e" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
 
-  <!-- Cheek blush -->
-  <ellipse cx="175" cy="310" rx="22" ry="14" fill="#c4b5fd" opacity="0.4"/>
-  <ellipse cx="337" cy="310" rx="22" ry="14" fill="#c4b5fd" opacity="0.4"/>
+  <!-- Cheek fluff (lighter fur patches) -->
+  <ellipse cx="170" cy="305" rx="24" ry="16" fill="#fde68a" opacity="0.45"/>
+  <ellipse cx="342" cy="305" rx="24" ry="16" fill="#fde68a" opacity="0.45"/>
+
+  <!-- Subtle smile blush -->
+  <ellipse cx="220" cy="338" rx="14" ry="8" fill="#fca5a5" opacity="0.3"/>
+  <ellipse cx="292" cy="338" rx="14" ry="8" fill="#fca5a5" opacity="0.3"/>
 </svg>
 `;
 
-// Foreground SVG (just the cat, no background circle — for adaptive icons)
+// Foreground SVG (just the ginger cat, no background — for adaptive icons)
 const catForegroundSvg = `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="ear" x1="0%" y1="100%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#a78bfa"/>
-      <stop offset="100%" style="stop-color:#c4b5fd"/>
+    <linearGradient id="fur" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f59e0b"/>
+      <stop offset="100%" style="stop-color:#ea580c"/>
+    </linearGradient>
+    <linearGradient id="furLight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fbbf24"/>
+      <stop offset="100%" style="stop-color:#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="earInner" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#fca5a5"/>
+      <stop offset="100%" style="stop-color:#fecaca"/>
     </linearGradient>
   </defs>
 
-  <!-- Left ear (outer) -->
-  <path d="M110 220 L135 80 L210 180 Z" fill="#e0e7ff" opacity="0.95"/>
-  <path d="M130 200 L147 105 L195 175 Z" fill="url(#ear)"/>
+  <!-- Left ear -->
+  <path d="M108 225 L128 72 L215 178 Z" fill="url(#fur)"/>
+  <path d="M128 210 L142 100 L198 175 Z" fill="url(#earInner)"/>
 
-  <!-- Right ear (outer) -->
-  <path d="M402 220 L377 80 L302 180 Z" fill="#e0e7ff" opacity="0.95"/>
-  <path d="M382 200 L365 105 L317 175 Z" fill="url(#ear)"/>
+  <!-- Right ear -->
+  <path d="M404 225 L384 72 L297 178 Z" fill="url(#fur)"/>
+  <path d="M384 210 L370 100 L314 175 Z" fill="url(#earInner)"/>
 
   <!-- Head -->
-  <ellipse cx="256" cy="280" rx="150" ry="140" fill="#e0e7ff"/>
+  <ellipse cx="256" cy="282" rx="155" ry="145" fill="url(#furLight)"/>
+
+  <!-- Forehead stripes -->
+  <path d="M256 155 L250 200 L262 200 Z" fill="#d97706" opacity="0.5"/>
+  <path d="M220 165 L225 205 L235 200 Z" fill="#d97706" opacity="0.35"/>
+  <path d="M292 165 L287 205 L277 200 Z" fill="#d97706" opacity="0.35"/>
+
+  <!-- White muzzle -->
+  <ellipse cx="256" cy="320" rx="80" ry="55" fill="#fef3c7"/>
+  <ellipse cx="256" cy="310" rx="68" ry="42" fill="white" opacity="0.7"/>
 
   <!-- Left eye -->
-  <ellipse cx="205" cy="260" rx="28" ry="32" fill="white"/>
-  <ellipse cx="210" cy="263" rx="16" ry="20" fill="#1e1b4b"/>
-  <ellipse cx="215" cy="256" rx="6" ry="7" fill="white"/>
+  <ellipse cx="200" cy="262" rx="30" ry="33" fill="white"/>
+  <ellipse cx="205" cy="265" rx="18" ry="22" fill="#166534"/>
+  <ellipse cx="205" cy="265" rx="10" ry="13" fill="#14532d"/>
+  <ellipse cx="211" cy="258" rx="6" ry="7" fill="white"/>
+  <ellipse cx="198" cy="270" rx="3" ry="3" fill="white" opacity="0.5"/>
 
   <!-- Right eye -->
-  <ellipse cx="307" cy="260" rx="28" ry="32" fill="white"/>
-  <ellipse cx="312" cy="263" rx="16" ry="20" fill="#1e1b4b"/>
-  <ellipse cx="317" cy="256" rx="6" ry="7" fill="white"/>
+  <ellipse cx="312" cy="262" rx="30" ry="33" fill="white"/>
+  <ellipse cx="307" cy="265" rx="18" ry="22" fill="#166534"/>
+  <ellipse cx="307" cy="265" rx="10" ry="13" fill="#14532d"/>
+  <ellipse cx="313" cy="258" rx="6" ry="7" fill="white"/>
+  <ellipse cx="300" cy="270" rx="3" ry="3" fill="white" opacity="0.5"/>
 
   <!-- Nose -->
-  <path d="M248 310 L264 310 L256 322 Z" fill="#c084fc" stroke="#a855f7" stroke-width="1"/>
+  <path d="M246 308 L266 308 L256 322 Z" fill="#fb7185" stroke="#e11d48" stroke-width="1"/>
 
   <!-- Mouth -->
-  <path d="M256 322 Q240 345 225 335" fill="none" stroke="#6d28d9" stroke-width="3" stroke-linecap="round"/>
-  <path d="M256 322 Q272 345 287 335" fill="none" stroke="#6d28d9" stroke-width="3" stroke-linecap="round"/>
+  <path d="M256 322 Q238 347 220 336" fill="none" stroke="#92400e" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M256 322 Q274 347 292 336" fill="none" stroke="#92400e" stroke-width="2.5" stroke-linecap="round"/>
 
   <!-- Whiskers left -->
-  <line x1="105" y1="290" x2="190" y2="300" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
-  <line x1="100" y1="315" x2="188" y2="315" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
-  <line x1="105" y1="340" x2="190" y2="330" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
+  <line x1="98" y1="288" x2="185" y2="298" stroke="#92400e" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+  <line x1="93" y1="315" x2="183" y2="315" stroke="#92400e" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+  <line x1="98" y1="342" x2="185" y2="332" stroke="#92400e" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
 
   <!-- Whiskers right -->
-  <line x1="407" y1="290" x2="322" y2="300" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
-  <line x1="412" y1="315" x2="324" y2="315" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
-  <line x1="407" y1="340" x2="322" y2="330" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
+  <line x1="414" y1="288" x2="327" y2="298" stroke="#92400e" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+  <line x1="419" y1="315" x2="329" y2="315" stroke="#92400e" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+  <line x1="414" y1="342" x2="327" y2="332" stroke="#92400e" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
 
-  <!-- Cheek blush -->
-  <ellipse cx="175" cy="310" rx="22" ry="14" fill="#c4b5fd" opacity="0.4"/>
-  <ellipse cx="337" cy="310" rx="22" ry="14" fill="#c4b5fd" opacity="0.4"/>
+  <!-- Cheek fluff -->
+  <ellipse cx="170" cy="305" rx="24" ry="16" fill="#fde68a" opacity="0.45"/>
+  <ellipse cx="342" cy="305" rx="24" ry="16" fill="#fde68a" opacity="0.45"/>
+
+  <!-- Blush -->
+  <ellipse cx="220" cy="338" rx="14" ry="8" fill="#fca5a5" opacity="0.3"/>
+  <ellipse cx="292" cy="338" rx="14" ry="8" fill="#fca5a5" opacity="0.3"/>
 </svg>
 `;
 
