@@ -6,8 +6,8 @@
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
-  background: #0a0e14;
-  color: #e8ecf1;
+  background: linear-gradient(145deg, #e8eef5 0%, #dfe6f0 40%, #eae4f2 100%);
+  color: #1a1a2e;
   height: 100vh;
   height: 100dvh;
   -webkit-font-smoothing: antialiased;
@@ -29,15 +29,15 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.1);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.18);
 }
 
 /* Selection color */
 ::selection {
-  background: rgba(99, 136, 255, 0.3);
-  color: #fff;
+  background: rgba(99, 102, 241, 0.25);
+  color: #1a1a2e;
 }

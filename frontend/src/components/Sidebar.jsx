@@ -1068,12 +1068,6 @@ export default function Sidebar({
       {showBurgerDrawer && (
         <div className="burger-overlay" onClick={() => setShowBurgerDrawer(false)}>
           <div className="burger-drawer" ref={burgerRef} onClick={e => e.stopPropagation()}>
-            {/* Search bar */}
-            <div className="burger-search">
-              <Search size={16} className="burger-search-icon" />
-              <span className="burger-search-text">Поиск</span>
-            </div>
-
             {/* User profile row */}
             <button className="burger-menu-item burger-user-row" onClick={() => { setShowBurgerDrawer(false); setShowProfile(true); }}>
               <div className="burger-user-avatar" style={{ background: avatarUrl ? 'transparent' : getAvatarColor(username) }}>
