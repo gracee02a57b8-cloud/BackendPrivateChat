@@ -653,22 +653,6 @@
   color: #fff !important;
   background: rgba(99, 136, 255, 0.15) !important;
 }
-.sb-add-folder-btn:hover::after {
-  content: 'Создать папку';
-  position: absolute;
-  top: 110%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #1e293b;
-  color: #d5e0ec;
-  font-size: 0.7rem;
-  padding: 4px 10px;
-  border-radius: 6px;
-  white-space: nowrap;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-  z-index: 100;
-  pointer-events: none;
-}
 
 /* ===== Folder Context Menu ===== */
 .folder-ctx-overlay {
