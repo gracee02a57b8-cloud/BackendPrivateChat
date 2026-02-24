@@ -27,7 +27,11 @@ const WS_URL = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${win
 
 export default function Chat({ token, username, avatarUrl, onAvatarChange, onLogout, joinRoomId, joinConfId, onShowNews }) {
   const [rooms, setRooms] = useState([]);
-  const [activeRoomId, setActiveRoomId] = useState(null);
+  const [activeRoomId, setActiveRoomIdRaw] = useState(() => {
+    const saved = sessionStorage.getItem('activeRoomId');
+    return saved ? Number(saved) : null;
+  });
+  const setActiveRoomId = (id) => { setActiveRoomIdRaw(id); if (id != null) sessionStorage.setItem('activeRoomId', id); else sessionStorage.removeItem('activeRoomId'); };
   const [messagesByRoom, setMessagesByRoom] = useState({});
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [allUsers, setAllUsers] = useState([]);

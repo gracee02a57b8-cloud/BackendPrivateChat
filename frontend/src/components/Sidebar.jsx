@@ -11,7 +11,7 @@ import StoriesBar from './StoriesBar';
 import { copyToClipboard } from '../utils/clipboard';
 import appSettings from '../utils/appSettings';
 import { getAvatarColor, getInitials, formatLastSeen } from '../utils/avatar';
-import { ArrowLeft, MoreVertical, User, Mail, Plus, Bookmark, Download, X, Search, Users, MessageSquare, Pin, Phone, Star, Newspaper, ClipboardList, Link, Volume2, Bell, BellOff, Settings, LogOut, ChevronDown, ChevronUp, FolderPlus, Trash2, Check, Edit3, ArrowUpDown, Folder, Menu, Wallet, UserPlus, Clock } from 'lucide-react';
+import { ArrowLeft, MoreVertical, User, Mail, Plus, Bookmark, Download, X, Search, Users, MessageSquare, Pin, Phone, Star, Newspaper, ClipboardList, Link, Volume2, Bell, BellOff, Settings, LogOut, ChevronDown, ChevronUp, FolderPlus, Trash2, Check, Edit3, ArrowUpDown, Folder, Menu, UserPlus, Clock } from 'lucide-react';
 
 function formatTime(ts) {
   if (!ts) return '';
@@ -1068,27 +1068,32 @@ export default function Sidebar({
       {showBurgerDrawer && (
         <div className="burger-overlay" onClick={() => setShowBurgerDrawer(false)}>
           <div className="burger-drawer" ref={burgerRef} onClick={e => e.stopPropagation()}>
-            {/* User profile header */}
-            <div className="burger-user-section" onClick={() => { setShowBurgerDrawer(false); setShowProfile(true); }}>
+            {/* Search bar */}
+            <div className="burger-search">
+              <Search size={16} className="burger-search-icon" />
+              <span className="burger-search-text">Поиск</span>
+            </div>
+
+            {/* User profile row */}
+            <button className="burger-menu-item burger-user-row" onClick={() => { setShowBurgerDrawer(false); setShowProfile(true); }}>
               <div className="burger-user-avatar" style={{ background: avatarUrl ? 'transparent' : getAvatarColor(username) }}>
                 {avatarUrl
                   ? <img src={avatarUrl} alt="" className="sb-avatar-img" />
                   : getInitials(username)}
               </div>
-              <div className="burger-user-info">
-                <span className="burger-user-name">{username}</span>
-                <span className={`burger-user-status ${connected ? 'online' : ''}`}>
-                  {connected ? '● В сети' : '● Офлайн'}
-                </span>
-              </div>
-            </div>
+              <span>{username}</span>
+            </button>
+
+            {/* Add account */}
+            <button className="burger-menu-item" onClick={() => { setShowBurgerDrawer(false); }}>
+              <UserPlus size={20} />
+              <span>Добавить аккаунт</span>
+            </button>
+
+            <div className="burger-menu-divider" />
 
             {/* Menu items */}
             <div className="burger-menu-list">
-              <button className="burger-menu-item" onClick={() => { setShowBurgerDrawer(false); setShowProfile(true); }}>
-                <User size={20} />
-                <span>Профиль</span>
-              </button>
               <button className="burger-menu-item" onClick={() => { setShowBurgerDrawer(false); if (onOpenSaved) onOpenSaved(); }}>
                 <Bookmark size={20} />
                 <span>Сохранённые сообщения</span>
@@ -1100,21 +1105,6 @@ export default function Sidebar({
               <button className="burger-menu-item" onClick={() => { setShowBurgerDrawer(false); setShowContacts(true); }}>
                 <Users size={20} />
                 <span>Контакты</span>
-              </button>
-              <button className="burger-menu-item" onClick={() => { setShowBurgerDrawer(false); setShowCreate(true); }}>
-                <Plus size={20} />
-                <span>Создать группу</span>
-              </button>
-              <button className="burger-menu-item" onClick={() => { setShowBurgerDrawer(false); setShowSearch(true); }}>
-                <Mail size={20} />
-                <span>Написать сообщение</span>
-              </button>
-
-              <div className="burger-menu-divider" />
-
-              <button className="burger-menu-item" onClick={() => { setShowBurgerDrawer(false); }}>
-                <Wallet size={20} />
-                <span>Кошелек</span>
               </button>
 
               <div className="burger-menu-divider" />
