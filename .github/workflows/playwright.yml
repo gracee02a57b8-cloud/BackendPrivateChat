@@ -1,0 +1,59 @@
+name: Playwright E2E Tests
+
+on:
+  push:
+    branches: [main]
+    paths: ['frontend/**']
+  pull_request:
+    branches: [main]
+    paths: ['frontend/**']
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: frontend
+
+jobs:
+  playwright:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - chromium-desktop
+          - mobile-chromium
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Run Playwright tests (${{ matrix.project }})
+        run: npx playwright test --project=${{ matrix.project }}
+        env:
+          BASE_URL: ${{ secrets.BASE_URL || 'https://barsikchat.duckdns.org' }}
+          TEST_USER: ${{ secrets.TEST_USER || 'playwright_tester' }}
+          TEST_PASS: ${{ secrets.TEST_PASS || 'TestPass2026!' }}
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report-${{ matrix.project }}
+          path: frontend/playwright-report/
+          retention-days: 14
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: test-results-${{ matrix.project }}
+          path: frontend/test-results/
+          retention-days: 7
