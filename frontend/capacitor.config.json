@@ -3,11 +3,11 @@
   "appName": "BarsikChat",
   "webDir": "dist",
   "server": {
-    "url": "http://46.149.71.106",
-    "cleartext": true
+    "url": "https://barsikchat.duckdns.org",
+    "cleartext": false
   },
   "android": {
-    "allowMixedContent": true,
+    "allowMixedContent": false,
     "backgroundColor": "#e8eef5",
     "webContentsDebuggingEnabled": true
   },
