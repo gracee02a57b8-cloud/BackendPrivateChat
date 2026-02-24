@@ -56,6 +56,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   const [myContacts, setMyContacts] = useState([]);
   const [showStoryUpload, setShowStoryUpload] = useState(false);
   const [storyViewerAuthor, setStoryViewerAuthor] = useState(null);
+  const [disappearingTimers, setDisappearingTimers] = useState({});
   const wsRef = useRef(null);
   const loadedRooms = useRef(new Set());
   const activeRoomIdRef = useRef(null);
@@ -1102,6 +1103,97 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
     }
   };
 
+  /**
+   * Forward one or more messages to selected contacts/rooms.
+   * targets can contain room IDs or "user:<username>" for users without an existing room.
+   */
+  const forwardToContacts = async (messagesToForward, targets) => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+    let successCount = 0;
+
+    for (const target of targets) {
+      let targetRoomId = target;
+
+      // If target is a user without existing chat, create a private room first
+      if (target.startsWith('user:')) {
+        const targetUser = target.replace('user:', '');
+        try {
+          const res = await fetch(`/api/rooms/private/${targetUser}`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) continue;
+          const room = await res.json();
+          targetRoomId = room.id;
+          fetchRooms();
+        } catch {
+          continue;
+        }
+      }
+
+      // Send each forwarded message
+      for (const msg of messagesToForward) {
+        const forwardedContent = `↪ ${msg.sender}: ${msg.content || ''}`.trim();
+        const fwdMsg = {
+          type: 'CHAT',
+          roomId: targetRoomId,
+          content: forwardedContent || (msg.fileUrl ? '' : 'Пересланное сообщение'),
+        };
+        if (msg.fileUrl) {
+          fwdMsg.fileUrl = msg.fileUrl;
+          fwdMsg.fileName = msg.fileName;
+          fwdMsg.fileSize = msg.fileSize;
+          fwdMsg.fileType = msg.fileType;
+        }
+        wsRef.current.send(JSON.stringify(fwdMsg));
+      }
+      successCount++;
+    }
+
+    if (successCount > 0) {
+      const msgWord = messagesToForward.length > 1 ? `${messagesToForward.length} сообщений` : 'сообщение';
+      const recipientWord = successCount > 1 ? `${successCount} получателям` : '1 получателю';
+      showToast(`Переслано ${msgWord} ${recipientWord}`, 'success');
+      fetchRooms();
+    }
+  };
+
+  // Disappearing messages: set timer for a room
+  const setDisappearingTimer = (roomId, seconds) => {
+    setDisappearingTimers(prev => ({ ...prev, [roomId]: seconds }));
+    if (seconds > 0) {
+      showToast(`Исчезающие сообщения: ${seconds >= 86400 ? `${seconds / 86400} д.` : seconds >= 3600 ? `${seconds / 3600} ч.` : seconds >= 60 ? `${seconds / 60} мин.` : `${seconds} сек.`}`, 'success');
+    } else {
+      showToast('Исчезающие сообщения выключены', 'success');
+    }
+  };
+
+  // Disappearing messages auto-delete effect
+  useEffect(() => {
+    const intervals = [];
+    for (const [roomId, timer] of Object.entries(disappearingTimers)) {
+      if (timer <= 0) continue;
+      const interval = setInterval(() => {
+        setMessagesByRoom(prev => {
+          const msgs = prev[roomId];
+          if (!msgs || msgs.length === 0) return prev;
+          const now = Date.now();
+          const filtered = msgs.filter(msg => {
+            if (msg.type === 'JOIN' || msg.type === 'LEAVE' || msg.type === 'CALL_LOG') return true;
+            if (!msg.timestamp) return true;
+            const ts = new Date(msg.timestamp.includes?.('T') ? msg.timestamp : msg.timestamp.replace(' ', 'T'));
+            if (isNaN(ts.getTime())) return true;
+            return (now - ts.getTime()) < timer * 1000;
+          });
+          if (filtered.length === msgs.length) return prev;
+          return { ...prev, [roomId]: filtered };
+        });
+      }, 5000); // check every 5 seconds
+      intervals.push(interval);
+    }
+    return () => intervals.forEach(clearInterval);
+  }, [disappearingTimers]);
+
   const deleteRoom = async (roomId) => {
     // Prevent deleting saved messages room
     const room = rooms.find(r => r.id === roomId);
@@ -1334,6 +1426,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           callState={webrtc.callState}
           onLeaveRoom={deleteRoom}
           onForwardToSaved={forwardToSaved}
+          onForwardToContacts={forwardToContacts}
           onJoinRoom={joinRoom}
           onJoinConference={async (confId) => {
             try {
@@ -1346,6 +1439,9 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           onAddMembers={() => setShowAddMembersPanel(true)}
           onDismissAddMembers={() => setNewlyCreatedRoomId(null)}
           onStartPrivateChat={startPrivateChat}
+          rooms={rooms}
+          disappearingTimer={disappearingTimers[activeRoomId] || 0}
+          onSetDisappearingTimer={(seconds) => setDisappearingTimer(activeRoomId, seconds)}
         />
       )}
       {showAddMembersPanel && (

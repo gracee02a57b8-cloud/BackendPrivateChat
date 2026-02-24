@@ -11,8 +11,9 @@ import useDecryptedUrl from '../hooks/useDecryptedUrl';
 import { copyToClipboard } from '../utils/clipboard';
 import { showToast } from './Toast';
 import GroupInfoPanel from './GroupInfoPanel';
+import ForwardContactPicker from './ForwardContactPicker';
 import { getAvatarColor, getInitials, formatLastSeen } from '../utils/avatar';
-import { ArrowLeft, Bookmark, Phone, Search, Lock, Link, ChevronUp, ChevronDown, X, Pin, Paperclip, MessageSquare, Check, CheckCheck, Reply, Forward, Clipboard, Pencil, Trash2, Clock, Mic, Video, SendHorizontal, FolderOpen, Smile, Unlock, Download, MoreVertical, Plus } from 'lucide-react';
+import { ArrowLeft, Bookmark, Phone, Search, Lock, Link, ChevronUp, ChevronDown, X, Pin, Paperclip, MessageSquare, Check, CheckCheck, Reply, Forward, Clipboard, Pencil, Trash2, Clock, Mic, Video, SendHorizontal, FolderOpen, Smile, Unlock, Download, MoreVertical, Plus, Timer, CheckSquare } from 'lucide-react';
 
 function formatFileSize(bytes) {
   if (bytes < 1024) return bytes + ' Б';
@@ -184,7 +185,7 @@ function CallLogBubble({ msg, username }) {
   );
 }
 
-export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, onDeleteMessage, onScheduleMessage, scheduledMessages, roomName, username, connected, token, activeRoom, onlineUsers, allUsers = [], typingUsers = [], onTyping, isE2E, onShowSecurityCode, avatarMap = {}, onStartCall, callState, onLeaveRoom, onBack, onForwardToSaved, onJoinRoom, onJoinConference, showAddMembers, onAddMembers, onDismissAddMembers, onStartPrivateChat }) {
+export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, onDeleteMessage, onScheduleMessage, scheduledMessages, roomName, username, connected, token, activeRoom, onlineUsers, allUsers = [], typingUsers = [], onTyping, isE2E, onShowSecurityCode, avatarMap = {}, onStartCall, callState, onLeaveRoom, onBack, onForwardToSaved, onForwardToContacts, onJoinRoom, onJoinConference, showAddMembers, onAddMembers, onDismissAddMembers, onStartPrivateChat, rooms = [], disappearingTimer, onSetDisappearingTimer }) {
   const [input, setInput] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
@@ -211,6 +212,11 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
   const [showSearch, setShowSearch] = useState(false);
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
+  const [multiSelectMode, setMultiSelectMode] = useState(false);
+  const [selectedMsgIds, setSelectedMsgIds] = useState(new Set());
+  const [showForwardPicker, setShowForwardPicker] = useState(false);
+  const [forwardMessages, setForwardMessages] = useState([]);
+  const [showDisappearingPicker, setShowDisappearingPicker] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searchIndex, setSearchIndex] = useState(0);
@@ -269,6 +275,10 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
     setMentionQuery(null);
     setShowGroupInfo(false);
     setShowSearch(false);
+    setMultiSelectMode(false);
+    setSelectedMsgIds(new Set());
+    setShowForwardPicker(false);
+    setForwardMessages([]);
     setSearchQuery('');
     setSearchResults([]);
     setSearchIndex(0);
@@ -571,10 +581,45 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
 
   const handleForwardMsg = (msg) => {
     setContextMenu(null);
-    // Copy text to input with a forward prefix
-    const forwardText = `↪ ${msg.sender}: ${msg.content || ''}`;
-    setInput(forwardText);
-    setTimeout(() => inputRef.current?.focus(), 0);
+    setForwardMessages([msg]);
+    setShowForwardPicker(true);
+  };
+
+  // Multi-select helpers
+  const toggleMsgSelection = (msgId) => {
+    setSelectedMsgIds(prev => {
+      const next = new Set(prev);
+      if (next.has(msgId)) next.delete(msgId);
+      else next.add(msgId);
+      return next;
+    });
+  };
+
+  const enterMultiSelect = (msg) => {
+    setContextMenu(null);
+    setMultiSelectMode(true);
+    setSelectedMsgIds(new Set([msg.id]));
+  };
+
+  const exitMultiSelect = () => {
+    setMultiSelectMode(false);
+    setSelectedMsgIds(new Set());
+  };
+
+  const forwardSelected = () => {
+    const msgs = messages.filter(m => selectedMsgIds.has(m.id));
+    if (msgs.length === 0) return;
+    setForwardMessages(msgs);
+    setShowForwardPicker(true);
+  };
+
+  const handleForwardToContacts = (targets) => {
+    if (onForwardToContacts && forwardMessages.length > 0) {
+      onForwardToContacts(forwardMessages, targets);
+    }
+    setForwardMessages([]);
+    setShowForwardPicker(false);
+    exitMultiSelect();
   };
 
   const QUICK_REACTIONS = ['❤️', '😆', '🐱', '😄', '🔥', '🎉', '🤝'];
@@ -940,6 +985,14 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
                 <button onClick={() => { handleCopyLink(); setShowHeaderMenu(false); }}>
                   <Link size={16} /> Поделиться
                 </button>
+                {activeRoom?.type !== 'SAVED_MESSAGES' && (
+                  <button onClick={() => { setShowDisappearingPicker(true); setShowHeaderMenu(false); }}>
+                    <Timer size={16} /> Исчезающие сообщения
+                  </button>
+                )}
+                <button onClick={() => { setMultiSelectMode(true); setShowHeaderMenu(false); }}>
+                  <CheckSquare size={16} /> Выбрать сообщения
+                </button>
               </div>
             )}
           </div>
@@ -979,6 +1032,25 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
         <div className="add-members-banner">
           <span className="add-members-text" onClick={onAddMembers}>Добавить участников</span>
           <button className="add-members-close" onClick={onDismissAddMembers}><X size={16} /></button>
+        </div>
+      )}
+
+      {/* Disappearing messages banner */}
+      {disappearingTimer && disappearingTimer > 0 && (
+        <div className="disappearing-banner">
+          <Timer size={14} />
+          Исчезающие сообщения: {disappearingTimer >= 86400 ? `${disappearingTimer / 86400} д.` : disappearingTimer >= 3600 ? `${disappearingTimer / 3600} ч.` : disappearingTimer >= 60 ? `${disappearingTimer / 60} мин.` : `${disappearingTimer} сек.`}
+        </div>
+      )}
+
+      {/* Multi-select bar */}
+      {multiSelectMode && (
+        <div className="multi-select-bar">
+          <span className="msel-count">Выбрано: {selectedMsgIds.size}</span>
+          <button onClick={exitMultiSelect}><X size={16} /> Отмена</button>
+          <button className="msel-forward" onClick={forwardSelected} disabled={selectedMsgIds.size === 0}>
+            <Forward size={16} /> Переслать
+          </button>
         </div>
       )}
 
@@ -1044,6 +1116,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
 
           const isSearchMatch = searchResults.some(r => r.id === msg.id);
           const isCurrentSearch = searchResults[searchIndex]?.id === msg.id;
+          const isMsgSelected = multiSelectMode && selectedMsgIds.has(msg.id);
 
           return (
             <div key={msg.id || i}>
@@ -1051,9 +1124,16 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
               <div
                 id={`msg-${msg.id}`}
                 data-msg-id={msg.id}
-                className={`${msgClass}${isSearchMatch ? ' search-match' : ''}${isCurrentSearch ? ' search-current' : ''}`}
-                onContextMenu={(e) => handleContextMenu(e, msg)}
+                className={`${msgClass}${isSearchMatch ? ' search-match' : ''}${isCurrentSearch ? ' search-current' : ''}${multiSelectMode ? ' multi-select-mode' : ''}${isMsgSelected ? ' selected-msg' : ''}`}
+                onContextMenu={(e) => !multiSelectMode && handleContextMenu(e, msg)}
+                onClick={multiSelectMode && !isSys && !isCallLog ? () => toggleMsgSelection(msg.id) : undefined}
               >
+                {/* Multi-select checkbox */}
+                {multiSelectMode && !isSys && !isCallLog && (
+                  <div className={`msg-select-check${isMsgSelected ? ' on' : ''}`} style={{ display: 'flex' }}>
+                    {isMsgSelected && <Check size={13} />}
+                  </div>
+                )}
                 {isSys ? (
                   <span className="system-text">{msg.content}</span>
                 ) : isCallLog ? (
@@ -1094,6 +1174,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
                           {linkifyContent(msg.content, onJoinRoom, onJoinConference)}
                           <span className="msg-meta">
                             {msg.edited && <span className="edited-badge">ред. </span>}
+                            {disappearingTimer > 0 && <span className="disappearing-badge"><Timer size={10} /></span>}
                             {msg.timestamp}
                             {isOwn && (msg.type === 'CHAT' || msg.type === 'VOICE' || msg.type === 'VIDEO_CIRCLE') && (
                               <span className={`msg-check ${msg.status === 'READ' ? 'read' : ''}`}>
@@ -1109,6 +1190,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
                       {!msg.content && (
                         <span className="msg-meta standalone">
                           {msg.edited && <span className="edited-badge">ред. </span>}
+                          {disappearingTimer > 0 && <span className="disappearing-badge"><Timer size={10} /></span>}
                           {msg.timestamp}
                           {isOwn && (msg.type === 'CHAT' || msg.type === 'VOICE' || msg.type === 'VIDEO_CIRCLE') && (
                             <span className={`msg-check ${msg.status === 'READ' ? 'read' : ''}`}>
@@ -1193,6 +1275,9 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
             </button>
             <button onClick={() => handleForwardMsg(contextMenu.msg)}>
               <span className="ctx-icon"><Forward size={16} /></span> Переслать
+            </button>
+            <button onClick={() => enterMultiSelect(contextMenu.msg)}>
+              <span className="ctx-icon"><CheckSquare size={16} /></span> Выбрать
             </button>
             <button onClick={() => { setContextMenu(null); if (onForwardToSaved) onForwardToSaved(contextMenu.msg); }}>
               <span className="ctx-icon"><Bookmark size={16} /></span> В Избранное
@@ -1424,6 +1509,54 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
             onlineUsers={onlineUsers}
             avatarMap={avatarMap}
           />
+        </div>
+      )}
+
+      {/* Forward Contact Picker */}
+      {showForwardPicker && (
+        <ForwardContactPicker
+          rooms={rooms}
+          allUsers={allUsers}
+          username={username}
+          avatarMap={avatarMap}
+          onlineUsers={onlineUsers}
+          onForward={handleForwardToContacts}
+          onClose={() => { setShowForwardPicker(false); setForwardMessages([]); }}
+          messagesToForward={forwardMessages}
+        />
+      )}
+
+      {/* Disappearing Messages Picker */}
+      {showDisappearingPicker && (
+        <div className="disappearing-picker-overlay" onClick={() => setShowDisappearingPicker(false)}>
+          <div className="disappearing-picker" onClick={e => e.stopPropagation()}>
+            <div className="disappearing-picker-header">
+              <h3>Исчезающие сообщения</h3>
+              <p>Сообщения будут автоматически удалены через выбранное время после отправки.</p>
+            </div>
+            <div className="disappearing-options">
+              {[
+                { value: 0, label: 'Выключено' },
+                { value: 30, label: '30 секунд' },
+                { value: 300, label: '5 минут' },
+                { value: 3600, label: '1 час' },
+                { value: 86400, label: '1 день' },
+                { value: 604800, label: '1 неделя' },
+              ].map(opt => (
+                <button
+                  key={opt.value}
+                  className={`disappearing-option${(disappearingTimer || 0) === opt.value ? ' active' : ''}`}
+                  onClick={() => {
+                    if (onSetDisappearingTimer) onSetDisappearingTimer(opt.value);
+                    setShowDisappearingPicker(false);
+                  }}
+                >
+                  <span className="disopt-radio" />
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>
