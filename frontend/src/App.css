@@ -1186,7 +1186,7 @@
   border-radius: 6px;
   transition: background 0.15s, color 0.15s;
   line-height: 1;
-  color: rgba(255,255,255,0.5);
+  color: rgba(255,255,255,0.75);
 }
 
 .sb-pin-btn:hover {
