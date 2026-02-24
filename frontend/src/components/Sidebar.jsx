@@ -11,7 +11,7 @@ import StoriesBar from './StoriesBar';
 import { copyToClipboard } from '../utils/clipboard';
 import appSettings from '../utils/appSettings';
 import { getAvatarColor, getInitials, formatLastSeen } from '../utils/avatar';
-import { ArrowLeft, MoreVertical, User, Mail, Plus, Bookmark, Download, X, Search, Users, MessageSquare, Pin, Phone, Star, Newspaper, ClipboardList, Link, Volume2, Bell, Settings, LogOut, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, MoreVertical, User, Mail, Plus, Bookmark, Download, X, Search, Users, MessageSquare, Pin, Phone, Star, Newspaper, ClipboardList, Link, Volume2, Bell, Settings, LogOut, ChevronDown, ChevronUp, FolderPlus, Trash2, Check } from 'lucide-react';
 
 function formatTime(ts) {
   if (!ts) return '';
@@ -88,6 +88,14 @@ export default function Sidebar({
   const [callSoundOn, setCallSoundOn] = useState(() => appSettings.callSound);
   const [pushOn, setPushOn] = useState(() => appSettings.pushEnabled);
   const [storiesFeedOpen, setStoriesFeedOpen] = useState(false);
+  const [chatFolders, setChatFolders] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(`chatFolders_${username}`) || '[]'); }
+    catch { return []; }
+  });
+  const [showFolderModal, setShowFolderModal] = useState(false);
+  const [folderName, setFolderName] = useState('');
+  const [folderSelectedRooms, setFolderSelectedRooms] = useState(new Set());
+  const [editingFolderId, setEditingFolderId] = useState(null);
   const menuRef = useRef(null);
   const pullStartY = useRef(0);
   const pullActive = useRef(false);
@@ -162,6 +170,56 @@ export default function Sidebar({
     });
   };
 
+  const saveFolders = (folders) => {
+    setChatFolders(folders);
+    localStorage.setItem(`chatFolders_${username}`, JSON.stringify(folders));
+  };
+
+  const openCreateFolder = () => {
+    setFolderName('');
+    setFolderSelectedRooms(new Set());
+    setEditingFolderId(null);
+    setShowFolderModal(true);
+  };
+
+  const openEditFolder = (e, folder) => {
+    e.stopPropagation();
+    setFolderName(folder.name);
+    setFolderSelectedRooms(new Set(folder.roomIds));
+    setEditingFolderId(folder.id);
+    setShowFolderModal(true);
+  };
+
+  const handleSaveFolder = () => {
+    const name = folderName.trim();
+    if (!name || folderSelectedRooms.size === 0) return;
+    if (editingFolderId) {
+      const updated = chatFolders.map(f => f.id === editingFolderId ? { ...f, name, roomIds: [...folderSelectedRooms] } : f);
+      saveFolders(updated);
+    } else {
+      const newFolder = { id: Date.now().toString(), name, roomIds: [...folderSelectedRooms] };
+      saveFolders([...chatFolders, newFolder]);
+    }
+    setShowFolderModal(false);
+    setFolderName('');
+    setFolderSelectedRooms(new Set());
+    setEditingFolderId(null);
+  };
+
+  const deleteFolder = (e, folderId) => {
+    e.stopPropagation();
+    saveFolders(chatFolders.filter(f => f.id !== folderId));
+    if (chatFilter === `folder_${folderId}`) setChatFilter('all');
+  };
+
+  const toggleFolderRoom = (roomId) => {
+    setFolderSelectedRooms(prev => {
+      const next = new Set(prev);
+      if (next.has(roomId)) next.delete(roomId); else next.add(roomId);
+      return next;
+    });
+  };
+
   const getPrivateDisplayName = (room) => {
     const parts = room.name.split(' & ');
     return parts.find((p) => p !== username) || room.name;
@@ -197,8 +255,13 @@ export default function Sidebar({
       list = list.filter(r => r.type === 'PRIVATE');
     } else if (chatFilter === 'groups') {
       list = list.filter(r => r.type === 'ROOM');
-    } else if (chatFilter === 'unread') {
-      list = list.filter(r => (unreadCounts[r.id] || 0) > 0);
+    } else if (chatFilter.startsWith('folder_')) {
+      const folderId = chatFilter.replace('folder_', '');
+      const folder = chatFolders.find(f => f.id === folderId);
+      if (folder) {
+        const roomSet = new Set(folder.roomIds);
+        list = list.filter(r => roomSet.has(r.id));
+      }
     }
 
     // Apply search
@@ -344,7 +407,6 @@ export default function Sidebar({
               { key: 'all', label: 'Все' },
               { key: 'private', label: 'Личные' },
               { key: 'groups', label: 'Группы' },
-              { key: 'unread', label: 'Непрочитанные' },
             ].map(f => (
               <button
                 key={f.key}
@@ -352,12 +414,23 @@ export default function Sidebar({
                 onClick={() => setChatFilter(f.key)}
               >
                 {f.label}
-                {f.key === 'unread' && (() => {
-                  const total = Object.values(unreadCounts).reduce((s, v) => s + v, 0);
-                  return total > 0 ? <span className="sb-filter-badge">{total}</span> : null;
-                })()}
               </button>
             ))}
+            {chatFolders.map(folder => (
+              <button
+                key={folder.id}
+                className={`sb-filter sb-folder-tab${chatFilter === `folder_${folder.id}` ? ' active' : ''}`}
+                onClick={() => setChatFilter(`folder_${folder.id}`)}
+              >
+                {folder.name}
+                <span className="sb-folder-delete" onClick={(e) => deleteFolder(e, folder.id)} title="Удалить папку">
+                  <X size={12} />
+                </span>
+              </button>
+            ))}
+            <button className="sb-filter sb-add-folder-btn" onClick={openCreateFolder} title="Создать папку">
+              <Plus size={14} />
+            </button>
           </div>
 
           {/* Search */}
@@ -790,6 +863,53 @@ export default function Sidebar({
           onAvatarChange={onAvatarChange}
           onClose={() => setShowProfile(false)}
         />
+      )}
+
+      {/* Folder creation/edit modal */}
+      {showFolderModal && (
+        <div className="folder-modal-overlay" onClick={() => setShowFolderModal(false)}>
+          <div className="folder-modal" onClick={e => e.stopPropagation()}>
+            <div className="folder-modal-header">
+              <h3>{editingFolderId ? 'Редактировать папку' : 'Создать папку'}</h3>
+              <button className="folder-modal-close" onClick={() => setShowFolderModal(false)}><X size={20} /></button>
+            </div>
+            <div className="folder-modal-name">
+              <input
+                type="text"
+                placeholder="Название папки..."
+                value={folderName}
+                onChange={e => setFolderName(e.target.value)}
+                autoFocus
+                maxLength={24}
+              />
+            </div>
+            <div className="folder-modal-label">Выберите чаты:</div>
+            <div className="folder-modal-list">
+              {rooms.filter(r => r.type !== 'SAVED_MESSAGES').map(room => {
+                const displayName = getDisplayName(room);
+                const selected = folderSelectedRooms.has(room.id);
+                return (
+                  <div key={room.id} className={`folder-modal-item${selected ? ' selected' : ''}`} onClick={() => toggleFolderRoom(room.id)}>
+                    <div className="folder-modal-item-avatar" style={{ background: avatarMap[displayName] ? 'transparent' : getAvatarColor(displayName) }}>
+                      {avatarMap[displayName]
+                        ? <img src={avatarMap[displayName]} alt="" className="sb-avatar-img" />
+                        : getInitials(displayName)}
+                    </div>
+                    <span className="folder-modal-item-name">{displayName}</span>
+                    <span className="folder-modal-item-type">{room.type === 'PRIVATE' ? 'Личный' : 'Группа'}</span>
+                    {selected && <Check size={16} className="folder-modal-check" />}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="folder-modal-footer">
+              <span className="folder-modal-count">Выбрано: {folderSelectedRooms.size}</span>
+              <button className="folder-modal-save" onClick={handleSaveFolder} disabled={!folderName.trim() || folderSelectedRooms.size === 0}>
+                {editingFolderId ? 'Сохранить' : 'Создать'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>
