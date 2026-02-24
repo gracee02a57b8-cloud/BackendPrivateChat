@@ -259,7 +259,6 @@ export default function Sidebar({
           <div className="sb-chat-top-row">
             <span className="sb-chat-name">{displayName}</span>
             <span className="sb-chat-time">
-              {pinnedRooms.has(room.id) && <Pin size={12} className="sb-pin-indicator" />}
               {lastMsg ? formatTime(lastMsg.timestamp) : ''}
             </span>
           </div>
