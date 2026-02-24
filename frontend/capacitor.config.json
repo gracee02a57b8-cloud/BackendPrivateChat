@@ -3,13 +3,13 @@
   "appName": "BarsikChat",
   "webDir": "dist",
   "server": {
-    "url": "https://46.149.71.106",
-    "cleartext": false
+    "url": "http://46.149.71.106",
+    "cleartext": true
   },
   "android": {
-    "allowMixedContent": false,
+    "allowMixedContent": true,
     "backgroundColor": "#e8eef5",
-    "webContentsDebuggingEnabled": false
+    "webContentsDebuggingEnabled": true
   },
   "plugins": {
     "SplashScreen": {

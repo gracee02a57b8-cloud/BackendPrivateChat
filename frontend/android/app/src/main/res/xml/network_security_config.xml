@@ -1,12 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- Trust the server's self-signed certificate -->
-    <domain-config cleartextTrafficPermitted="false">
+    <!-- Allow cleartext HTTP to our server (no valid SSL cert for IP) -->
+    <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="false">46.149.71.106</domain>
         <trust-anchors>
-            <!-- Trust system CAs + user-installed CAs (for Let's Encrypt / self-signed) -->
             <certificates src="system" />
             <certificates src="user" />
         </trust-anchors>
     </domain-config>
+    <!-- Block cleartext for everything else -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
 </network-security-config>
