@@ -134,7 +134,25 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   useEffect(() => {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+      // On mobile, AudioContext starts in 'suspended' state and needs
+      // a user gesture to resume. We attach a one-time touch/click listener.
+      const resumeAudio = () => {
+        if (ctx.state === 'suspended') {
+          ctx.resume().then(() => {
+            console.log('[Sound] AudioContext resumed');
+          }).catch(() => {});
+        }
+      };
+      // Resume on any user interaction
+      document.addEventListener('touchstart', resumeAudio, { once: true, passive: true });
+      document.addEventListener('click', resumeAudio, { once: true });
+      // Also try to resume immediately (works on some browsers)
+      resumeAudio();
+
       notifSound.current = () => {
+        // Ensure context is running before playing
+        if (ctx.state === 'suspended') ctx.resume();
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.connect(gain);
@@ -195,9 +213,16 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
     }
 
     if (!appSettings.pushEnabled) return;
-    if (!('Notification' in window)) return;
-    if (Notification.permission !== 'granted') return;
     if (documentVisible.current && roomId === activeRoomIdRef.current) return;
+
+    // Play sound when notification arrives (even on mobile)
+    try { if (appSettings.notifSound) notifSound.current?.(); } catch (e) {}
+
+    // Vibrate on mobile if available
+    try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) {}
+
+    // Check if browser Notification API is available (not in Capacitor WebView)
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
     // Use Service Worker notification when available (works in background / mobile PWA)
     if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {

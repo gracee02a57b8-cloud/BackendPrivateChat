@@ -4,6 +4,14 @@
   box-sizing: border-box;
 }
 
+html {
+  overflow: hidden;
+  height: 100%;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+  touch-action: manipulation;
+}
+
 :root {
   --keyboard-height: 0px;
   --safe-top: env(safe-area-inset-top, 0px);
@@ -18,6 +26,12 @@ body {
   color: #1a1a2e;
   height: 100vh;
   height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+  position: fixed;
+  width: 100%;
+  top: 0;
+  left: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;

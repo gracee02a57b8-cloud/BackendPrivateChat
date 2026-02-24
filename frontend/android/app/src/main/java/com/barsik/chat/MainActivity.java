@@ -1,5 +1,7 @@
 package com.barsik.chat;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.net.http.SslError;
 import android.os.Build;
@@ -15,11 +17,18 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.WebChromeClient;
 import android.webkit.PermissionRequest;
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
 
     private static final String TAG = "BarsikChat";
+    private static final int PERMISSION_REQUEST_CODE = 1001;
+
+    // Pending WebView permission request (waiting for Android runtime grant)
+    private PermissionRequest pendingPermissionRequest;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,6 +46,62 @@ public class MainActivity extends BridgeActivity {
 
         // Keep screen on for calls
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+        // Proactively request camera + microphone permissions on launch
+        requestMediaPermissions();
+    }
+
+    /**
+     * Request CAMERA + RECORD_AUDIO at Android runtime level.
+     * This ensures that when the WebView requests getUserMedia,
+     * the Android OS permission is already granted.
+     */
+    private void requestMediaPermissions() {
+        String[] permissions = {
+            Manifest.permission.CAMERA,
+            Manifest.permission.RECORD_AUDIO
+        };
+
+        boolean needsRequest = false;
+        for (String perm : permissions) {
+            if (ContextCompat.checkSelfPermission(this, perm) != PackageManager.PERMISSION_GRANTED) {
+                needsRequest = true;
+                break;
+            }
+        }
+
+        if (needsRequest) {
+            Log.d(TAG, "Requesting CAMERA + RECORD_AUDIO permissions");
+            ActivityCompat.requestPermissions(this, permissions, PERMISSION_REQUEST_CODE);
+        } else {
+            Log.d(TAG, "CAMERA + RECORD_AUDIO already granted");
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            boolean allGranted = true;
+            for (int result : grantResults) {
+                if (result != PackageManager.PERMISSION_GRANTED) {
+                    allGranted = false;
+                    break;
+                }
+            }
+            Log.d(TAG, "Permission result: allGranted=" + allGranted);
+
+            // If we had a pending WebView permission request, grant/deny it now
+            if (pendingPermissionRequest != null) {
+                if (allGranted) {
+                    pendingPermissionRequest.grant(pendingPermissionRequest.getResources());
+                } else {
+                    pendingPermissionRequest.deny();
+                }
+                pendingPermissionRequest = null;
+            }
+        }
     }
 
     @Override
@@ -73,6 +138,8 @@ public class MainActivity extends BridgeActivity {
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 Log.d(TAG, "Page finished: " + url);
+                // Inject overscroll fix after page loads
+                view.setOverScrollMode(View.OVER_SCROLL_NEVER);
             }
 
             @Override
@@ -80,7 +147,6 @@ public class MainActivity extends BridgeActivity {
                 super.onReceivedError(view, request, error);
                 Log.e(TAG, "WebView error: " + error.getDescription() + " URL: " + request.getUrl());
 
-                // Show error page only for main frame
                 if (request.isForMainFrame()) {
                     showErrorPage(view, "Ошибка подключения", error.getDescription().toString());
                 }
@@ -89,19 +155,35 @@ public class MainActivity extends BridgeActivity {
             @Override
             public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
                 Log.w(TAG, "SSL error: " + error.toString());
-                // Accept SSL errors for our server (self-signed/IP cert)
                 handler.proceed();
             }
         });
 
-        // WebChromeClient — grant WebRTC permissions
+        // WebChromeClient — grant WebRTC permissions (camera, microphone)
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
-            public void onPermissionRequest(PermissionRequest request) {
-                Log.d(TAG, "Permission request: " + java.util.Arrays.toString(request.getResources()));
-                request.grant(request.getResources());
+            public void onPermissionRequest(final PermissionRequest request) {
+                Log.d(TAG, "WebView permission request: " + java.util.Arrays.toString(request.getResources()));
+
+                // Check if Android runtime permissions are already granted
+                boolean hasCam = ContextCompat.checkSelfPermission(
+                    MainActivity.this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
+                boolean hasMic = ContextCompat.checkSelfPermission(
+                    MainActivity.this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
+
+                if (hasCam && hasMic) {
+                    // Already have Android permissions — grant WebView request on UI thread
+                    runOnUiThread(() -> request.grant(request.getResources()));
+                } else {
+                    // Need to request Android permissions first, then grant WebView
+                    pendingPermissionRequest = request;
+                    requestMediaPermissions();
+                }
             }
         });
+
+        // Disable overscroll glow/bounce
+        webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
     }
 
     private void showErrorPage(WebView webView, String title, String message) {

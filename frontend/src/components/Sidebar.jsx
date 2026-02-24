@@ -11,7 +11,7 @@ import StoriesBar from './StoriesBar';
 import { copyToClipboard } from '../utils/clipboard';
 import appSettings from '../utils/appSettings';
 import { getAvatarColor, getInitials, formatLastSeen } from '../utils/avatar';
-import { ArrowLeft, MoreVertical, User, Mail, Plus, Bookmark, Download, X, Search, Users, MessageSquare, Pin, Phone, Star, Newspaper, ClipboardList, Link, Volume2, Bell, BellOff, Settings, LogOut, ChevronDown, ChevronUp, FolderPlus, Trash2, Check, Edit3, ArrowUpDown, Folder, Menu, UserPlus, Clock } from 'lucide-react';
+import { ArrowLeft, MoreVertical, User, Mail, Plus, Bookmark, Download, X, Search, Users, MessageSquare, Pin, Phone, Star, Newspaper, ClipboardList, Link, Volume2, Bell, BellOff, Settings, LogOut, ChevronDown, ChevronUp, FolderPlus, Trash2, Check, Edit3, ArrowUpDown, Folder, Menu, UserPlus, Clock, Info, RefreshCw, Smartphone } from 'lucide-react';
 
 function formatTime(ts) {
   if (!ts) return '';
@@ -924,6 +924,27 @@ export default function Sidebar({
                 <span className="sb-settings-arrow">›</span>
               </button>
             )}
+            <button className="sb-settings-item" onClick={() => {
+              if ('caches' in window) {
+                caches.keys().then(names => names.forEach(n => caches.delete(n)));
+              }
+              localStorage.removeItem('barsik_media_permissions_granted');
+              window.location.reload();
+            }}>
+              <span className="sb-settings-icon"><RefreshCw size={18} /></span>
+              <span className="sb-settings-label">Очистить кэш</span>
+              <span className="sb-settings-arrow">›</span>
+            </button>
+            <div className="sb-settings-item" style={{ cursor: 'default' }}>
+              <span className="sb-settings-icon"><Info size={18} /></span>
+              <span className="sb-settings-label">Версия: 1.0.0</span>
+            </div>
+            <div className="sb-settings-item" style={{ cursor: 'default' }}>
+              <span className="sb-settings-icon"><Smartphone size={18} /></span>
+              <span className="sb-settings-label" style={{ fontSize: '0.78rem', color: '#5a6a80' }}>
+                {navigator.userAgent.includes('BarsikChat') ? 'Android APK' : 'Браузер'}
+              </span>
+            </div>
 
             {/* ── Папки с чатами ── */}
             <div className="settings-section-title" style={{ marginTop: 8 }}><Folder size={16} /> Папки с чатами</div>

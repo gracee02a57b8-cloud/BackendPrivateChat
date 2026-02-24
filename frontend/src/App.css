@@ -379,6 +379,8 @@
   height: 100vh;
   height: 100dvh;
   position: relative;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 /* ===== Mobile Hamburger ===== */
@@ -1208,23 +1210,30 @@
 /* ===== User Search (modal/overlay) ===== */
 .user-search {
   padding: 0.8rem 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .user-search input {
   width: 100%;
   padding: 0.5rem 0.8rem;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 6px;
-  background: #0a0e14;
-  color: #eee;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px);
+  color: #1a1a2e;
   font-size: 0.85rem;
   outline: none;
   box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.user-search input::placeholder {
+  color: #9ca3af;
 }
 
 .user-search input:focus {
   border-color: #818cf8;
+  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.15);
 }
 
 .search-header {
@@ -1267,7 +1276,7 @@
 }
 
 .search-result-item:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(99, 102, 241, 0.08);
 }
 
 .no-results {
