@@ -6016,7 +6016,7 @@
 /* ===== Call Header Buttons ===== */
 .call-header-btn {
   background: none;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1.5px solid rgba(129, 140, 248, 0.35);
   border-radius: 50%;
   width: 36px;
   height: 36px;
@@ -6027,11 +6027,13 @@
   justify-content: center;
   transition: all 0.3s;
   padding: 0;
+  color: #818cf8;
 }
 
 .call-header-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(129, 140, 248, 0.12);
   border-color: #818cf8;
+  color: #a5b4fc;
   transform: scale(1.1);
 }
 
