@@ -185,7 +185,7 @@ function CallLogBubble({ msg, username }) {
   );
 }
 
-export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, onDeleteMessage, onScheduleMessage, scheduledMessages, roomName, username, connected, token, activeRoom, onlineUsers, allUsers = [], typingUsers = [], onTyping, isE2E, onShowSecurityCode, avatarMap = {}, onStartCall, callState, onLeaveRoom, onBack, onForwardToSaved, onForwardToContacts, onJoinRoom, onJoinConference, showAddMembers, onAddMembers, onDismissAddMembers, onStartPrivateChat, rooms = [], disappearingTimer, onSetDisappearingTimer }) {
+export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, onDeleteMessage, onScheduleMessage, scheduledMessages, roomName, username, connected, token, activeRoom, onlineUsers, allUsers = [], typingUsers = [], onTyping, isE2E, e2eEnabled, onToggleE2E, onShowSecurityCode, avatarMap = {}, onStartCall, callState, onLeaveRoom, onBack, onForwardToSaved, onForwardToContacts, onJoinRoom, onJoinConference, showAddMembers, onAddMembers, onDismissAddMembers, onStartPrivateChat, rooms = [], disappearingTimer, onSetDisappearingTimer }) {
   const [input, setInput] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
@@ -974,14 +974,20 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
             </button>
             {showHeaderMenu && (
               <div className="chat-header-dropdown">
+                {activeRoom?.type !== 'SAVED_MESSAGES' && (
+                  <button onClick={() => { onToggleE2E?.(); setShowHeaderMenu(false); }} className={e2eEnabled ? 'e2e-toggle-on' : ''}>
+                    {e2eEnabled ? <Lock size={16} /> : <Unlock size={16} />}
+                    {e2eEnabled ? 'Шифрование включено' : 'Включить шифрование'}
+                  </button>
+                )}
+                {isE2E && (
+                  <button onClick={() => { onShowSecurityCode(); setShowHeaderMenu(false); }}>
+                    <Lock size={16} /> Код безопасности
+                  </button>
+                )}
                 <button onClick={() => { openSearch(); setShowHeaderMenu(false); }}>
                   <Search size={16} /> Поиск
                 </button>
-                {isE2E && (
-                  <button onClick={() => { onShowSecurityCode(); setShowHeaderMenu(false); }}>
-                    <Lock size={16} /> E2E-шифрование
-                  </button>
-                )}
                 <button onClick={() => { handleCopyLink(); setShowHeaderMenu(false); }}>
                   <Link size={16} /> Поделиться
                 </button>

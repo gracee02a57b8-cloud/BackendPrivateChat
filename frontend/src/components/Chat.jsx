@@ -57,6 +57,13 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   const [showStoryUpload, setShowStoryUpload] = useState(false);
   const [storyViewerAuthor, setStoryViewerAuthor] = useState(null);
   const [disappearingTimers, setDisappearingTimers] = useState({});
+  // E2E encryption opt-in: only rooms explicitly enabled by user
+  const [e2eRooms, setE2eRooms] = useState(() => {
+    try {
+      const saved = localStorage.getItem('e2eRooms');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
+  });
   const wsRef = useRef(null);
   const loadedRooms = useRef(new Set());
   const activeRoomIdRef = useRef(null);
@@ -878,9 +885,9 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
       msg.mentions = mentions;
     }
 
-    // E2E encrypt for private rooms
+    // E2E encrypt for private rooms (only if user enabled E2E for this room)
     const room = rooms.find(r => r.id === activeRoomId);
-    if (room?.type === 'PRIVATE' && e2eReady) {
+    if (room?.type === 'PRIVATE' && e2eReady && e2eRooms.has(activeRoomId)) {
       const peerUser = getPeerUsername(room);
       if (peerUser) {
         try {
@@ -914,8 +921,8 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
       }
     }
 
-    // E2E encrypt for group rooms
-    if (room?.type === 'ROOM' && e2eReady) {
+    // E2E encrypt for group rooms (only if user enabled E2E for this room)
+    if (room?.type === 'ROOM' && e2eReady && e2eRooms.has(activeRoomId)) {
       try {
         // Generate group key if we don't have one yet, and distribute
         if (!(await groupCrypto.hasGroupKey(activeRoomId))) {
@@ -1253,9 +1260,24 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
     return parts.find((p) => p !== username) || null;
   };
 
-  const isPrivateE2E = activeRoom?.type === 'PRIVATE' && e2eReady;
-  const isGroupE2E = activeRoom?.type === 'ROOM' && e2eReady;
+  // E2E is now opt-in: only active if user explicitly enabled it for this room
+  const isRoomE2E = activeRoomId && e2eRooms.has(activeRoomId);
+  const isPrivateE2E = activeRoom?.type === 'PRIVATE' && e2eReady && isRoomE2E;
+  const isGroupE2E = activeRoom?.type === 'ROOM' && e2eReady && isRoomE2E;
   const isE2E = isPrivateE2E || isGroupE2E;
+
+  const toggleE2E = useCallback((roomId) => {
+    setE2eRooms(prev => {
+      const next = new Set(prev);
+      if (next.has(roomId)) {
+        next.delete(roomId);
+      } else {
+        next.add(roomId);
+      }
+      localStorage.setItem('e2eRooms', JSON.stringify([...next]));
+      return next;
+    });
+  }, []);
 
   const showSecurityCode = async () => {
     const peer = getPeerUsername(activeRoom);
@@ -1417,6 +1439,8 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           typingUsers={activeTypingUsers}
           onTyping={sendTyping}
           isE2E={isE2E}
+          e2eEnabled={isRoomE2E}
+          onToggleE2E={() => toggleE2E(activeRoomId)}
           onShowSecurityCode={showSecurityCode}
           avatarMap={avatarMap}
           onStartCall={(type) => {

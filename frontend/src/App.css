@@ -2614,6 +2614,12 @@
 .chat-header-dropdown button:hover {
   background: rgba(99, 136, 255, 0.08);
 }
+.chat-header-dropdown button.e2e-toggle-on {
+  color: #34d399;
+}
+.chat-header-dropdown button.e2e-toggle-on:hover {
+  background: rgba(52, 211, 153, 0.08);
+}
 
 /* ===== Copy Link Button ===== */
 .copy-link-btn {
