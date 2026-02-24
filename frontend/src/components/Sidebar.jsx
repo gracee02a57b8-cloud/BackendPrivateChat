@@ -11,7 +11,7 @@ import StoriesBar from './StoriesBar';
 import { copyToClipboard } from '../utils/clipboard';
 import appSettings from '../utils/appSettings';
 import { getAvatarColor, getInitials, formatLastSeen } from '../utils/avatar';
-import { ArrowLeft, MoreVertical, User, Mail, Plus, Bookmark, Download, X, Search, Users, MessageSquare, Pin, Phone, Star, Newspaper, ClipboardList, Link, Volume2, Bell, BellOff, Settings, LogOut, ChevronDown, ChevronUp, FolderPlus, Trash2, Check, Edit3, ArrowUpDown, Folder } from 'lucide-react';
+import { ArrowLeft, MoreVertical, User, Mail, Plus, Bookmark, Download, X, Search, Users, MessageSquare, Pin, Phone, Star, Newspaper, ClipboardList, Link, Volume2, Bell, BellOff, Settings, LogOut, ChevronDown, ChevronUp, FolderPlus, Trash2, Check, Edit3, ArrowUpDown, Folder, Menu, Wallet, UserPlus, Clock } from 'lucide-react';
 
 function formatTime(ts) {
   if (!ts) return '';
@@ -98,9 +98,11 @@ export default function Sidebar({
   const [editingFolderId, setEditingFolderId] = useState(null);
   const [folderContextMenu, setFolderContextMenu] = useState(null);
   const [settingsFolderView, setSettingsFolderView] = useState(null); // null | folderId
+  const [showBurgerDrawer, setShowBurgerDrawer] = useState(false);
   const menuRef = useRef(null);
   const filtersRef = useRef(null);
   const contextMenuRef = useRef(null);
+  const burgerRef = useRef(null);
   const pullStartY = useRef(0);
   const pullActive = useRef(false);
   const chatListRef = useRef(null);
@@ -151,6 +153,16 @@ export default function Sidebar({
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [folderContextMenu]);
+
+  // Click-outside handler for burger drawer
+  useEffect(() => {
+    if (!showBurgerDrawer) return;
+    const handleClick = (e) => {
+      if (burgerRef.current && !burgerRef.current.contains(e.target)) setShowBurgerDrawer(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showBurgerDrawer]);
 
   // Horizontal wheel scroll on filter tabs
   useEffect(() => {
@@ -410,25 +422,15 @@ export default function Sidebar({
             {mobileTab === 'ai' && 'AI Помощник'}
             {mobileTab === 'profile' && 'Профиль'}
           </div>
+          <button className="sb-burger-btn" onClick={() => setShowBurgerDrawer(true)} aria-label="Меню">
+            <Menu size={22} />
+          </button>
           <div className="sb-desktop-brand">
             <span className="sb-cat-emoji">🐱</span>
             <span className="sb-brand-name">BarsikChat</span>
           </div>
         </div>
         <div className="sb-header-right">
-          <div className="sb-desktop-header-user">
-            <div className="sb-user-meta">
-              <span className="sb-user-name">{username}</span>
-              <span className={`sb-user-status ${connected ? 'online' : ''}`}>
-                {connected ? '● В сети' : '● Офлайн'}
-              </span>
-            </div>
-            <div className="sb-user-avatar" style={{ background: avatarUrl ? 'transparent' : getAvatarColor(username) }} onClick={() => setShowProfile(true)} title="Открыть профиль">
-              {avatarUrl
-                ? <img src={avatarUrl} alt="" className="sb-avatar-img" />
-                : getInitials(username)}
-            </div>
-          </div>
           <button className="sb-menu-btn" onClick={() => setShowMenu(!showMenu)} aria-label="Меню" title="Меню"><MoreVertical size={20} /></button>
           {showMenu && (
             <div className="sb-menu-dropdown" ref={menuRef}>
@@ -1057,6 +1059,76 @@ export default function Sidebar({
               <button className="folder-modal-save" onClick={handleSaveFolder} disabled={!folderName.trim() || folderSelectedRooms.size === 0}>
                 {editingFolderId ? 'Сохранить' : 'Создать'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════  BURGER DRAWER  ══════════ */}
+      {showBurgerDrawer && (
+        <div className="burger-overlay" onClick={() => setShowBurgerDrawer(false)}>
+          <div className="burger-drawer" ref={burgerRef} onClick={e => e.stopPropagation()}>
+            {/* User profile header */}
+            <div className="burger-user-section" onClick={() => { setShowBurgerDrawer(false); setShowProfile(true); }}>
+              <div className="burger-user-avatar" style={{ background: avatarUrl ? 'transparent' : getAvatarColor(username) }}>
+                {avatarUrl
+                  ? <img src={avatarUrl} alt="" className="sb-avatar-img" />
+                  : getInitials(username)}
+              </div>
+              <div className="burger-user-info">
+                <span className="burger-user-name">{username}</span>
+                <span className={`burger-user-status ${connected ? 'online' : ''}`}>
+                  {connected ? '● В сети' : '● Офлайн'}
+                </span>
+              </div>
+            </div>
+
+            {/* Menu items */}
+            <div className="burger-menu-list">
+              <button className="burger-menu-item" onClick={() => { setShowBurgerDrawer(false); setShowProfile(true); }}>
+                <User size={20} />
+                <span>Профиль</span>
+              </button>
+              <button className="burger-menu-item" onClick={() => { setShowBurgerDrawer(false); if (onOpenSaved) onOpenSaved(); }}>
+                <Bookmark size={20} />
+                <span>Сохранённые сообщения</span>
+              </button>
+              <button className="burger-menu-item" onClick={() => { setShowBurgerDrawer(false); if (onOpenStoryUpload) onOpenStoryUpload(); }}>
+                <Clock size={20} />
+                <span>Мои истории</span>
+              </button>
+              <button className="burger-menu-item" onClick={() => { setShowBurgerDrawer(false); setShowContacts(true); }}>
+                <Users size={20} />
+                <span>Контакты</span>
+              </button>
+              <button className="burger-menu-item" onClick={() => { setShowBurgerDrawer(false); setShowCreate(true); }}>
+                <Plus size={20} />
+                <span>Создать группу</span>
+              </button>
+              <button className="burger-menu-item" onClick={() => { setShowBurgerDrawer(false); setShowSearch(true); }}>
+                <Mail size={20} />
+                <span>Написать сообщение</span>
+              </button>
+
+              <div className="burger-menu-divider" />
+
+              <button className="burger-menu-item" onClick={() => { setShowBurgerDrawer(false); }}>
+                <Wallet size={20} />
+                <span>Кошелек</span>
+              </button>
+
+              <div className="burger-menu-divider" />
+
+              <button className="burger-menu-item" onClick={() => { setShowBurgerDrawer(false); setProfileSubView('settings'); }}>
+                <Settings size={20} />
+                <span>Настройки</span>
+              </button>
+              {installPrompt && (
+                <button className="burger-menu-item" onClick={() => { setShowBurgerDrawer(false); handleInstall(); }}>
+                  <Download size={20} />
+                  <span>Установить приложение</span>
+                </button>
+              )}
             </div>
           </div>
         </div>

@@ -426,6 +426,153 @@
   gap: 10px;
 }
 
+/* ── Burger menu button ── */
+.sb-burger-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: #a0aec0;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 8px;
+  transition: color 0.18s, background 0.18s;
+}
+.sb-burger-btn:hover {
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* ── Burger drawer overlay ── */
+.burger-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 9999;
+  animation: burgerFadeIn 0.2s ease;
+}
+@keyframes burgerFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ── Burger drawer panel ── */
+.burger-drawer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 280px;
+  max-width: 85vw;
+  height: 100%;
+  background: #1a1f2e;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  animation: burgerSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow-y: auto;
+}
+@keyframes burgerSlideIn {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+/* ── Burger user profile section ── */
+.burger-user-section {
+  padding: 24px 20px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  transition: background 0.18s;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.burger-user-section:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.burger-user-avatar {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #fff;
+  overflow: hidden;
+}
+.burger-user-avatar .sb-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.burger-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.burger-user-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e8edf2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.burger-user-status {
+  font-size: 0.78rem;
+  color: #5a6a80;
+}
+.burger-user-status.online {
+  color: #4ade80;
+}
+
+/* ── Burger menu item list ── */
+.burger-menu-list {
+  padding: 8px 0;
+  flex: 1;
+}
+
+.burger-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+  padding: 13px 22px;
+  background: none;
+  border: none;
+  color: #d0d8e4;
+  font-size: 0.93rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  text-align: left;
+}
+.burger-menu-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.burger-menu-item svg {
+  color: #7c8ba5;
+  flex-shrink: 0;
+}
+.burger-menu-item:hover svg {
+  color: #a5b4fc;
+}
+
+.burger-menu-divider {
+  height: 1px;
+  margin: 6px 16px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
 /* ── Desktop brand name (left side of header) ── */
 .sb-desktop-brand {
   display: flex;
@@ -8371,6 +8518,10 @@
   }
 
   .sb-desktop-brand {
+    display: none;
+  }
+
+  .sb-burger-btn {
     display: none;
   }
 
