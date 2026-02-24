@@ -36,6 +36,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [connected, setConnected] = useState(false);
+  const [showConnBanner, setShowConnBanner] = useState(false);
   const [unreadCounts, setUnreadCounts] = useState({});
   const [scheduledMessages, setScheduledMessages] = useState([]);
   const [showTasks, setShowTasks] = useState(false);
@@ -263,6 +264,13 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   useEffect(() => {
     activeRoomIdRef.current = activeRoomId;
   }, [activeRoomId]);
+
+  // Delay showing connection banner to avoid flash during initial WS handshake
+  useEffect(() => {
+    if (connected) { setShowConnBanner(false); return; }
+    const t = setTimeout(() => setShowConnBanner(true), 2500);
+    return () => clearTimeout(t);
+  }, [connected]);
 
   useEffect(() => {
     fetchRooms();
@@ -1390,7 +1398,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
       <a href="#chat-main" className="skip-nav">Перейти к чату</a>
 
       {/* Connection lost banner */}
-      {!connected && (
+      {showConnBanner && (
         <div className="connection-banner" role="alert">
           <span className="connection-banner-icon">⚠️</span>
           <span className="connection-banner-text">Нет соединения с сервером. Переподключение...</span>
@@ -1436,6 +1444,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
         wsRef={wsRef}
         onAvatarChange={onAvatarChange}
         mobileTab={mobileTab}
+        setMobileTab={setMobileTab}
         myContacts={myContacts}
         onRefreshContacts={fetchContacts}
         storiesHook={storiesHook}

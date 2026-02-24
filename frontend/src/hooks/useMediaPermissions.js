@@ -34,15 +34,21 @@ async function queryPermission(name) {
 }
 
 export default function useMediaPermissions() {
+  // On native Capacitor (Android/iOS), permissions are handled natively in MainActivity
+  const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+
   const [permissionsGranted, setPermissionsGranted] = useState(
-    () => localStorage.getItem(STORAGE_KEY) === 'true'
+    () => isNative || localStorage.getItem(STORAGE_KEY) === 'true'
   );
   const [permissionsDenied, setPermissionsDenied] = useState(false);
   const [showBanner, setShowBanner] = useState(false);
-  const [checking, setChecking] = useState(true);
+  const [checking, setChecking] = useState(!isNative);
 
   // Check current permission status on mount
   useEffect(() => {
+    // Native platforms handle permissions natively — skip web permission checks
+    if (isNative) return;
+
     let cancelled = false;
 
     async function check() {

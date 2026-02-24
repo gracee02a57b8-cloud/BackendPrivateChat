@@ -109,8 +109,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100vh;
-  height: 100dvh;
+  height: 100%;
   background: linear-gradient(145deg, #e8eef5 0%, #dfe6f0 40%, #eae4f2 100%);
   background-image:
     radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
@@ -376,8 +375,7 @@
 /* ===== Chat Layout ===== */
 .chat-container {
   display: flex;
-  height: 100vh;
-  height: 100dvh;
+  height: 100%;
   position: relative;
   overflow: hidden;
   overscroll-behavior: none;
@@ -4739,7 +4737,7 @@
   }
 
   .login-card input {
-    padding: 0.6rem 0.8rem;
+    padding: 0.6rem 0.8rem 0.6rem 2.2rem;
     font-size: 0.9rem;
   }
 
@@ -4954,8 +4952,7 @@
   .login-card {
     margin: 0;
     border-radius: 0;
-    min-height: 100vh;
-    min-height: 100dvh;
+    min-height: 100%;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -4971,8 +4968,12 @@
   }
 
   .emoji-picker {
-    width: 100vw;
+    position: fixed;
     left: 0;
+    right: 0;
+    bottom: 50px;
+    width: auto;
+    max-width: 100vw;
     transform: none;
     border-radius: 12px 12px 0 0;
     max-height: 240px;
@@ -8838,10 +8839,31 @@
 
   /* ── Emoji picker position ── */
   .emoji-picker {
-    bottom: calc(100% + 4px);
-    left: 0;
-    right: auto;
-    width: min(300px, calc(100vw - 20px));
+    position: fixed;
+    bottom: 60px;
+    left: 10px;
+    right: 10px;
+    width: auto;
+    max-width: 320px;
+    margin: 0 auto;
+  }
+
+  /* ── Pinned bar compact ── */
+  .pinned-bar {
+    padding: 4px 10px;
+    gap: 6px;
+  }
+
+  .pinned-label {
+    font-size: 0.62rem;
+  }
+
+  .pinned-text {
+    font-size: 0.75rem;
+  }
+
+  .pinned-icon {
+    font-size: 0.85rem;
   }
 
   /* ── Scroll-to-bottom ── */

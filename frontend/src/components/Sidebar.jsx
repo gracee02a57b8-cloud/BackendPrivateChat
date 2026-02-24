@@ -60,6 +60,7 @@ export default function Sidebar({
   wsRef,
   onAvatarChange,
   mobileTab = 'chats',
+  setMobileTab,
   onOpenSaved,
   onStartCall,
   myContacts = [],
@@ -1124,7 +1125,7 @@ export default function Sidebar({
 
               <div className="burger-menu-divider" />
 
-              <button className="burger-menu-item" onClick={() => { setShowBurgerDrawer(false); setProfileSubView('settings'); }}>
+              <button className="burger-menu-item" onClick={() => { setShowBurgerDrawer(false); if (setMobileTab) setMobileTab('profile'); setProfileSubView('settings'); }}>
                 <Settings size={20} />
                 <span>Настройки</span>
               </button>

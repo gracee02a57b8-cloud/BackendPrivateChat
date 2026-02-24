@@ -50,8 +50,8 @@ body.keyboard-open {
 }
 
 #root {
-  height: 100vh;
-  height: 100dvh;
+  height: 100%;
+  overflow: hidden;
 }
 
 body.keyboard-open #root {
