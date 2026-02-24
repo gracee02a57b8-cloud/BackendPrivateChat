@@ -485,7 +485,7 @@ export default function Sidebar({
                 {folder.name}
               </button>
             ))}
-            <button className="sb-filter sb-add-folder-btn" onClick={openCreateFolder} title="Создать папку">
+            <button className="sb-filter sb-add-folder-btn" onClick={openCreateFolder}>
               <Plus size={14} />
             </button>
           </div>
