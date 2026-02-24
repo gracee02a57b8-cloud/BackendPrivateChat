@@ -1,0 +1,23 @@
+{
+  "appId": "com.barsik.chat",
+  "appName": "BarsikChat",
+  "webDir": "dist",
+  "server": {
+    "url": "https://46.149.71.106",
+    "cleartext": false
+  },
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#1a1a2e"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#1a1a2e",
+      "showSpinner": false,
+      "androidScaleType": "CENTER_CROP",
+      "splashFullScreen": true,
+      "splashImmersive": true
+    }
+  }
+}

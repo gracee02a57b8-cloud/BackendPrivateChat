@@ -1077,6 +1077,8 @@
   background: rgba(17, 22, 32, 0.85);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+  position: relative;
+  z-index: 50;
 }
 
 .chat-header h3 {
@@ -2532,6 +2534,7 @@
   align-items: center;
   justify-content: space-between;
   position: relative;
+  z-index: 50;
 }
 
 .chat-header-info {
@@ -2582,15 +2585,15 @@
   top: 100%;
   right: 0;
   margin-top: 4px;
-  background: rgba(21, 28, 40, 0.95);
+  background: rgba(21, 28, 40, 0.98);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
   padding: 4px 0;
   min-width: 200px;
-  z-index: 100;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+  z-index: 9999;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.55);
   animation: fadeIn 0.12s ease-out;
 }
 .chat-header-dropdown button {

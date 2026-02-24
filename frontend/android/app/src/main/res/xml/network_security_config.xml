@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Trust the server's self-signed certificate -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="false">46.149.71.106</domain>
+        <trust-anchors>
+            <!-- Trust system CAs + user-installed CAs (for Let's Encrypt / self-signed) -->
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </domain-config>
+</network-security-config>
