@@ -71,6 +71,7 @@ export default function Sidebar({
   storiesHook,
   onOpenStoryViewer,
   onOpenStoryUpload,
+  typingUsers = {},
 }) {
   const [chatFilter, setChatFilter] = useState('all');
   const [showSearch, setShowSearch] = useState(false);
@@ -385,11 +386,26 @@ export default function Sidebar({
     const isOnline = room.type === 'PRIVATE' && onlineUsers.includes(displayName);
     const unread = unreadCounts[room.id] || 0;
 
+    // Typing indicator for this room
+    const roomTypingMap = typingUsers && typingUsers[room.id] ? typingUsers[room.id] : {};
+    const roomTypers = Object.keys(roomTypingMap).filter(u => u !== username);
+
     let previewText = 'Нет сообщений';
-    if (lastMsg) {
+    let previewCheck = null;
+    if (roomTypers.length > 0) {
+      previewText = roomTypers.length === 1
+        ? `${roomTypers[0]} печатает...`
+        : 'печатают...';
+    } else if (lastMsg) {
+      // Read receipt indicator for own messages
+      if (lastMsg.sender === username) {
+        const checkIcon = lastMsg.status === 'READ' ? '✓✓ ' : lastMsg.status === 'DELIVERED' ? '✓✓ ' : '✓ ';
+        const checkClass = lastMsg.status === 'READ' ? 'sb-check read' : 'sb-check';
+        previewCheck = <span className={checkClass}>{checkIcon}</span>;
+      }
       const sender = lastMsg.sender === username ? 'Вы: ' : '';
       const text = lastMsg.content || (lastMsg.fileUrl ? '📎 Файл' : '');
-      previewText = sender + (text.length > 35 ? text.slice(0, 35) + '…' : text);
+      previewText = sender + text;
     }
 
     return (
@@ -422,7 +438,7 @@ export default function Sidebar({
             </span>
           </div>
           <div className="sb-chat-bottom-row">
-            <span className="sb-chat-preview">{previewText}</span>
+            <span className={`sb-chat-preview${roomTypers.length > 0 ? ' typing' : ''}`}>{previewCheck}{previewText}</span>
             {unread > 0 && <span className="sb-unread">{unread}</span>}
           </div>
         </div>

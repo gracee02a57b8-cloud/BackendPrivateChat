@@ -1667,6 +1667,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
         storiesHook={storiesHook}
         onOpenStoryViewer={(author) => setStoryViewerAuthor(author)}
         onOpenStoryUpload={() => setShowStoryUpload(true)}
+        typingUsers={typingUsers}
         onStartCall={async (peer, type) => {
           await startPrivateChat(peer);
           webrtc.startCall(peer, type);

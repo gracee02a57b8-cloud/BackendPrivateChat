@@ -617,7 +617,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 14px 16px;
+  padding: 10px 14px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   background: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(20px) saturate(180%);
@@ -637,7 +637,7 @@
   position: relative;
   margin-left: auto;
   flex-shrink: 0;
-  display: flex;
+  display: none;
   align-items: center;
   gap: 10px;
 }
@@ -803,7 +803,7 @@
   font-size: 1.35em;
   margin-right: 5px;
   vertical-align: middle;
-  animation: catBounce 2s ease-in-out infinite;
+  animation: catBounce 1.5s ease-in-out 1;
   cursor: default;
   position: relative;
   top: -1px;
@@ -950,8 +950,8 @@
 /* ===== Filter Tabs (Telegram folders) ===== */
 .sb-filters {
   display: flex;
-  padding: 8px 12px;
-  gap: 6px;
+  padding: 6px 10px;
+  gap: 5px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   overflow-x: auto;
   scrollbar-width: none;
@@ -961,12 +961,12 @@
 .sb-filters::-webkit-scrollbar { display: none; }
 
 .sb-filter {
-  padding: 6px 14px;
+  padding: 5px 12px;
   background: none;
   border: none;
   border-radius: 20px;
   color: #6b7a99;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   cursor: pointer;
   transition: all 0.25s var(--spring);
   white-space: nowrap;
@@ -974,7 +974,7 @@
   align-items: center;
   gap: 5px;
   font-weight: 500;
-  min-height: 36px;
+  min-height: 32px;
 }
 
 .sb-filter:hover {
@@ -1347,13 +1347,13 @@
 
 /* ===== Search ===== */
 .sb-search {
-  padding: 10px 12px;
+  padding: 8px 12px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.04);
   display: flex;
   align-items: center;
   gap: 8px;
   background: rgba(0, 0, 0, 0.03);
-  margin: 8px 12px;
+  margin: 6px 10px;
   border-radius: 22px;
   border: 1px solid rgba(0, 0, 0, 0.05);
   transition: all 0.25s var(--spring);
@@ -1522,12 +1522,12 @@
 .sb-chat-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  margin: 0 8px;
+  gap: 10px;
+  padding: 8px 10px;
+  margin: 0 6px;
   cursor: pointer;
   transition: all 0.25s var(--spring);
-  border-radius: 14px;
+  border-radius: 12px;
   position: relative;
 }
 
@@ -1541,14 +1541,7 @@
 }
 
 .sb-chat-item.active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 8px;
-  bottom: 8px;
-  width: 3px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  border-radius: 0 3px 3px 0;
+  display: none;
 }
 
 .sb-chat-actions {
@@ -1611,14 +1604,14 @@
 }
 
 .sb-chat-avatar {
-  width: 46px;
-  height: 46px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: 1rem;
   color: #fff;
   overflow: hidden;
 }
@@ -1638,10 +1631,10 @@
 
 .sb-online-dot {
   position: absolute;
-  bottom: 1px;
-  right: 1px;
-  width: 12px;
-  height: 12px;
+  bottom: 0px;
+  right: 0px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
   border: 2px solid rgba(245, 247, 252, 0.9);
 }
@@ -1659,7 +1652,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
 }
 
 .sb-chat-top-row {
@@ -1678,7 +1671,7 @@
 }
 
 .sb-chat-time {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   color: #9ca3af;
   display: flex;
   align-items: center;
@@ -1709,6 +1702,23 @@
   flex-shrink: 0;
   margin-left: 8px;
   box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+}
+
+/* ── Typing indicator in sidebar preview ── */
+.sb-chat-preview.typing {
+  color: #6366f1;
+  font-style: italic;
+  font-weight: 500;
+}
+
+/* ── Read receipt checks in sidebar ── */
+.sb-check {
+  color: #9ca3af;
+  font-size: 0.75rem;
+  font-style: normal;
+}
+.sb-check.read {
+  color: #6366f1;
 }
 
 .sb-empty {
