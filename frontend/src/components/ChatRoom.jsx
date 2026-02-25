@@ -1042,7 +1042,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
       )}
 
       {/* Disappearing messages banner */}
-      {disappearingTimer && disappearingTimer > 0 && (
+      {disappearingTimer > 0 && (
         <div className="disappearing-banner">
           <Timer size={14} />
           Исчезающие сообщения: {disappearingTimer >= 86400 ? `${disappearingTimer / 86400} д.` : disappearingTimer >= 3600 ? `${disappearingTimer / 3600} ч.` : disappearingTimer >= 60 ? `${disappearingTimer / 60} мин.` : `${disappearingTimer} сек.`}
