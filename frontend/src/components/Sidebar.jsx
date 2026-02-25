@@ -1022,6 +1022,7 @@ export default function Sidebar({
           onOpenEdit={() => setProfileSubView('edit')}
           onOpenSettings={() => setProfileSubView('settings')}
           onLogout={onLogout}
+          onBack={() => setMobileTab('chats')}
         />
       )}
 

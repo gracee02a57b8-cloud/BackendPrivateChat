@@ -8975,11 +8975,31 @@
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
+.my-profile-back {
+  background: none;
+  border: none;
+  color: #6366f1;
+  font-size: 1.4rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background 0.2s;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.my-profile-back:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
 .my-profile-title {
   font-size: 1.15rem;
   font-weight: 700;
   color: #1a1a2e;
   margin: 0;
+  flex: 1;
 }
 
 .my-profile-menu-wrap {

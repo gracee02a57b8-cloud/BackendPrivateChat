@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { copyToClipboard } from '../utils/clipboard';
 import { getAvatarColor } from '../utils/avatar';
-import { MoreVertical, Link, Camera, Pencil, Settings, LogOut } from 'lucide-react';
+import { ArrowLeft, MoreVertical, Link, Camera, Pencil, Settings, LogOut } from 'lucide-react';
 
-export default function MyProfilePage({ username, avatarUrl, token, wsRef, onAvatarChange, connected, onOpenEdit, onOpenSettings, onLogout }) {
+export default function MyProfilePage({ username, avatarUrl, token, wsRef, onAvatarChange, connected, onOpenEdit, onOpenSettings, onLogout, onBack }) {
   const [profile, setProfile] = useState(null);
   const [showMenu, setShowMenu] = useState(false);
   const [showNameModal, setShowNameModal] = useState(false);
@@ -164,6 +164,11 @@ export default function MyProfilePage({ username, avatarUrl, token, wsRef, onAva
     <div className="my-profile-page" data-testid="my-profile-page">
       {/* Header with title and three-dot menu */}
       <div className="my-profile-header">
+        {onBack && (
+          <button className="my-profile-back" data-testid="my-profile-back" onClick={onBack} aria-label="Назад">
+            <ArrowLeft size={20} />
+          </button>
+        )}
         <h2 className="my-profile-title">Профиль</h2>
         <div className="my-profile-menu-wrap" ref={menuRef}>
           <button className="my-profile-dots-btn" onClick={() => setShowMenu(!showMenu)} aria-label="Меню"><MoreVertical size={20} /></button>
