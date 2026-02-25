@@ -513,7 +513,7 @@
 
 /* ── Burger drawer panel ── */
 .burger-drawer {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   width: 280px;
@@ -4525,7 +4525,7 @@
   }
 
   /* --- Scroll-to-bottom button --- */
-  .scroll-bottom-btn {
+  .scroll-to-bottom {
     bottom: 75px;
     right: 12px;
     width: 36px;
@@ -4685,12 +4685,16 @@
 
   /* --- Emoji picker fullwidth --- */
   .emoji-picker {
-    width: calc(100vw - 1.2rem);
-    left: 50%;
-    transform: translateX(-50%);
-    right: auto;
+    position: fixed;
+    bottom: 60px;
+    left: 10px;
+    right: 10px;
+    width: auto;
+    max-width: 320px;
+    margin: 0 auto;
     max-height: 260px;
     border-radius: 10px;
+    transform: none;
   }
 
   .emoji-grid {
@@ -4969,8 +4973,8 @@
 
   .emoji-picker {
     position: fixed;
-    left: 0;
-    right: 0;
+    left: 5px;
+    right: 5px;
     bottom: 50px;
     width: auto;
     max-width: 100vw;
@@ -7300,6 +7304,7 @@
   color: #fff;
   text-align: center;
   padding: 6px 16px;
+  padding-top: calc(6px + env(safe-area-inset-top, 0px));
   font-size: 0.85rem;
   font-weight: 500;
   z-index: var(--z-notification, 10000);
@@ -7324,6 +7329,12 @@
   transform: translateX(-50%);
   z-index: var(--z-notification, 10000);
   pointer-events: none;
+}
+
+@media (max-width: 768px) {
+  .toast-container {
+    bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+  }
 }
 .toast {
   background: rgba(255, 255, 255, 0.92);
@@ -8621,6 +8632,11 @@
     padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
   }
 
+  /* Ensure chat list has enough padding for the floating bottom nav pill */
+  .chat-container.mobile-sidebar-view .sb-chat-list {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  }
+
   /* Hide hamburger when in mobile-sidebar-view (bottom nav replaces it) */
   .chat-container.mobile-sidebar-view .desktop-only-hamburger {
     display: none !important;
@@ -8690,7 +8706,7 @@
     gap: 8px;
     position: sticky;
     top: 0;
-    z-index: 10;
+    z-index: 50;
     padding-top: calc(8px + env(safe-area-inset-top, 0px)) !important;
   }
 
@@ -8772,7 +8788,7 @@
   .messages {
     flex: 1;
     padding: 8px 10px;
-    padding-bottom: 4px;
+    padding-bottom: 12px;
   }
 
   .message {
@@ -8893,7 +8909,7 @@
   }
 
   /* ── Scroll-to-bottom ── */
-  .scroll-bottom-btn {
+  .scroll-to-bottom {
     bottom: 70px;
     right: 10px;
   }
@@ -10911,7 +10927,7 @@
    ═══════════════════════════════════════════════════════════ */
 .fab-container {
   position: fixed;
-  bottom: 90px;
+  bottom: calc(100px + env(safe-area-inset-bottom, 0px));
   right: 18px;
   display: flex;
   flex-direction: column;
