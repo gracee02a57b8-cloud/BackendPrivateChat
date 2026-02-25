@@ -171,8 +171,15 @@ public class ChatService {
     @Transactional(readOnly = true)
     public List<String> searchUsers(String query) {
         if (query == null || query.isBlank()) return getAllUsers();
-        return userRepository.findByUsernameContainingIgnoreCase(query)
+        return userRepository.findByUsernameContainingIgnoreCaseOrTagContainingIgnoreCase(query, query)
                 .stream().map(UserEntity::getUsername).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public String getUserTag(String username) {
+        return userRepository.findByUsername(username)
+                .map(UserEntity::getTag)
+                .orElse(null);
     }
 
     // === Entity <-> DTO conversion ===

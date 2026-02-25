@@ -58,6 +58,7 @@ public class ContactBlockController {
                 map.put("avatarUrl", u.getAvatarUrl() != null ? u.getAvatarUrl() : "");
                 map.put("firstName", u.getFirstName() != null ? u.getFirstName() : "");
                 map.put("lastName", u.getLastName() != null ? u.getLastName() : "");
+                map.put("tag", u.getTag() != null ? u.getTag() : "");
             });
             return map;
         }).collect(Collectors.toList());
@@ -171,6 +172,7 @@ public class ContactBlockController {
         profile.put("profileColor", user.getProfileColor() != null ? user.getProfileColor() : "");
         profile.put("createdAt", user.getCreatedAt() != null ? user.getCreatedAt() : "");
         profile.put("lastSeen", user.getLastSeen() != null ? user.getLastSeen() : "");
+        profile.put("tag", user.getTag() != null ? user.getTag() : "");
 
         // Is this person in my contacts?
         profile.put("isContact", contactRepository.existsByOwnerAndContact(username, targetUsername));

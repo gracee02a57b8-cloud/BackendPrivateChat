@@ -25,7 +25,7 @@ import appSettings from '../utils/appSettings';
 
 const WS_URL = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
 
-export default function Chat({ token, username, avatarUrl, onAvatarChange, onLogout, joinRoomId, joinConfId, onShowNews }) {
+export default function Chat({ token, username, avatarUrl, onAvatarChange, onLogout, onAddAccount, joinRoomId, joinConfId, onShowNews }) {
   const [rooms, setRooms] = useState([]);
   const [activeRoomId, setActiveRoomIdRaw] = useState(() => {
     const saved = sessionStorage.getItem('activeRoomId');
@@ -1641,6 +1641,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
         username={username}
         connected={connected}
         onLogout={onLogout}
+        onAddAccount={onAddAccount}
         onStartPrivateChat={startPrivateChat}
         onCreateRoom={createRoom}
         onJoinRoom={joinRoom}

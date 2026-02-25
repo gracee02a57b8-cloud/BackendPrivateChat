@@ -45,6 +45,9 @@ public class UserEntity {
     @Column(name = "profile_color", length = 20)
     private String profileColor;
 
+    @Column(unique = true, length = 30)
+    private String tag;
+
     public UserEntity() {}
 
     public UserEntity(String username, String password, String createdAt) {
@@ -91,4 +94,7 @@ public class UserEntity {
 
     public String getProfileColor() { return profileColor; }
     public void setProfileColor(String profileColor) { this.profileColor = profileColor; }
+
+    public String getTag() { return tag; }
+    public void setTag(String tag) { this.tag = tag; }
 }

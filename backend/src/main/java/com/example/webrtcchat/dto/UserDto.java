@@ -3,6 +3,7 @@ package com.example.webrtcchat.dto;
 public class UserDto {
     private String username;
     private String password;
+    private String tag;
     private boolean online;
     private String lastSeen;
     private String avatarUrl;
@@ -31,6 +32,14 @@ public class UserDto {
         this.avatarUrl = avatarUrl;
     }
 
+    public UserDto(String username, boolean online, String lastSeen, String avatarUrl, String tag) {
+        this.username = username;
+        this.online = online;
+        this.lastSeen = lastSeen;
+        this.avatarUrl = avatarUrl;
+        this.tag = tag;
+    }
+
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
 
@@ -45,4 +54,7 @@ public class UserDto {
 
     public String getAvatarUrl() { return avatarUrl; }
     public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
+
+    public String getTag() { return tag; }
+    public void setTag(String tag) { this.tag = tag; }
 }

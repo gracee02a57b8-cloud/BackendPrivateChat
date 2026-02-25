@@ -243,6 +243,12 @@ export default function MyProfilePage({ username, avatarUrl, token, wsRef, onAva
           <div className="my-profile-info-value">@{username}</div>
           <div className="my-profile-info-label">Имя пользователя</div>
         </div>
+        {profile?.tag && (
+          <div className="my-profile-info-row">
+            <div className="my-profile-info-value">{profile.tag}</div>
+            <div className="my-profile-info-label">Тег</div>
+          </div>
+        )}
         {profile?.birthday && (
           <div className="my-profile-info-row">
             <div className="my-profile-info-value">{formatBirthday(profile.birthday)}</div>

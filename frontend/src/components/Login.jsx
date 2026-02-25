@@ -1,12 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
-export default function Login({ onLogin, pendingConfId }) {
+export default function Login({ onLogin, pendingConfId, savedAccounts = [], onSwitchAccount }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [tag, setTag] = useState('');
   const [isRegister, setIsRegister] = useState(false);
+  const [rememberPassword, setRememberPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showAccounts, setShowAccounts] = useState(false);
+
+  // Auto-fill from remembered credentials
+  useEffect(() => {
+    const remembered = localStorage.getItem('barsik_remembered');
+    if (remembered) {
+      try {
+        const cred = JSON.parse(remembered);
+        if (cred.username) setUsername(cred.username);
+        if (cred.password) setPassword(cred.password);
+        setRememberPassword(true);
+      } catch {}
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,16 +36,24 @@ export default function Login({ onLogin, pendingConfId }) {
       setError('Пароль должен быть не менее 8 символов');
       return;
     }
+    if (isRegister && !tag.trim()) {
+      setError('Тег обязателен');
+      return;
+    }
 
     setLoading(true);
     setError('');
 
     try {
       const endpoint = isRegister ? '/api/auth/register' : '/api/auth/login';
+      const body = { username: username.trim(), password };
+      if (isRegister) {
+        body.tag = tag.trim();
+      }
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: username.trim(), password }),
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) {
@@ -39,7 +63,15 @@ export default function Login({ onLogin, pendingConfId }) {
       }
 
       const data = await res.json();
-      onLogin(data.token, data.username, data.role, data.avatarUrl);
+
+      // Save or clear remembered credentials
+      if (rememberPassword) {
+        localStorage.setItem('barsik_remembered', JSON.stringify({ username: data.username, password }));
+      } else {
+        localStorage.removeItem('barsik_remembered');
+      }
+
+      onLogin(data.token, data.username, data.role, data.avatarUrl, data.tag);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -72,11 +104,23 @@ export default function Login({ onLogin, pendingConfId }) {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Имя пользователя..."
+              placeholder={isRegister ? 'Имя пользователя...' : 'Имя или тег (@tag)...'}
               maxLength={20}
               autoFocus
             />
           </div>
+          {isRegister && (
+            <div className="login-input-wrapper">
+              <span className="login-input-icon">🏷️</span>
+              <input
+                type="text"
+                value={tag}
+                onChange={(e) => setTag(e.target.value)}
+                placeholder="Тег (@yourtag)..."
+                maxLength={25}
+              />
+            </div>
+          )}
           <div className="login-input-wrapper">
             <span className="login-input-icon">🔒</span>
             <input
@@ -99,6 +143,14 @@ export default function Login({ onLogin, pendingConfId }) {
               />
             </div>
           )}
+          <label className="login-remember">
+            <input
+              type="checkbox"
+              checked={rememberPassword}
+              onChange={(e) => setRememberPassword(e.target.checked)}
+            />
+            <span>Запомнить пароль</span>
+          </label>
           <button type="submit" data-testid="login-submit" disabled={loading || !username.trim() || !password}>
             {loading ? (
               <span className="btn-loading"><span className="spinner" /> {isRegister ? 'Регистрация...' : 'Вход...'}</span>
@@ -106,7 +158,28 @@ export default function Login({ onLogin, pendingConfId }) {
           </button>
         </form>
         {error && <p className="error" data-testid="login-error">{error}</p>}
-        <p className="login-toggle" data-testid="login-toggle" onClick={() => { setIsRegister(!isRegister); setError(''); setConfirmPassword(''); }}>
+
+        {/* Saved accounts */}
+        {savedAccounts.length > 0 && (
+          <div className="login-accounts-section">
+            <button className="login-accounts-toggle" onClick={() => setShowAccounts(!showAccounts)}>
+              {showAccounts ? '▲' : '▼'} Сохранённые аккаунты ({savedAccounts.length})
+            </button>
+            {showAccounts && (
+              <div className="login-accounts-list">
+                {savedAccounts.map((acc, i) => (
+                  <button key={i} className="login-account-item" onClick={() => onSwitchAccount && onSwitchAccount(acc)}>
+                    <span className="login-account-avatar">👤</span>
+                    <span className="login-account-name">{acc.username}</span>
+                    {acc.tag && <span className="login-account-tag">{acc.tag}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        <p className="login-toggle" data-testid="login-toggle" onClick={() => { setIsRegister(!isRegister); setError(''); setConfirmPassword(''); setTag(''); }}>
           {isRegister ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Зарегистрироваться'}
         </p>
         <div className="login-features">

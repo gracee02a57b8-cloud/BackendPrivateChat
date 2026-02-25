@@ -64,6 +64,7 @@ public class ProfileController {
         profile.put("lastName", user.getLastName() != null ? user.getLastName() : "");
         profile.put("profileColor", user.getProfileColor() != null ? user.getProfileColor() : "");
         profile.put("createdAt", user.getCreatedAt() != null ? user.getCreatedAt() : "");
+        profile.put("tag", user.getTag() != null ? user.getTag() : "");
         return ResponseEntity.ok(profile);
     }
 
@@ -126,6 +127,7 @@ public class ProfileController {
         profile.put("lastName", user.getLastName() != null ? user.getLastName() : "");
         profile.put("profileColor", user.getProfileColor() != null ? user.getProfileColor() : "");
         profile.put("createdAt", user.getCreatedAt() != null ? user.getCreatedAt() : "");
+        profile.put("tag", user.getTag() != null ? user.getTag() : "");
         return ResponseEntity.ok(profile);
     }
 

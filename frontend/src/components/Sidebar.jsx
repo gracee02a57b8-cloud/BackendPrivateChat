@@ -11,7 +11,7 @@ import StoriesBar from './StoriesBar';
 import { copyToClipboard } from '../utils/clipboard';
 import appSettings from '../utils/appSettings';
 import { getAvatarColor, getInitials, formatLastSeen } from '../utils/avatar';
-import { ArrowLeft, MoreVertical, User, Mail, Plus, Bookmark, Download, X, Search, Users, MessageSquare, Pin, Phone, Star, Newspaper, ClipboardList, Link, Volume2, Bell, BellOff, Settings, LogOut, ChevronDown, ChevronUp, FolderPlus, Trash2, Check, Edit3, ArrowUpDown, Folder, Menu, UserPlus, Clock, Info, RefreshCw, Smartphone } from 'lucide-react';
+import { ArrowLeft, MoreVertical, User, Mail, Plus, Bookmark, Download, X, Search, Users, MessageSquare, Pin, Phone, Star, Newspaper, ClipboardList, Link, Volume2, Bell, BellOff, Settings, LogOut, ChevronDown, ChevronUp, FolderPlus, Trash2, Check, CheckCircle, Edit3, ArrowUpDown, Folder, Menu, UserPlus, Clock, Info, RefreshCw, Smartphone } from 'lucide-react';
 
 function formatTime(ts) {
   if (!ts) return '';
@@ -45,6 +45,7 @@ export default function Sidebar({
   username,
   connected,
   onLogout,
+  onAddAccount,
   onStartPrivateChat,
   onCreateRoom,
   onJoinRoom,
@@ -76,6 +77,8 @@ export default function Sidebar({
   const [searchFilter, setSearchFilter] = useState('');
   const [showMenu, setShowMenu] = useState(false);
   const [showContacts, setShowContacts] = useState(false);
+  const [contactSearchResults, setContactSearchResults] = useState([]);
+  const [searchingContacts, setSearchingContacts] = useState(false);
   const [pinnedRooms, setPinnedRooms] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem(`pinnedRooms_${username}`) || '[]')); }
     catch { return new Set(); }
@@ -120,6 +123,27 @@ export default function Sidebar({
     window.addEventListener('appinstalled', () => setInstallPrompt(null));
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
+
+  // Debounced contact search via API (search people by name and tag)
+  useEffect(() => {
+    if ((mobileTab !== 'contacts' && mobileTab !== 'chats') || !searchFilter.trim()) {
+      setContactSearchResults([]);
+      return;
+    }
+    setSearchingContacts(true);
+    const timer = setTimeout(() => {
+      fetch(`/api/chat/users?search=${encodeURIComponent(searchFilter.trim())}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then(res => res.ok ? res.json() : [])
+        .then(data => {
+          setContactSearchResults(data.filter(u => u.username !== username));
+          setSearchingContacts(false);
+        })
+        .catch(() => { setContactSearchResults([]); setSearchingContacts(false); });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchFilter, mobileTab, token, username]);
 
   // Reset profile sub-view when switching tabs
   useEffect(() => {
@@ -531,7 +555,7 @@ export default function Sidebar({
             <span className="sb-search-icon"><Search size={16} /></span>
             <input
               type="text"
-              placeholder="Поиск чатов..."
+              placeholder="Поиск чатов и людей..."
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
             />
@@ -551,79 +575,10 @@ export default function Sidebar({
           {showContacts ? (
             <div className="sb-chat-list">
               <div className="sb-section-header">
-                <span className="sb-section-label">КОНТАКТЫ ({allUsers.filter(u => u.username !== username).length})</span>
+                <span className="sb-section-label">КОНТАКТЫ</span>
                 <button className="sb-section-add" onClick={() => setShowContacts(false)} title="Закрыть"><X size={16} /></button>
               </div>
-              {(() => {
-                const contacts = allUsers
-                  .filter(u => u.username !== username)
-                  .filter(u => {
-                    if (!searchFilter.trim()) return true;
-                    return u.username.toLowerCase().includes(searchFilter.toLowerCase());
-                  });
-                const online = contacts.filter(u => u.online);
-                const offline = contacts.filter(u => !u.online);
-                return (
-                  <>
-                    {online.length > 0 && (
-                      <div className="sb-section-header">
-                        <span className="sb-section-label">В СЕТИ — {online.length}</span>
-                      </div>
-                    )}
-                    {online.map(user => (
-                      <div
-                        key={user.username}
-                        className="sb-contact-item"
-                        onClick={() => { onStartPrivateChat(user.username); setShowContacts(false); }}
-                      >
-                        <div className="sb-chat-avatar-wrap">
-                          <div className="sb-chat-avatar" style={{ background: (avatarMap[user.username] || user.avatarUrl) ? 'transparent' : getAvatarColor(user.username) }}>
-                            {(avatarMap[user.username] || user.avatarUrl)
-                              ? <img src={avatarMap[user.username] || user.avatarUrl} alt="" className="sb-avatar-img" />
-                              : getInitials(user.username)}
-                          </div>
-                          <span className="sb-online-dot online" />
-                        </div>
-                        <div className="sb-contact-info">
-                          <span className="sb-contact-name">{user.username}</span>
-                          <span className="sb-contact-status online">В сети</span>
-                        </div>
-                      </div>
-                    ))}
-                    {offline.length > 0 && (
-                      <div className="sb-section-header">
-                        <span className="sb-section-label">НЕ В СЕТИ — {offline.length}</span>
-                      </div>
-                    )}
-                    {offline.map(user => (
-                      <div
-                        key={user.username}
-                        className="sb-contact-item"
-                        onClick={() => { onStartPrivateChat(user.username); setShowContacts(false); }}
-                      >
-                        <div className="sb-chat-avatar-wrap">
-                          <div className="sb-chat-avatar" style={{ background: (avatarMap[user.username] || user.avatarUrl) ? 'transparent' : getAvatarColor(user.username) }}>
-                            {(avatarMap[user.username] || user.avatarUrl)
-                              ? <img src={avatarMap[user.username] || user.avatarUrl} alt="" className="sb-avatar-img" />
-                              : getInitials(user.username)}
-                          </div>
-                          <span className="sb-online-dot offline" />
-                        </div>
-                        <div className="sb-contact-info">
-                          <span className="sb-contact-name">{user.username}</span>
-                          <span className="sb-contact-status offline">{user.lastSeen ? formatLastSeen(user.lastSeen) : 'Не в сети'}</span>
-                        </div>
-                      </div>
-                    ))}
-                    {contacts.length === 0 && (
-                      <div className="sb-empty">
-                        <span><Users size={32} /></span>
-                        <p>{searchFilter ? 'Не найдено' : 'Нет пользователей'}</p>
-                      </div>
-                    )}
-                  </>
-                );
-              })()}
+              <div className="sb-empty"><span><Search size={32} /></span><p>Используйте поиск выше для поиска людей</p></div>
             </div>
           ) : (
             <div
@@ -634,13 +589,38 @@ export default function Sidebar({
               onTouchEnd={handlePullEnd}
             >
               {getSortedRooms().map((room) => renderChatItem(room))}
-              {rooms.length === 0 && (
+              {/* People search results in chats tab */}
+              {searchFilter.trim() && contactSearchResults.length > 0 && (
+                <>
+                  <div className="contacts-sort-label"><Users size={14} /> Люди</div>
+                  {contactSearchResults.map(user => (
+                    <div key={'psr-' + user.username} className="sb-contact-item" onClick={() => onStartPrivateChat(user.username)}>
+                      <div className="sb-chat-avatar-wrap">
+                        <div className="sb-chat-avatar" style={{ background: (avatarMap[user.username] || user.avatarUrl) ? 'transparent' : getAvatarColor(user.username) }}>
+                          {(avatarMap[user.username] || user.avatarUrl)
+                            ? <img src={avatarMap[user.username] || user.avatarUrl} alt="" className="sb-avatar-img" />
+                            : getInitials(user.username)}
+                        </div>
+                        <span className={`sb-online-dot ${user.online ? 'online' : 'offline'}`} />
+                      </div>
+                      <div className="sb-contact-info">
+                        <span className="sb-contact-name">{user.username}</span>
+                        {user.tag && <span className="sb-contact-tag">{user.tag}</span>}
+                        <span className={`sb-contact-status ${user.online ? 'online' : 'offline'}`}>
+                          {user.online ? 'В сети' : (user.lastSeen ? formatLastSeen(user.lastSeen) : 'Не в сети')}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+              {rooms.length === 0 && !searchFilter.trim() && (
                 <div className="sb-empty"><span><MessageSquare size={32} /></span><p>Нет чатов</p></div>
               )}
               {rooms.length > 0 && getSortedRooms().length === 0 && chatFilter === 'unread' && (
                 <div className="sb-empty"><span><CheckCircle size={32} /></span><p>Все прочитано</p></div>
               )}
-              {rooms.length > 0 && getSortedRooms().length === 0 && chatFilter !== 'unread' && searchFilter && (
+              {rooms.length > 0 && getSortedRooms().length === 0 && chatFilter !== 'unread' && searchFilter && contactSearchResults.length === 0 && (
                 <div className="sb-empty"><span><Search size={32} /></span><p>Не найдено</p></div>
               )}
             </div>
@@ -664,7 +644,7 @@ export default function Sidebar({
             <span className="sb-search-icon"><Search size={16} /></span>
             <input
               type="text"
-              placeholder="Поиск контактов..."
+              placeholder="Поиск по имени или тегу..."
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
             />
@@ -683,14 +663,15 @@ export default function Sidebar({
               <span className="contacts-action-label">Недавние звонки</span>
             </div>
 
-            {/* My Contacts section */}
+            {/* My Contacts section (shown when no search or when contacts match) */}
             {(() => {
               const myContactNames = new Set(myContacts.map(c => c.contact || c.username || c));
               const myContactUsers = allUsers
                 .filter(u => myContactNames.has(u.username) && u.username !== username)
                 .filter(u => {
                   if (!searchFilter.trim()) return true;
-                  return u.username.toLowerCase().includes(searchFilter.toLowerCase());
+                  const q = searchFilter.toLowerCase();
+                  return u.username.toLowerCase().includes(q) || (u.tag && u.tag.toLowerCase().includes(q));
                 });
               if (myContactUsers.length > 0) {
                 const mcOnline = myContactUsers.filter(u => u.online);
@@ -710,6 +691,7 @@ export default function Sidebar({
                         </div>
                         <div className="sb-contact-info">
                           <span className="sb-contact-name">{user.username}</span>
+                          {user.tag && <span className="sb-contact-tag">{user.tag}</span>}
                           <span className="sb-contact-status online">В сети</span>
                         </div>
                       </div>
@@ -726,6 +708,7 @@ export default function Sidebar({
                         </div>
                         <div className="sb-contact-info">
                           <span className="sb-contact-name">{user.username}</span>
+                          {user.tag && <span className="sb-contact-tag">{user.tag}</span>}
                           <span className="sb-contact-status offline">{user.lastSeen ? formatLastSeen(user.lastSeen) : 'Не в сети'}</span>
                         </div>
                       </div>
@@ -736,67 +719,44 @@ export default function Sidebar({
               return null;
             })()}
 
-            {/* All Users section */}
-            <div className="contacts-sort-label">Все пользователи</div>
-            {(() => {
-              const contacts = allUsers
-                .filter(u => u.username !== username)
-                .filter(u => {
-                  if (!searchFilter.trim()) return true;
-                  return u.username.toLowerCase().includes(searchFilter.toLowerCase());
-                });
-              const online = contacts.filter(u => u.online);
-              const offline = contacts.filter(u => !u.online);
-              return (
-                <>
-                  {online.length > 0 && (
-                    <div className="sb-section-header">
-                      <span className="sb-section-label">В СЕТИ — {online.length}</span>
-                    </div>
-                  )}
-                  {online.map(user => (
-                    <div key={user.username} className="sb-contact-item" onClick={() => onStartPrivateChat(user.username)}>
-                      <div className="sb-chat-avatar-wrap">
-                        <div className="sb-chat-avatar" style={{ background: (avatarMap[user.username] || user.avatarUrl) ? 'transparent' : getAvatarColor(user.username) }}>
-                          {(avatarMap[user.username] || user.avatarUrl)
-                            ? <img src={avatarMap[user.username] || user.avatarUrl} alt="" className="sb-avatar-img" />
-                            : getInitials(user.username)}
+            {/* Search results — shown only when user types a search query */}
+            {searchFilter.trim() && (
+              <>
+                <div className="contacts-sort-label"><Search size={14} /> Результаты поиска</div>
+                {searchingContacts && (
+                  <div className="sb-empty"><span className="spinner" /><p>Поиск...</p></div>
+                )}
+                {!searchingContacts && contactSearchResults.length > 0 && (
+                  <>
+                    {contactSearchResults.map(user => (
+                      <div key={'sr-' + user.username} className="sb-contact-item" onClick={() => onStartPrivateChat(user.username)}>
+                        <div className="sb-chat-avatar-wrap">
+                          <div className="sb-chat-avatar" style={{ background: (avatarMap[user.username] || user.avatarUrl) ? 'transparent' : getAvatarColor(user.username) }}>
+                            {(avatarMap[user.username] || user.avatarUrl)
+                              ? <img src={avatarMap[user.username] || user.avatarUrl} alt="" className="sb-avatar-img" />
+                              : getInitials(user.username)}
+                          </div>
+                          <span className={`sb-online-dot ${user.online ? 'online' : 'offline'}`} />
                         </div>
-                        <span className="sb-online-dot online" />
-                      </div>
-                      <div className="sb-contact-info">
-                        <span className="sb-contact-name">{user.username}</span>
-                        <span className="sb-contact-status online">В сети</span>
-                      </div>
-                    </div>
-                  ))}
-                  {offline.length > 0 && (
-                    <div className="sb-section-header">
-                      <span className="sb-section-label">НЕ В СЕТИ — {offline.length}</span>
-                    </div>
-                  )}
-                  {offline.map(user => (
-                    <div key={user.username} className="sb-contact-item" onClick={() => onStartPrivateChat(user.username)}>
-                      <div className="sb-chat-avatar-wrap">
-                        <div className="sb-chat-avatar" style={{ background: (avatarMap[user.username] || user.avatarUrl) ? 'transparent' : getAvatarColor(user.username) }}>
-                          {(avatarMap[user.username] || user.avatarUrl)
-                            ? <img src={avatarMap[user.username] || user.avatarUrl} alt="" className="sb-avatar-img" />
-                            : getInitials(user.username)}
+                        <div className="sb-contact-info">
+                          <span className="sb-contact-name">{user.username}</span>
+                          {user.tag && <span className="sb-contact-tag">{user.tag}</span>}
+                          <span className={`sb-contact-status ${user.online ? 'online' : 'offline'}`}>
+                            {user.online ? 'В сети' : (user.lastSeen ? formatLastSeen(user.lastSeen) : 'Не в сети')}
+                          </span>
                         </div>
-                        <span className="sb-online-dot offline" />
                       </div>
-                      <div className="sb-contact-info">
-                        <span className="sb-contact-name">{user.username}</span>
-                        <span className="sb-contact-status offline">{user.lastSeen ? formatLastSeen(user.lastSeen) : 'Не в сети'}</span>
-                      </div>
-                    </div>
-                  ))}
-                  {contacts.length === 0 && (
-                    <div className="sb-empty"><span><Users size={32} /></span><p>{searchFilter ? 'Не найдено' : 'Нет пользователей'}</p></div>
-                  )}
-                </>
-              );
-            })()}
+                    ))}
+                  </>
+                )}
+                {!searchingContacts && contactSearchResults.length === 0 && (
+                  <div className="sb-empty"><span><Users size={32} /></span><p>Не найдено</p></div>
+                )}
+              </>
+            )}
+            {!searchFilter.trim() && myContacts.length === 0 && (
+              <div className="sb-empty"><span><Search size={32} /></span><p>Найдите людей по имени или тегу</p></div>
+            )}
           </div>
         </>
       )}
@@ -1104,7 +1064,7 @@ export default function Sidebar({
             </button>
 
             {/* Add account */}
-            <button className="burger-menu-item" onClick={() => { setShowBurgerDrawer(false); }}>
+            <button className="burger-menu-item" onClick={() => { setShowBurgerDrawer(false); if (onAddAccount) onAddAccount(); }}>
               <UserPlus size={20} />
               <span>Добавить аккаунт</span>
             </button>

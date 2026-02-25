@@ -101,6 +101,15 @@ export default function EditProfilePage({ token, username, onBack, onProfileUpda
               <div className="edit-profile-info-sublabel">Имя пользователя</div>
             </div>
           </div>
+          {profile?.tag && (
+            <div className="edit-profile-info-row">
+              <span className="edit-profile-info-icon">🏷️</span>
+              <div className="edit-profile-info-content">
+                <div className="edit-profile-info-value">{profile.tag}</div>
+                <div className="edit-profile-info-sublabel">Тег</div>
+              </div>
+            </div>
+          )}
           <div className="edit-profile-info-row edit-profile-info-row-editable">
             <span className="edit-profile-info-icon"><Cake size={16} /></span>
             <div className="edit-profile-info-content">

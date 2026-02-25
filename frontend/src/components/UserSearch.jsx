@@ -27,7 +27,7 @@ export default function UserSearch({ token, username, onStartChat, onClose }) {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Поиск пользователей..."
+          placeholder="Поиск по имени или тегу..."
           autoFocus
         />
         <button className="close-btn" onClick={onClose}>✕</button>
@@ -36,6 +36,7 @@ export default function UserSearch({ token, username, onStartChat, onClose }) {
         {results.map((user, i) => (
           <div key={i} className="search-result-item" onClick={() => onStartChat(user.username)}>
             <span className={`user-dot ${user.online ? 'online' : 'offline'}`}>●</span> {user.username}
+            {user.tag && <span style={{ color: '#6366f1', fontSize: '0.8rem', marginLeft: 6 }}>{user.tag}</span>}
           </div>
         ))}
         {query && results.length === 0 && (

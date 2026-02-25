@@ -373,6 +373,91 @@
   text-decoration: underline;
 }
 
+/* Remember password checkbox */
+.login-remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 14px;
+  cursor: pointer;
+  font-size: 0.86rem;
+  color: #94a3b8;
+  user-select: none;
+}
+.login-remember input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #6366f1;
+  cursor: pointer;
+}
+.login-remember span {
+  line-height: 1.2;
+}
+
+/* Saved accounts section on login */
+.login-accounts-section {
+  margin-top: 12px;
+  width: 100%;
+}
+.login-accounts-toggle {
+  width: 100%;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.18);
+  border-radius: 10px;
+  padding: 8px 14px;
+  color: #94a3b8;
+  font-size: 0.82rem;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.2s;
+}
+.login-accounts-toggle:hover {
+  background: rgba(99, 102, 241, 0.15);
+}
+.login-accounts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+.login-account-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  cursor: pointer;
+  color: #e2e8f0;
+  font-size: 0.88rem;
+  transition: background 0.2s;
+  width: 100%;
+}
+.login-account-item:hover {
+  background: rgba(99, 102, 241, 0.12);
+}
+.login-account-avatar {
+  font-size: 1.3rem;
+}
+.login-account-name {
+  font-weight: 500;
+  flex: 1;
+}
+.login-account-tag {
+  color: #6366f1;
+  font-size: 0.78rem;
+}
+
+/* Contact tag display in sidebar */
+.sb-contact-tag {
+  display: block;
+  font-size: 0.72rem;
+  color: #6366f1;
+  margin-top: 1px;
+  line-height: 1;
+}
+
 .error {
   color: #ef4444;
   margin-top: 1rem;

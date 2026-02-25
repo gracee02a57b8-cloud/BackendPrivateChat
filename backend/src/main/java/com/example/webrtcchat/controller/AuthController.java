@@ -37,12 +37,23 @@ public class AuthController {
         if (userDto.getPassword() == null || userDto.getPassword().length() < 8) {
             return ResponseEntity.badRequest().body(Map.of("error", "Пароль должен быть не менее 8 символов"));
         }
+        if (userDto.getTag() == null || userDto.getTag().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Тег обязателен"));
+        }
         String username = userDto.getUsername().trim();
         if (username.length() > 20) {
             return ResponseEntity.badRequest().body(Map.of("error", "Имя не более 20 символов"));
         }
+        String tag = userDto.getTag().trim().toLowerCase();
+        if (!tag.startsWith("@")) tag = "@" + tag;
+        if (!tag.matches("@[a-zA-Z0-9_]{2,24}")) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Тег: 2-24 символа (латиница, цифры, _)"));
+        }
         if (userRepository.existsByUsername(username)) {
             return ResponseEntity.badRequest().body(Map.of("error", "Пользователь уже существует"));
+        }
+        if (userRepository.existsByTag(tag)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Этот тег уже занят"));
         }
 
         UserEntity user = new UserEntity(
@@ -50,23 +61,36 @@ public class AuthController {
                 passwordEncoder.encode(userDto.getPassword()),
                 LocalDateTime.now().format(FORMATTER)
         );
+        user.setTag(tag);
         userRepository.save(user);
 
         String token = jwtService.generateToken(username, user.getRole());
-        return ResponseEntity.ok(new AuthResponse(token, username, user.getRole(), user.getAvatarUrl()));
+        return ResponseEntity.ok(new AuthResponse(token, username, user.getRole(), user.getAvatarUrl(), tag));
     }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody UserDto userDto) {
         if (userDto.getUsername() == null || userDto.getUsername().isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Имя пользователя обязательно"));
+            return ResponseEntity.badRequest().body(Map.of("error", "Имя пользователя или тег обязательны"));
         }
         if (userDto.getPassword() == null || userDto.getPassword().isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Пароль обязателен"));
         }
 
-        String username = userDto.getUsername().trim();
-        var userOpt = userRepository.findByUsername(username);
+        String loginInput = userDto.getUsername().trim();
+        java.util.Optional<UserEntity> userOpt;
+
+        // If login starts with @, try finding by tag first
+        if (loginInput.startsWith("@")) {
+            userOpt = userRepository.findByTag(loginInput.toLowerCase());
+        } else {
+            userOpt = userRepository.findByUsername(loginInput);
+            // If not found by username, try finding by tag
+            if (userOpt.isEmpty()) {
+                userOpt = userRepository.findByTag("@" + loginInput.toLowerCase());
+            }
+        }
+
         if (userOpt.isEmpty()) {
             return ResponseEntity.status(401).body(Map.of("error", "Неверные учетные данные"));
         }
@@ -76,7 +100,7 @@ public class AuthController {
             return ResponseEntity.status(401).body(Map.of("error", "Неверные учетные данные"));
         }
 
-        String token = jwtService.generateToken(username, user.getRole());
-        return ResponseEntity.ok(new AuthResponse(token, username, user.getRole(), user.getAvatarUrl()));
+        String token = jwtService.generateToken(user.getUsername(), user.getRole());
+        return ResponseEntity.ok(new AuthResponse(token, user.getUsername(), user.getRole(), user.getAvatarUrl(), user.getTag()));
     }
 }
