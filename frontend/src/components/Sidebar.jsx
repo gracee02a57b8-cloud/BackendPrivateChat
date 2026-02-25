@@ -437,7 +437,7 @@ export default function Sidebar({
           <button className="sb-menu-btn" data-testid="sb-menu-btn" onClick={() => setShowMenu(!showMenu)} aria-label="Меню" title="Меню"><MoreVertical size={20} /></button>
           {showMenu && (
             <div className="sb-menu-dropdown" ref={menuRef}>
-              <button onClick={() => { setShowMenu(false); const mobile = window.innerWidth <= 768; if (mobile && setMobileTab) setMobileTab('profile'); else setShowProfile(true); }}><User size={16} /> Профиль</button>
+              <button onClick={() => { setShowMenu(false); if (setMobileTab) setMobileTab('profile'); else setShowProfile(true); }}><User size={16} /> Профиль</button>
               <button onClick={() => { setShowMenu(false); setShowSearch(!showSearch); }}><Mail size={16} /> Написать</button>
               <button onClick={() => { setShowMenu(false); setShowCreate(true); }}><Plus size={16} /> Создать группу</button>
               <button onClick={() => { setShowMenu(false); if (onOpenSaved) onOpenSaved(); }}><Bookmark size={16} /> Избранное</button>
@@ -1093,6 +1093,24 @@ export default function Sidebar({
       {showBurgerDrawer && (
         <div className="burger-overlay" onClick={() => setShowBurgerDrawer(false)}>
           <div className="burger-drawer" data-testid="burger-drawer" ref={burgerRef} onClick={e => e.stopPropagation()}>
+            {/* User profile row */}
+            <button className="burger-menu-item burger-user-row" onClick={() => { setShowBurgerDrawer(false); setShowProfile(true); }}>
+              <div className="burger-user-avatar" style={{ background: avatarUrl ? 'transparent' : getAvatarColor(username) }}>
+                {avatarUrl
+                  ? <img src={avatarUrl} alt="" className="sb-avatar-img" />
+                  : getInitials(username)}
+              </div>
+              <span>{username}</span>
+            </button>
+
+            {/* Add account */}
+            <button className="burger-menu-item" onClick={() => { setShowBurgerDrawer(false); }}>
+              <UserPlus size={20} />
+              <span>Добавить аккаунт</span>
+            </button>
+
+            <div className="burger-menu-divider" />
+
             {/* Menu items */}
             <div className="burger-menu-list">
               <button className="burger-menu-item" onClick={() => { setShowBurgerDrawer(false); if (onOpenSaved) onOpenSaved(); }}>
