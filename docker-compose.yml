@@ -26,6 +26,10 @@ services:
       DDL_AUTO: ${DDL_AUTO:-update}
       HIKARI_MAX_POOL: ${HIKARI_MAX_POOL:-10}
       JAVA_OPTS: ${JAVA_OPTS:--Xmx512m -Xms256m}
+      TURN_SECRET: ${TURN_SECRET:-}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@barsik.chat}
     volumes:
       - uploads_data:/app/uploads
     # Port NOT exposed externally — only reachable via nginx on barsik-net
