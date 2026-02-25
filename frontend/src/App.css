@@ -1328,11 +1328,16 @@ button, a, [role="button"], input, textarea, select, label,
 .settings-folder-del-btn {
   background: none;
   border: none;
-  color: #7b8ca2;
+  color: var(--color-text-secondary);
   cursor: pointer;
   padding: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 8px;
-  transition: all 0.15s;
+  transition: background 0.15s, color 0.15s;
   flex-shrink: 0;
 }
 .settings-folder-edit-btn:hover {
@@ -1435,7 +1440,7 @@ button, a, [role="button"], input, textarea, select, label,
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #f4f4f5;
+  background: var(--color-bg-input);
   margin: 6px 12px 4px;
   border-radius: 12px;
   border: 1.5px solid transparent;
@@ -1459,14 +1464,14 @@ button, a, [role="button"], input, textarea, select, label,
   background: none;
   border: none;
   outline: none;
-  color: #1a1a2e;
+  color: var(--color-text-primary);
   font-size: 0.88rem;
-  min-height: 28px;
+  min-height: 36px;
   font-weight: 400;
 }
 
 .sb-search input::placeholder {
-  color: #9ca3af;
+  color: var(--color-text-muted);
 }
 
 /* ===== User Search (modal/overlay) ===== */
@@ -1513,10 +1518,15 @@ button, a, [role="button"], input, textarea, select, label,
 .close-btn {
   background: none;
   border: none;
-  color: #7b8ca2;
+  color: var(--color-text-secondary);
   cursor: pointer;
   font-size: 1.1rem;
   padding: 0;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .close-btn:hover {
@@ -1530,10 +1540,13 @@ button, a, [role="button"], input, textarea, select, label,
 }
 
 .search-result-item {
-  padding: 0.4rem 0.6rem;
-  border-radius: 6px;
+  padding: 10px 12px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 0.85rem;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
   transition: background 0.2s;
 }
 
@@ -1594,10 +1607,12 @@ button, a, [role="button"], input, textarea, select, label,
 .sb-section-add {
   width: 32px;
   height: 32px;
+  min-width: 44px;
+  min-height: 44px;
   border-radius: 10px;
   border: none;
   background: rgba(99, 102, 241, 0.08);
-  color: #6366f1;
+  color: var(--color-accent);
   font-size: 1rem;
   cursor: pointer;
   display: flex;
@@ -1627,11 +1642,11 @@ button, a, [role="button"], input, textarea, select, label,
 }
 
 .sb-chat-item:hover {
-  background: #f8f8fa;
+  background: var(--color-bg-hover);
 }
 
 .sb-chat-item:active {
-  background: #f0f0f3;
+  background: var(--color-bg-active);
 }
 
 .sb-chat-item.active {
@@ -1653,10 +1668,10 @@ button, a, [role="button"], input, textarea, select, label,
   content: '';
   position: absolute;
   bottom: 0;
-  left: 72px;
+  left: calc(12px + 50px + 12px);
   right: 14px;
   height: 0.5px;
-  background: rgba(0,0,0,0.08);
+  background: var(--color-separator);
 }
 .sb-chat-item:last-child::after {
   display: none;
@@ -1679,8 +1694,8 @@ button, a, [role="button"], input, textarea, select, label,
   font-size: 1rem;
   cursor: pointer;
   padding: 4px;
-  min-width: 28px;
-  min-height: 28px;
+  min-width: 44px;
+  min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1802,7 +1817,7 @@ button, a, [role="button"], input, textarea, select, label,
 .sb-chat-name {
   font-size: 0.93rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--color-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1812,7 +1827,7 @@ button, a, [role="button"], input, textarea, select, label,
 
 .sb-chat-time {
   font-size: 0.7rem;
-  color: #9ca3af;
+  color: var(--color-text-muted);
   display: flex;
   align-items: center;
   font-weight: 400;
@@ -1822,7 +1837,7 @@ button, a, [role="button"], input, textarea, select, label,
 
 .sb-chat-preview {
   font-size: 0.82rem;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2062,11 +2077,15 @@ button, a, [role="button"], input, textarea, select, label,
 
 .chat-header h3 {
   font-size: 1.05rem;
-  color: #1a1a2e;
+  color: var(--color-text-primary);
   margin: 0;
   font-weight: 650;
   letter-spacing: -0.01em;
   line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 50vw;
 }
 
 /* ── Back button (hidden on desktop, shown on mobile) ── */
@@ -2159,14 +2178,14 @@ button, a, [role="button"], input, textarea, select, label,
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: var(--z-sidebar, 1000);
+  z-index: var(--z-modal, 1000);
   animation: fadeIn 0.2s ease;
 }
 
 .modal {
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(40px) saturate(180%);
-  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  background: var(--color-bg-glass-heavy);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   padding: 2rem;
   border-radius: 20px;
   width: 100%;
@@ -2429,7 +2448,7 @@ button, a, [role="button"], input, textarea, select, label,
   position: relative;
   transition: transform 0.15s var(--ease-smooth), box-shadow 0.15s;
   content-visibility: auto;
-  contain-intrinsic-size: 0 52px;
+  contain-intrinsic-size: 0 80px;
 }
 
 /* === Single message (no group) вЂ” has tail === */
@@ -2443,10 +2462,10 @@ button, a, [role="button"], input, textarea, select, label,
 
 .message.other {
   align-self: flex-start;
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(0, 0, 0, 0.04);
+  background: var(--color-bg-bubble-other);
+  border: 1px solid var(--color-border);
   border-radius: 18px 18px 18px 6px;
-  color: #1a1a2e;
+  color: var(--color-text-primary);
   box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
 
@@ -2586,7 +2605,7 @@ button, a, [role="button"], input, textarea, select, label,
 .msg-meta {
   float: right;
   font-size: 0.67rem;
-  color: rgba(0,0,0,0.38);
+  color: var(--color-text-tertiary);
   margin-left: 10px;
   margin-top: 4px;
   white-space: nowrap;
@@ -3819,12 +3838,12 @@ button, a, [role="button"], input, textarea, select, label,
 .ctx-menu {
   position: fixed;
   background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(48px) saturate(200%);
-  -webkit-backdrop-filter: blur(48px) saturate(200%);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid rgba(99,102,241,0.06);
   border-radius: 18px;
   box-shadow: 0 12px 48px rgba(0,0,0,0.10), 0 4px 16px rgba(99,102,241,0.06), 0 0 0 1px rgba(255,255,255,0.6) inset;
-  z-index: var(--z-sidebar, 1000);
+  z-index: var(--z-modal, 1000);
   overflow: hidden;
   min-width: 215px;
   animation: ctxPopIn 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -3881,18 +3900,17 @@ button, a, [role="button"], input, textarea, select, label,
   padding: 10px 16px;
   background: none;
   border: none;
-  color: #1a1a2e;
+  color: var(--color-text-primary);
   font-size: 0.88rem;
   text-align: left;
   cursor: pointer;
-  transition: all 0.15s var(--ease-smooth);
+  transition: background 0.15s var(--ease-smooth), color 0.15s var(--ease-smooth);
   font-weight: 475;
 }
 
 .ctx-items button:hover {
   background: rgba(99, 102, 241, 0.06);
   color: #6366f1;
-  padding-left: 18px;
 }
 
 .ctx-icon {
@@ -8791,6 +8809,39 @@ button, a, [role="button"], input, textarea, select, label,
   }
 }
 
+/* ===== Accessibility: Focus Visible ===== */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+input:focus-visible,
+textarea:focus-visible {
+  outline-offset: 0;
+}
+
+/* ===== Accessibility: High Contrast ===== */
+@media (prefers-contrast: high) {
+  :root {
+    --color-bg-glass: rgba(255, 255, 255, 1);
+    --color-bg-glass-heavy: rgba(255, 255, 255, 1);
+    --color-border: rgba(0, 0, 0, 0.2);
+    --color-separator: rgba(0, 0, 0, 0.15);
+  }
+  .chat-header,
+  .message-form,
+  .mobile-bottom-nav {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+  }
+  .message-bubble,
+  .message.other {
+    border-width: 2px;
+  }
+}
+
 /* ====================================================================
    ██  MOBILE BOTTOM NAVIGATION (Telegram-style)  ██
    ==================================================================== */
@@ -9147,11 +9198,11 @@ button, a, [role="button"], input, textarea, select, label,
     bottom: 12px;
     left: 12px;
     right: 12px;
-    z-index: 1002;
-    background: rgba(255, 255, 255, 0.65);
-    backdrop-filter: blur(40px) saturate(200%);
-    -webkit-backdrop-filter: blur(40px) saturate(200%);
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    z-index: var(--z-overlay, 500);
+    background: var(--color-bg-glass);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
     box-shadow:
       0 8px 32px rgba(0, 0, 0, 0.08),
       0 2px 8px rgba(0, 0, 0, 0.04),
@@ -9439,7 +9490,7 @@ button, a, [role="button"], input, textarea, select, label,
 
   .message-body {
     font-size: 1rem;
-    line-height: 1.38;
+    line-height: 1.45;
   }
 
   .msg-meta {

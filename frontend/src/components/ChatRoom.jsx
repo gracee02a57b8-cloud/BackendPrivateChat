@@ -1128,7 +1128,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
                             {disappearingTimer > 0 && <span className="disappearing-badge"><Timer size={10} /></span>}
                             {msg.timestamp}
                             {isOwn && (msg.type === 'CHAT' || msg.type === 'VOICE' || msg.type === 'VIDEO_CIRCLE') && (
-                              <span className={`msg-check ${msg.status === 'READ' ? 'read' : msg.status === 'DELIVERED' ? 'delivered' : ''}`}>
+                              <span className={`msg-check ${msg.status === 'READ' ? 'read' : msg.status === 'DELIVERED' ? 'delivered' : ''}`} aria-label={msg.status === 'READ' ? 'Прочитано' : msg.status === 'DELIVERED' ? 'Доставлено' : 'Отправлено'}>
                                 {msg.status === 'READ' ? <CheckCheck size={14} /> : msg.status === 'DELIVERED' ? <CheckCheck size={14} /> : <Check size={14} />}
                               </span>
                             )}
@@ -1144,7 +1144,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
                           {disappearingTimer > 0 && <span className="disappearing-badge"><Timer size={10} /></span>}
                           {msg.timestamp}
                           {isOwn && (msg.type === 'CHAT' || msg.type === 'VOICE' || msg.type === 'VIDEO_CIRCLE') && (
-                            <span className={`msg-check ${msg.status === 'READ' ? 'read' : msg.status === 'DELIVERED' ? 'delivered' : ''}`}>
+                            <span className={`msg-check ${msg.status === 'READ' ? 'read' : msg.status === 'DELIVERED' ? 'delivered' : ''}`} aria-label={msg.status === 'READ' ? 'Прочитано' : msg.status === 'DELIVERED' ? 'Доставлено' : 'Отправлено'}>
                               {msg.status === 'READ' ? <CheckCheck size={14} /> : msg.status === 'DELIVERED' ? <CheckCheck size={14} /> : <Check size={14} />}
                             </span>
                           )}
@@ -1352,7 +1352,8 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
             placeholder={editingMsg ? 'Редактировать сообщение...' : 'Введите сообщение...'}
             disabled={!connected}
             rows={1}
-            autoFocus
+            autoFocus={window.innerWidth > 768}
+            aria-label={editingMsg ? 'Редактировать сообщение' : 'Введите сообщение'}
           />
           {showEmoji && <EmojiPicker onSelect={insertEmoji} onClose={() => setShowEmoji(false)} />}
           {mentionQuery !== null && (
@@ -1370,6 +1371,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
               value={scheduleDate}
               onChange={(e) => setScheduleDate(e.target.value)}
               min={new Date().toISOString().slice(0, 16)}
+              aria-label="Дата и время отложенной отправки"
             />
             <span className="schedule-hint">Сообщение будет отправлено в указанное время</span>
           </div>
@@ -1520,7 +1522,16 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
 
       {/* Image Lightbox */}
       {lightboxImage && (
-        <div className="lightbox-overlay" onClick={() => setLightboxImage(null)}>
+        <div
+          className="lightbox-overlay"
+          onClick={() => setLightboxImage(null)}
+          onKeyDown={(e) => { if (e.key === 'Escape') setLightboxImage(null); }}
+          tabIndex={-1}
+          ref={(el) => el?.focus()}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Просмотр изображения"
+        >
           <img src={lightboxImage.url} alt={lightboxImage.name || 'image'} onClick={e => e.stopPropagation()} />
           <button className="lightbox-close" onClick={() => setLightboxImage(null)} aria-label="Закрыть">
             <X size={22} />

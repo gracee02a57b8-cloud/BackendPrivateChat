@@ -452,6 +452,10 @@ export default function Sidebar({
         key={room.id}
         className={`sb-chat-item${activeRoomId === room.id ? ' active' : ''}${pinnedRooms.has(room.id) ? ' pinned' : ''}${unread > 0 ? ' has-unread' : ''}`}
         onClick={() => onSelectRoom(room.id)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectRoom(room.id); } }}
+        role="button"
+        tabIndex={0}
+        aria-label={`Чат: ${displayName}${unread > 0 ? `, непрочитанных: ${unread}` : ''}`}
       >
         <div className="sb-chat-avatar-wrap">
           {isSaved ? (
@@ -488,7 +492,12 @@ export default function Sidebar({
         </div>
         <div className="sb-chat-actions">
           {!isSaved && (
-            <span className={`sb-pin-btn${pinnedRooms.has(room.id) ? ' pinned' : ''}`} onClick={(e) => togglePin(e, room.id)} title={pinnedRooms.has(room.id) ? 'Открепить' : 'Закрепить'} role="button" aria-label="Закрепить чат">
+            <span className={`sb-pin-btn${pinnedRooms.has(room.id) ? ' pinned' : ''}`}
+              onClick={(e) => togglePin(e, room.id)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); togglePin(e, room.id); } }}
+              title={pinnedRooms.has(room.id) ? 'Открепить' : 'Закрепить'}
+              role="button" tabIndex={0}
+              aria-label={pinnedRooms.has(room.id) ? 'Открепить чат' : 'Закрепить чат'}>
               <Pin size={14} />
             </span>
           )}
@@ -637,6 +646,7 @@ export default function Sidebar({
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
               onBlur={() => { if (!searchFilter) setSearchExpanded(false); }}
+              aria-label="Поиск чатов и людей"
             />
             {searchFilter && <button className="sb-search-toggle" onClick={() => { setSearchFilter(''); setSearchExpanded(false); }}><X size={14} /></button>}
           </div>
