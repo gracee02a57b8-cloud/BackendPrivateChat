@@ -11,15 +11,29 @@ export default function Login({ onLogin, pendingConfId, savedAccounts = [], onSw
   const [loading, setLoading] = useState(false);
   const [showAccounts, setShowAccounts] = useState(false);
 
-  // Auto-fill from remembered credentials
+  // Auto-fill from remembered credentials (pick last used or first available)
   useEffect(() => {
     const remembered = localStorage.getItem('barsik_remembered');
     if (remembered) {
       try {
-        const cred = JSON.parse(remembered);
-        if (cred.username) setUsername(cred.username);
-        if (cred.password) setPassword(cred.password);
-        setRememberPassword(true);
+        const credMap = JSON.parse(remembered);
+        // Migration: if old format {username, password}, convert to new map format
+        if (credMap.username && credMap.password) {
+          const migrated = { [credMap.username]: credMap.password };
+          localStorage.setItem('barsik_remembered', JSON.stringify(migrated));
+          setUsername(credMap.username);
+          setPassword(credMap.password);
+          setRememberPassword(true);
+          return;
+        }
+        // New format: { username1: password1, username2: password2 }
+        const users = Object.keys(credMap);
+        if (users.length > 0) {
+          const lastUser = users[users.length - 1];
+          setUsername(lastUser);
+          setPassword(credMap[lastUser]);
+          setRememberPassword(true);
+        }
       } catch {}
     }
   }, []);
@@ -64,11 +78,21 @@ export default function Login({ onLogin, pendingConfId, savedAccounts = [], onSw
 
       const data = await res.json();
 
-      // Save or clear remembered credentials
+      // Save or clear remembered credentials (per-account map)
       if (rememberPassword) {
-        localStorage.setItem('barsik_remembered', JSON.stringify({ username: data.username, password }));
+        let credMap = {};
+        try { credMap = JSON.parse(localStorage.getItem('barsik_remembered') || '{}'); } catch {}
+        // Migration: if old format, reset
+        if (credMap.username) credMap = {};
+        credMap[data.username] = password;
+        localStorage.setItem('barsik_remembered', JSON.stringify(credMap));
       } else {
-        localStorage.removeItem('barsik_remembered');
+        // Remove only this account from map
+        try {
+          const credMap = JSON.parse(localStorage.getItem('barsik_remembered') || '{}');
+          if (credMap.username) { localStorage.removeItem('barsik_remembered'); }
+          else { delete credMap[data.username]; localStorage.setItem('barsik_remembered', JSON.stringify(credMap)); }
+        } catch { localStorage.removeItem('barsik_remembered'); }
       }
 
       onLogin(data.token, data.username, data.role, data.avatarUrl, data.tag);

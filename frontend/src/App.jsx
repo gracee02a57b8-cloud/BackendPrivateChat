@@ -79,6 +79,16 @@ function App() {
   };
 
   const handleAddAccount = () => {
+    // Save current account to the list before logging out
+    const curUser = localStorage.getItem('username');
+    if (curUser) {
+      saveAccountToList(
+        curUser,
+        localStorage.getItem('role') || 'USER',
+        localStorage.getItem('avatarUrl') || '',
+        localStorage.getItem('tag') || ''
+      );
+    }
     // Log out current account but keep savedAccounts
     localStorage.removeItem('token');
     localStorage.removeItem('username');
@@ -98,13 +108,24 @@ function App() {
     const remembered = localStorage.getItem('barsik_remembered');
     if (remembered) {
       try {
-        const cred = JSON.parse(remembered);
-        if (cred.username === acc.username && cred.password) {
+        const credMap = JSON.parse(remembered);
+        const pwd = credMap[acc.username];
+        if (pwd) {
+          // Save current account before switching
+          const curUser = localStorage.getItem('username');
+          if (curUser) {
+            saveAccountToList(
+              curUser,
+              localStorage.getItem('role') || 'USER',
+              localStorage.getItem('avatarUrl') || '',
+              localStorage.getItem('tag') || ''
+            );
+          }
           // Auto-login
           fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: acc.username, password: cred.password }),
+            body: JSON.stringify({ username: acc.username, password: pwd }),
           })
             .then(r => r.json())
             .then(data => {
