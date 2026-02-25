@@ -538,6 +538,14 @@
   animation: springSlideDown 0.3s var(--spring);
 }
 
+/* ===== Global Touch Optimization ===== */
+button, a, [role="button"], input, textarea, select, label,
+.action-btn, .sb-chat-item, .bottom-nav-item, .ctx-items button,
+.message, .stories-bar-item {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* ===== Chat Layout ===== */
 .chat-container {
   display: flex;
@@ -581,6 +589,7 @@
   z-index: var(--z-sidebar, 1000);
   position: relative;
   overflow: hidden;
+  contain: layout style;
 }
 
 .sidebar-overlay {
@@ -2220,6 +2229,9 @@
   flex-direction: column;
   gap: 3px;
   scroll-behavior: smooth;
+  contain: content;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
 
 .messages > div {
@@ -2332,8 +2344,7 @@
   padding: 0.25rem 1rem;
   font-size: 0.71rem;
   color: #8b8fa8;
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.96);
   border-radius: 20px;
   border: 1px solid rgba(99,102,241,0.05);
   white-space: nowrap;
@@ -2363,9 +2374,8 @@
 
 .message.other {
   align-self: flex-start;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(0, 0, 0, 0.035);
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(0, 0, 0, 0.04);
   border-radius: 18px 18px 18px 6px;
   color: #1a1a2e;
   box-shadow: 0 1px 4px rgba(0,0,0,0.04);
@@ -5015,8 +5025,8 @@
   .scroll-to-bottom {
     bottom: 75px;
     right: 12px;
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
   }
 }
 
@@ -5064,15 +5074,9 @@
     max-width: 120px;
   }
 
-  .copy-link-btn {
-    font-size: 0.75rem;
-    padding: 0.25rem 0.4rem;
-  }
-
   /* --- Messages --- */
   .message {
     max-width: 90%;
-    padding: 0.5rem 0.7rem;
   }
 
   .message-content {
@@ -5123,40 +5127,6 @@
     font-size: 1.2rem;
   }
 
-  /* --- Message form compact --- */
-  .message-form {
-    padding: 0.5rem;
-    gap: 0.3rem;
-  }
-
-  .message-form > .form-actions .send-btn {
-    padding: 0.5rem 0.8rem;
-    font-size: 0.95rem;
-    border-radius: 8px;
-  }
-
-  .form-actions .action-btn {
-    min-width: 44px;
-    min-height: 44px;
-    padding: 0.45rem 0.6rem;
-    font-size: 1rem;
-    border-radius: 8px;
-  }
-
-  .input-wrapper textarea {
-    font-size: 0.85rem;
-    padding: 0.5rem 0.6rem !important;
-    min-height: 20px;
-    border-radius: 8px;
-  }
-
-  .attach-btn {
-    font-size: 1.1rem;
-    padding: 3px 4px;
-    min-width: 44px;
-    min-height: 44px;
-  }
-
   /* --- Schedule picker --- */
   .schedule-picker {
     flex-direction: column;
@@ -5170,28 +5140,6 @@
 
   .schedule-picker button {
     width: 100%;
-  }
-
-  /* --- Emoji picker fullwidth --- */
-  .emoji-picker {
-    position: fixed;
-    bottom: 60px;
-    left: 10px;
-    right: 10px;
-    width: auto;
-    max-width: 320px;
-    margin: 0 auto;
-    max-height: 260px;
-    border-radius: 10px;
-    transform: none;
-  }
-
-  .emoji-grid {
-    font-size: 1.2rem;
-  }
-
-  .emoji-grid span {
-    padding: 4px;
   }
 
   /* --- Context menu --- */
@@ -9127,7 +9075,6 @@
     justify-content: space-around;
     align-items: center;
     border-radius: 28px;
-    margin-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   .bottom-nav-item {
@@ -9163,7 +9110,7 @@
   }
 
   .bottom-nav-label {
-    font-size: 0.68rem;
+    font-size: 0.72rem;
     font-weight: 600;
     letter-spacing: 0.01em;
     opacity: 0.9;
@@ -9373,9 +9320,9 @@
     font-size: 1rem;
   }
 
-  /* ── Chat main: full viewport ── */
+  /* ── Chat main: full viewport (absolute for keyboard resize compat) ── */
   .chat-main {
-    position: fixed;
+    position: absolute;
     inset: 0;
     z-index: 500;
     display: flex;
@@ -9400,12 +9347,12 @@
   }
 
   .message-body {
-    font-size: 0.88rem;
-    line-height: 1.35;
+    font-size: 0.93rem;
+    line-height: 1.38;
   }
 
   .msg-meta {
-    font-size: 0.62rem;
+    font-size: 0.7rem;
   }
 
   /* ── Message form: compact Telegram-style ── */
@@ -9498,7 +9445,7 @@
   }
 
   .pinned-label {
-    font-size: 0.62rem;
+    font-size: 0.7rem;
   }
 
   .pinned-text {
@@ -9518,6 +9465,125 @@
   /* ── Empty chat message centered ── */
   .messages-empty {
     padding: 2rem 1rem;
+  }
+
+  /* ── Messages: hide scrollbar on mobile ── */
+  .messages {
+    scrollbar-width: none;
+  }
+  .messages::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* ── Context Menu → Bottom Sheet on mobile ── */
+  .ctx-menu {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    max-height: 70vh;
+    width: 100% !important;
+    min-width: 100% !important;
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -8px 40px rgba(0,0,0,0.12);
+    animation: ctxSheetUp 0.25s var(--ease-out);
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .ctx-reactions {
+    padding: 14px 16px 10px;
+    gap: 6px;
+  }
+
+  .ctx-react-btn {
+    width: 46px;
+    height: 46px;
+    font-size: 1.5rem;
+    border-radius: 14px;
+  }
+
+  .ctx-items button {
+    padding: 14px 20px;
+    font-size: 0.95rem;
+    min-height: 48px;
+  }
+
+  .ctx-icon {
+    font-size: 1.15rem;
+  }
+}
+
+@keyframes ctxSheetUp {
+  from { opacity: 0; transform: translateY(100%); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== Touch: Prevent sticky hover on mobile ===== */
+@media (hover: none) {
+  .action-btn:hover,
+  .action-btn.send-btn:hover:not(:disabled),
+  .action-btn.emoji-btn:hover,
+  .action-btn.schedule-btn:hover:not(:disabled) {
+    transform: none;
+    background: inherit;
+    box-shadow: inherit;
+  }
+
+  .sb-chat-item:hover {
+    background: transparent;
+  }
+
+  .ctx-items button:hover {
+    background: none;
+    color: #1a1a2e;
+    padding-left: 16px;
+  }
+
+  .ctx-react-btn:hover {
+    background: none;
+    transform: none;
+  }
+
+  .chat-header-clickable:hover {
+    background: transparent;
+  }
+
+  .chat-header-clickable:hover .chat-header-chevron {
+    color: #c4c8d4;
+    transform: none;
+  }
+
+  .bottom-nav-item:hover {
+    background: inherit;
+    color: inherit;
+  }
+
+  .scroll-to-bottom:hover {
+    background: rgba(255, 255, 255, 0.92);
+    border-color: rgba(99,102,241,0.08);
+    box-shadow: 0 4px 20px rgba(99,102,241,0.10), 0 2px 8px rgba(0,0,0,0.04);
+    color: #6366f1;
+    transform: none;
+  }
+
+  .message:hover {
+    transform: none;
+  }
+
+  /* Touch active feedback instead of hover */
+  .sb-chat-item:active {
+    background: rgba(99, 102, 241, 0.06);
+  }
+
+  .ctx-items button:active {
+    background: rgba(99, 102, 241, 0.08);
+  }
+
+  .bottom-nav-item:active {
+    transform: scale(0.95);
   }
 }
 

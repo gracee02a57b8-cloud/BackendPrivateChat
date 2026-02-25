@@ -8,13 +8,13 @@
   },
   "android": {
     "allowMixedContent": false,
-    "backgroundColor": "#e8eef5",
-    "webContentsDebuggingEnabled": true
+    "backgroundColor": "#f5f7fc",
+    "webContentsDebuggingEnabled": false
   },
   "plugins": {
     "SplashScreen": {
       "launchShowDuration": 1500,
-      "backgroundColor": "#e8eef5",
+      "backgroundColor": "#f5f7fc",
       "showSpinner": false,
       "androidScaleType": "CENTER_CROP",
       "splashFullScreen": true,
@@ -22,7 +22,7 @@
     },
     "StatusBar": {
       "style": "DARK",
-      "backgroundColor": "#e8eef5",
+      "backgroundColor": "#f5f7fc",
       "overlaysWebView": false
     },
     "Keyboard": {
