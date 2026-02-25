@@ -26,12 +26,19 @@ export async function initCapacitor() {
 
     // ── Keyboard ──
     const { Keyboard } = await import('@capacitor/keyboard');
-    // Resize body when keyboard opens (better for chat input)
+    // With resize: "none" in capacitor.config, we manage layout via CSS variable
     Keyboard.addListener('keyboardWillShow', (info) => {
       document.documentElement.style.setProperty(
         '--keyboard-height', `${info.keyboardHeight}px`
       );
       document.body.classList.add('keyboard-open');
+      // Scroll active input into view after keyboard animation
+      requestAnimationFrame(() => {
+        const active = document.activeElement;
+        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+          active.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
     });
     Keyboard.addListener('keyboardWillHide', () => {
       document.documentElement.style.setProperty('--keyboard-height', '0px');

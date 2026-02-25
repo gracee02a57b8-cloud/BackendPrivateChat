@@ -7,6 +7,7 @@ import VideoCircleRecorder from './VideoCircleRecorder';
 import VideoCircleMessage from './VideoCircleMessage';
 import UserProfilePage from './UserProfilePage';
 import { copyToClipboard } from '../utils/clipboard';
+import { hapticTap } from '../utils/capacitor';
 import { showToast } from './Toast';
 import GroupInfoPanel from './GroupInfoPanel';
 import ForwardContactPicker from './ForwardContactPicker';
@@ -497,25 +498,32 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
     if (msg.type === 'JOIN' || msg.type === 'LEAVE') return;
     e.preventDefault();
 
-    // Position to the right of the message bubble
-    const bubble = e.target.closest('.message-bubble') || e.target.closest('.message');
-    const isOwn = msg.sender === username;
-    let x, y;
-    if (bubble) {
-      const rect = bubble.getBoundingClientRect();
-      x = isOwn ? rect.left - 10 : rect.right + 10;
-      y = rect.top;
-    } else {
-      x = e.clientX;
-      y = e.clientY;
-    }
+    // Haptic feedback on mobile
+    hapticTap();
 
-    // Clamp so menu doesn't overflow the viewport
-    const menuW = 220, menuH = 340;
-    if (x + menuW > window.innerWidth) x = window.innerWidth - menuW - 12;
-    if (x < 8) x = 8;
-    if (y + menuH > window.innerHeight) y = window.innerHeight - menuH - 12;
-    if (y < 8) y = 8;
+    const isMobile = window.innerWidth <= 768;
+    let x = 0, y = 0;
+
+    if (!isMobile) {
+      // Position to the right of the message bubble (desktop only)
+      const bubble = e.target.closest('.message-bubble') || e.target.closest('.message');
+      const isOwn = msg.sender === username;
+      if (bubble) {
+        const rect = bubble.getBoundingClientRect();
+        x = isOwn ? rect.left - 10 : rect.right + 10;
+        y = rect.top;
+      } else {
+        x = e.clientX;
+        y = e.clientY;
+      }
+
+      // Clamp so menu doesn't overflow the viewport
+      const menuW = 220, menuH = 340;
+      if (x + menuW > window.innerWidth) x = window.innerWidth - menuW - 12;
+      if (x < 8) x = 8;
+      if (y + menuH > window.innerHeight) y = window.innerHeight - menuH - 12;
+      if (y < 8) y = 8;
+    }
 
     setContextMenu({ x, y, msg });
   };
@@ -791,7 +799,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
       return (
         <div className="file-attachment image-attachment">
           <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer">
-            <img src={msg.fileUrl} alt={msg.fileName || 'image'} />
+            <img src={msg.fileUrl} alt={msg.fileName || 'image'} loading="lazy" />
           </a>
           <div className="file-info">
             <span className="file-name">{msg.fileName}</span>
@@ -1187,49 +1195,52 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
 
       {/* Context Menu — Telegram style */}
       {contextMenu && (
-        <div className="ctx-menu" style={{ top: contextMenu.y, left: contextMenu.x }} onClick={(e) => e.stopPropagation()}>
-          {/* Emoji reaction row */}
-          <div className="ctx-reactions">
-            {QUICK_REACTIONS.map((emoji) => {
-              const isActive = reactions[contextMenu.msg.id]?.[emoji]?.includes(username);
-              return (
-                <button key={emoji} className={`ctx-react-btn${isActive ? ' active' : ''}`}
-                  onClick={() => handleQuickReaction(contextMenu.msg, emoji)}>{emoji}</button>
-              );
-            })}
-          </div>
-          {/* Menu items */}
-          <div className="ctx-items">
-            <button onClick={() => startReply(contextMenu.msg)}>
-              <span className="ctx-icon"><Reply size={16} /></span> Ответить
-            </button>
-            <button onClick={() => handlePinMsg(contextMenu.msg)}>
-              <span className="ctx-icon"><Pin size={16} /></span> {pinnedMsgId === contextMenu.msg.id ? 'Открепить' : 'Закрепить'}
-            </button>
-            <button onClick={() => copyMessage(contextMenu.msg)}>
-              <span className="ctx-icon"><Clipboard size={16} /></span> Копировать текст
-            </button>
-            <button onClick={() => handleForwardMsg(contextMenu.msg)}>
-              <span className="ctx-icon"><Forward size={16} /></span> Переслать
-            </button>
-            <button onClick={() => enterMultiSelect(contextMenu.msg)}>
-              <span className="ctx-icon"><CheckSquare size={16} /></span> Выбрать
-            </button>
-            <button onClick={() => { setContextMenu(null); if (onForwardToSaved) onForwardToSaved(contextMenu.msg); }}>
-              <span className="ctx-icon"><Bookmark size={16} /></span> В Избранное
-            </button>
-            {contextMenu.msg.sender === username && (
-              <button onClick={() => startEdit(contextMenu.msg)}>
-                <span className="ctx-icon"><Pencil size={16} /></span> Редактировать
+        <>
+          <div className="ctx-overlay" onClick={() => setContextMenu(null)} />
+          <div className="ctx-menu" style={window.innerWidth > 768 ? { top: contextMenu.y, left: contextMenu.x } : undefined} onClick={(e) => e.stopPropagation()}>
+            {/* Emoji reaction row */}
+            <div className="ctx-reactions">
+              {QUICK_REACTIONS.map((emoji) => {
+                const isActive = reactions[contextMenu.msg.id]?.[emoji]?.includes(username);
+                return (
+                  <button key={emoji} className={`ctx-react-btn${isActive ? ' active' : ''}`}
+                    onClick={() => handleQuickReaction(contextMenu.msg, emoji)}>{emoji}</button>
+                );
+              })}
+            </div>
+            {/* Menu items */}
+            <div className="ctx-items">
+              <button onClick={() => startReply(contextMenu.msg)}>
+                <span className="ctx-icon"><Reply size={16} /></span> Ответить
               </button>
-            )}
-            {contextMenu.msg.sender === username && (
-              <button className="ctx-danger" onClick={() => handleDeleteMsg(contextMenu.msg)}>
-                <span className="ctx-icon"><Trash2 size={16} /></span> Удалить
+              <button onClick={() => handlePinMsg(contextMenu.msg)}>
+                <span className="ctx-icon"><Pin size={16} /></span> {pinnedMsgId === contextMenu.msg.id ? 'Открепить' : 'Закрепить'}
               </button>
-            )}
+              <button onClick={() => copyMessage(contextMenu.msg)}>
+                <span className="ctx-icon"><Clipboard size={16} /></span> Копировать текст
+              </button>
+              <button onClick={() => handleForwardMsg(contextMenu.msg)}>
+                <span className="ctx-icon"><Forward size={16} /></span> Переслать
+              </button>
+              <button onClick={() => enterMultiSelect(contextMenu.msg)}>
+                <span className="ctx-icon"><CheckSquare size={16} /></span> Выбрать
+              </button>
+              <button onClick={() => { setContextMenu(null); if (onForwardToSaved) onForwardToSaved(contextMenu.msg); }}>
+                <span className="ctx-icon"><Bookmark size={16} /></span> В Избранное
+              </button>
+              {contextMenu.msg.sender === username && (
+                <button onClick={() => startEdit(contextMenu.msg)}>
+                  <span className="ctx-icon"><Pencil size={16} /></span> Редактировать
+                </button>
+              )}
+              {contextMenu.msg.sender === username && (
+                <button className="ctx-danger" onClick={() => handleDeleteMsg(contextMenu.msg)}>
+                  <span className="ctx-icon"><Trash2 size={16} /></span> Удалить
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* Selection Reply Popup */}

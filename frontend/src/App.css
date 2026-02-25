@@ -28,6 +28,9 @@
   --font-lg: 1.25rem;
   --font-xl: 1.5rem;
 
+  /* Keyboard (set dynamically by Capacitor) */
+  --keyboard-height: 0px;
+
   /* Colors — iOS 2026 Light Glassmorphism */
   --color-bg-primary: rgba(255, 255, 255, 0.72);
   --color-bg-secondary: rgba(245, 247, 252, 0.85);
@@ -4813,8 +4816,8 @@ button, a, [role="button"], input, textarea, select, label,
 
   /* --- File attachments --- */
   .file-attachment.image-attachment img {
-    max-width: 220px;
-    max-height: 180px;
+    max-width: 280px;
+    max-height: 240px;
   }
 
   .file-attachment .file-name {
@@ -9075,6 +9078,8 @@ button, a, [role="button"], input, textarea, select, label,
     justify-content: space-around;
     align-items: center;
     border-radius: 28px;
+    will-change: transform;
+    contain: layout style;
   }
 
   .bottom-nav-item {
@@ -9328,6 +9333,9 @@ button, a, [role="button"], input, textarea, select, label,
     display: flex;
     flex-direction: column;
     background: rgba(245, 247, 252, 0.95);
+    height: 100%;
+    height: calc(100% - var(--keyboard-height, 0px));
+    transition: height 0.2s ease;
   }
 
   /* ── Messages area: fill between header and input ── */
@@ -9361,6 +9369,24 @@ button, a, [role="button"], input, textarea, select, label,
     padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
     gap: 4px;
     border-top: 1px solid rgba(0, 0, 0, 0.06);
+    transition: padding 0.15s ease;
+  }
+
+  /* ── Keyboard handling (Capacitor resize: none) ── */
+  body.keyboard-open .message-form {
+    padding-bottom: 6px;
+  }
+
+  body.keyboard-open .scroll-to-bottom {
+    bottom: 70px;
+  }
+
+  body.keyboard-open .emoji-picker {
+    bottom: 60px;
+  }
+
+  body.keyboard-open .mobile-bottom-nav {
+    display: none;
   }
 
   .input-wrapper {
@@ -9460,6 +9486,7 @@ button, a, [role="button"], input, textarea, select, label,
   .scroll-to-bottom {
     bottom: 70px;
     right: 10px;
+    will-change: transform, opacity;
   }
 
   /* ── Empty chat message centered ── */
@@ -9473,6 +9500,22 @@ button, a, [role="button"], input, textarea, select, label,
   }
   .messages::-webkit-scrollbar {
     display: none;
+  }
+
+  /* ── Stories bar: compact on mobile ── */
+  .stories-bar {
+    --stories-gap: 4px;
+    --stories-pad: 6px;
+    --stories-ring: 44px;
+    --stories-min-w: 52px;
+    --stories-font: 9.5px;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .stories-bar-add-badge {
+    width: 16px;
+    height: 16px;
   }
 
   /* ── Context Menu → Bottom Sheet on mobile ── */
@@ -9491,6 +9534,21 @@ button, a, [role="button"], input, textarea, select, label,
     padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    will-change: transform, opacity;
+  }
+
+  /* Bottom sheet grip handle */
+  .ctx-menu::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 4px;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 2px;
+    margin: 10px auto 4px;
+    flex-shrink: 0;
   }
 
   .ctx-reactions {
@@ -9519,6 +9577,28 @@ button, a, [role="button"], input, textarea, select, label,
 @keyframes ctxSheetUp {
   from { opacity: 0; transform: translateY(100%); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Context Menu Overlay (mobile bottom sheet backdrop) ── */
+.ctx-overlay {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .ctx-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 999;
+    animation: ctxOverlayIn 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@keyframes ctxOverlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 /* ===== Touch: Prevent sticky hover on mobile ===== */
