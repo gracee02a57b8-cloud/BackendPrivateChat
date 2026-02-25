@@ -78,15 +78,20 @@ export default function CallScreen({
       if (localVidEl.current && localStreamCache.current) {
         if (localVidEl.current.srcObject !== localStreamCache.current) {
           localVidEl.current.srcObject = localStreamCache.current;
+          localVidEl.current.play().catch(() => {});
         }
       }
       if (remoteVidEl.current && remoteStreamCache.current) {
         if (remoteVidEl.current.srcObject !== remoteStreamCache.current) {
           remoteVidEl.current.srcObject = remoteStreamCache.current;
+          remoteVidEl.current.play().catch(() => {});
         }
       }
       if (remoteAudioEl.current && remoteStreamCache.current) {
-        remoteAudioEl.current.srcObject = remoteStreamCache.current;
+        if (remoteAudioEl.current.srcObject !== remoteStreamCache.current) {
+          remoteAudioEl.current.srcObject = remoteStreamCache.current;
+          remoteAudioEl.current.play().catch(() => {});
+        }
       }
       if (localVideoRef) localVideoRef.current = localVidEl.current;
       if (remoteVideoRef) remoteVideoRef.current = remoteVidEl.current;

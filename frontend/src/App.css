@@ -6667,10 +6667,22 @@
   font-size: 1.5rem;
   transition: all 0.3s;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  /* Mobile: prevent 300ms click delay, disable double-tap zoom, ensure touch works */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  position: relative;
+  z-index: 1;
 }
 
 .call-btn:hover {
   transform: scale(1.1);
+}
+
+.call-btn:active {
+  transform: scale(0.95);
+  transition: transform 0.1s;
 }
 
 .call-btn-reject {
@@ -6980,6 +6992,10 @@
   align-items: center;
   justify-content: center;
   transition: all 0.3s;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .call-control-btn:hover {
@@ -8134,6 +8150,10 @@
   align-items: center;
   justify-content: center;
   transition: background 0.2s, transform 0.15s;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .conf-control-btn:hover {

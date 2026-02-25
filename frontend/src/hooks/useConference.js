@@ -67,6 +67,7 @@ export default function useConference({ wsRef, username, token }) {
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
+    // Always include plaintext payload alongside encrypted data as fallback
     const extra = { target, confId: confIdRef.current, ...payload };
 
     // Encrypt signaling via E2E
@@ -81,11 +82,7 @@ export default function useConference({ wsRef, username, token }) {
         if (enc.ephemeralKey) extra.sig_ek = enc.ephemeralKey;
         if (enc.senderIdentityKey) extra.sig_ik = enc.senderIdentityKey;
         if (enc.oneTimeKeyId != null) extra.sig_otk = String(enc.oneTimeKeyId);
-        // Remove plaintext payload keys from extra (they're now encrypted)
-        delete extra.sdp;
-        delete extra.candidate;
-        delete extra.mediaKey;
-        delete extra.callType;
+        // Keep plaintext fields in extra as fallback if receiver E2E decryption fails
       } catch (err) {
         console.warn('[Conference] Signal E2E failed, plaintext fallback:', err);
       }
@@ -185,7 +182,10 @@ export default function useConference({ wsRef, username, token }) {
 
       // Attach to video element if available
       const videoEl = remoteVideoRefs.current.get(peerId);
-      if (videoEl) videoEl.srcObject = stream;
+      if (videoEl) {
+        videoEl.srcObject = stream;
+        videoEl.play().catch(() => {});
+      }
 
       // E2E media decryption for this peer
       if (confCryptoRef.current) {
@@ -673,7 +673,10 @@ export default function useConference({ wsRef, username, token }) {
     if (element) {
       remoteVideoRefs.current.set(peerId, element);
       const stream = remoteStreamsRef.current.get(peerId);
-      if (stream) element.srcObject = stream;
+      if (stream) {
+        element.srcObject = stream;
+        element.play().catch(() => {});
+      }
     } else {
       remoteVideoRefs.current.delete(peerId);
     }

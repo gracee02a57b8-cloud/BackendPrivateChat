@@ -64,7 +64,9 @@ export default function useWebRTC({ wsRef, username, token }) {
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
-    const extra = { target };
+    // Always include plaintext payload alongside encrypted data.
+    // If receiver's E2E decryption fails, plaintext fields serve as fallback.
+    const extra = { target, ...payload };
 
     // Encrypt sensitive signaling data (SDP, ICE candidates) via E2E
     if (['CALL_OFFER', 'CALL_ANSWER', 'ICE_CANDIDATE'].includes(type) && e2eManager.isReady()) {
@@ -80,10 +82,8 @@ export default function useWebRTC({ wsRef, username, token }) {
         if (enc.oneTimeKeyId != null) extra.sig_otk = String(enc.oneTimeKeyId);
       } catch (err) {
         console.warn('[WebRTC] Signal E2E failed, plaintext fallback:', err);
-        Object.assign(extra, payload);
+        // payload already in extra, no need to reassign
       }
-    } else {
-      Object.assign(extra, payload);
     }
 
     try {
@@ -218,6 +218,7 @@ export default function useWebRTC({ wsRef, username, token }) {
       // Always assign to remoteVideoRef — CallScreen always renders <video> now
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = remoteStreamRef.current;
+        remoteVideoRef.current.play().catch(() => {});
       }
       // E2E media decryption on incoming tracks
       if (callCryptoRef.current) {
@@ -270,6 +271,7 @@ export default function useWebRTC({ wsRef, username, token }) {
       localStreamRef.current = stream;
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
+        localVideoRef.current.play().catch(() => {});
       }
 
       // E2E media: generate per-call AES key
@@ -359,7 +361,18 @@ export default function useWebRTC({ wsRef, username, token }) {
 
   /** Accept an incoming call */
   const acceptCall = useCallback(async () => {
-    if (callState !== 'incoming' || !pcRef.current?._pendingOffer) return;
+    if (callState !== 'incoming') return;
+
+    // If E2E decryption failed, _pendingOffer may be undefined — retry from raw extra
+    if (!pcRef.current?._pendingOffer) {
+      console.error('[WebRTC] acceptCall: missing SDP data (E2E decryption may have failed)');
+      alert('Ошибка расшифровки данных звонка. Попросите собеседника перезвонить.');
+      if (pcRef.current?._from) {
+        await sendSignal('CALL_END', pcRef.current._from, { reason: 'error' });
+      }
+      cleanup();
+      return;
+    }
 
     const { _pendingOffer: sdpStr, _from: from, _type: type, _peerMediaKey: peerMediaKey } = pcRef.current;
     pcRef.current = null;
@@ -383,12 +396,14 @@ export default function useWebRTC({ wsRef, username, token }) {
       localStreamRef.current = stream;
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
+        localVideoRef.current.play().catch(() => {});
       }
       // Retry srcObject assignment after CallScreen mounts (refs may be null during state transition)
       const retryId = setInterval(() => {
         if (localVideoRef.current) {
           if (!localVideoRef.current.srcObject || localVideoRef.current.srcObject !== stream) {
             localVideoRef.current.srcObject = stream;
+            localVideoRef.current.play().catch(() => {});
           }
           clearInterval(retryId);
         }

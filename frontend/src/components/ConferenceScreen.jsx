@@ -270,6 +270,7 @@ function PeerTile({ peerId, isVideo, avatarUrl, setRemoteVideoRef, getRemoteStre
       const stream = getRemoteStream(peerId);
       if (stream) {
         videoRef.current.srcObject = stream;
+        videoRef.current.play().catch(() => {});
         setHasStream(true);
         setHasVideoTrack(stream.getVideoTracks().some(t => t.enabled && t.readyState === 'live'));
       }
@@ -284,6 +285,7 @@ function PeerTile({ peerId, isVideo, avatarUrl, setRemoteVideoRef, getRemoteStre
       if (stream && videoRef.current) {
         if (videoRef.current.srcObject !== stream) {
           videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(() => {});
         }
         if (!hasStream) setHasStream(true);
         // Check if stream has active video tracks (for dynamic video toggle)
@@ -331,6 +333,7 @@ function FocusedPeerTile({ peerId, isVideo, avatarUrl, setRemoteVideoRef, getRem
       const stream = getRemoteStream(peerId);
       if (stream) {
         videoRef.current.srcObject = stream;
+        videoRef.current.play().catch(() => {});
         setHasStream(true);
         setHasVideoTrack(stream.getVideoTracks().some(t => t.enabled && t.readyState === 'live'));
       }
@@ -341,7 +344,10 @@ function FocusedPeerTile({ peerId, isVideo, avatarUrl, setRemoteVideoRef, getRem
     const interval = setInterval(() => {
       const stream = getRemoteStream(peerId);
       if (stream && videoRef.current) {
-        if (videoRef.current.srcObject !== stream) videoRef.current.srcObject = stream;
+        if (videoRef.current.srcObject !== stream) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(() => {});
+        }
         if (!hasStream) setHasStream(true);
         setHasVideoTrack(stream.getVideoTracks().some(t => t.enabled && t.readyState === 'live'));
       }
