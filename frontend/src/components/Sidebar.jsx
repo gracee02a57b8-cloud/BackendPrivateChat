@@ -442,7 +442,7 @@ export default function Sidebar({
         const checkClass = lastMsg.status === 'READ' ? 'sb-check read' : 'sb-check';
         previewCheck = <span className={checkClass}>{checkIcon}</span>;
       }
-      const sender = lastMsg.sender === username ? 'Вы: ' : '';
+      const sender = lastMsg.sender === username ? 'Вы: ' : (room.type === 'GROUP' ? lastMsg.sender?.split(' ')[0] + ': ' : '');
       const text = lastMsg.content || (lastMsg.fileUrl ? '📎 Файл' : '');
       previewText = sender + text;
     }
@@ -467,6 +467,11 @@ export default function Sidebar({
           )}
           {room.type === 'PRIVATE' && isOnline && (
             <span className="sb-online-dot online" />
+          )}
+          {room.type === 'GROUP' && (
+            <span className="sb-group-badge" title="Группа">
+              <Users size={10} />
+            </span>
           )}
         </div>
         <div className="sb-chat-info">
