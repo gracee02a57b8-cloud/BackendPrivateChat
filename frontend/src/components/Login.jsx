@@ -11,8 +11,24 @@ export default function Login({ onLogin, pendingConfId, savedAccounts = [], onSw
   const [loading, setLoading] = useState(false);
   const [showAccounts, setShowAccounts] = useState(false);
 
-  // Auto-fill from remembered credentials (pick last used or first available)
+  // Auto-fill from remembered credentials or switch request
   useEffect(() => {
+    // Check if we're switching to a specific account
+    const switchUser = sessionStorage.getItem('barsik_switch_user');
+    if (switchUser) {
+      sessionStorage.removeItem('barsik_switch_user');
+      setUsername(switchUser);
+      setPassword('');
+      // Try to fill password from remembered map
+      try {
+        const credMap = JSON.parse(localStorage.getItem('barsik_remembered') || '{}');
+        if (credMap[switchUser]) {
+          setPassword(credMap[switchUser]);
+          setRememberPassword(true);
+        }
+      } catch {}
+      return;
+    }
     const remembered = localStorage.getItem('barsik_remembered');
     if (remembered) {
       try {
@@ -192,7 +208,24 @@ export default function Login({ onLogin, pendingConfId, savedAccounts = [], onSw
             {showAccounts && (
               <div className="login-accounts-list">
                 {savedAccounts.map((acc, i) => (
-                  <button key={i} className="login-account-item" onClick={() => onSwitchAccount && onSwitchAccount(acc)}>
+                  <button key={i} className="login-account-item" onClick={() => {
+                    // Try to auto-fill from remembered creds
+                    try {
+                      const credMap = JSON.parse(localStorage.getItem('barsik_remembered') || '{}');
+                      const pwd = credMap[acc.username];
+                      if (pwd) {
+                        // Has remembered password — auto-login directly
+                        if (onSwitchAccount) onSwitchAccount(acc);
+                        return;
+                      }
+                    } catch {}
+                    // No remembered password — just fill in username
+                    setUsername(acc.username);
+                    setPassword('');
+                    setRememberPassword(false);
+                    setShowAccounts(false);
+                    setError('');
+                  }}>
                     <span className="login-account-avatar">👤</span>
                     <span className="login-account-name">{acc.username}</span>
                     {acc.tag && <span className="login-account-tag">{acc.tag}</span>}

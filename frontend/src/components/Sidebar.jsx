@@ -46,6 +46,8 @@ export default function Sidebar({
   connected,
   onLogout,
   onAddAccount,
+  onSwitchAccount,
+  savedAccounts = [],
   onStartPrivateChat,
   onCreateRoom,
   onJoinRoom,
@@ -1062,6 +1064,19 @@ export default function Sidebar({
               </div>
               <span>{username}</span>
             </button>
+
+            {/* Other saved accounts */}
+            {savedAccounts.filter(a => a.username !== username).map(acc => (
+              <button key={acc.username} className="burger-menu-item burger-user-row burger-alt-account" onClick={() => { setShowBurgerDrawer(false); if (onSwitchAccount) onSwitchAccount(acc); }}>
+                <div className="burger-user-avatar" style={{ background: (avatarMap[acc.username] || acc.avatarUrl) ? 'transparent' : getAvatarColor(acc.username) }}>
+                  {(avatarMap[acc.username] || acc.avatarUrl)
+                    ? <img src={avatarMap[acc.username] || acc.avatarUrl} alt="" className="sb-avatar-img" />
+                    : getInitials(acc.username)}
+                </div>
+                <span>{acc.username}</span>
+                {acc.tag && <span className="sb-contact-tag">{acc.tag}</span>}
+              </button>
+            ))}
 
             {/* Add account */}
             <button className="burger-menu-item" onClick={() => { setShowBurgerDrawer(false); if (onAddAccount) onAddAccount(); }}>

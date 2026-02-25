@@ -138,8 +138,10 @@ function App() {
         }
       } catch {}
     }
-    // If no remembered password, just go to login screen
+    // If no remembered password, just go to login screen with pre-filled username
     handleAddAccount();
+    // Store desired username so Login can pre-fill it
+    sessionStorage.setItem('barsik_switch_user', acc.username);
   };
 
   if (!token) {
@@ -174,6 +176,8 @@ function App() {
       onAvatarChange={setAvatarUrl}
       onLogout={handleLogout}
       onAddAccount={handleAddAccount}
+      onSwitchAccount={handleSwitchAccount}
+      savedAccounts={savedAccounts}
       joinRoomId={joinRoomId}
       joinConfId={joinConfId}
       onShowNews={() => setView('news')}
