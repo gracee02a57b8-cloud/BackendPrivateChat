@@ -82,6 +82,7 @@ export default function Sidebar({
   });
   const [showProfile, setShowProfile] = useState(false);
   const [profileSubView, setProfileSubView] = useState('main');
+  const [showMobileSettings, setShowMobileSettings] = useState(false);
   const [contactsSubView, setContactsSubView] = useState('list'); // 'list' | 'calls'
   const [inviteCopied, setInviteCopied] = useState(false); // 'main' | 'edit' | 'settings'
   const [installPrompt, setInstallPrompt] = useState(null);
@@ -124,6 +125,7 @@ export default function Sidebar({
   useEffect(() => {
     if (mobileTab !== 'profile') setProfileSubView('main');
     if (mobileTab !== 'contacts') setContactsSubView('list');
+    setShowMobileSettings(false);
   }, [mobileTab]);
 
   const handleInstall = async () => {
@@ -412,7 +414,7 @@ export default function Sidebar({
   return (
     <div className={`chat-sidebar${sidebarOpen ? ' open' : ''}`}>
       {/* ── Header (hidden in profile tab) ── */}
-      {mobileTab !== 'profile' && mobileTab !== 'ai' && (
+      {mobileTab !== 'profile' && mobileTab !== 'ai' && !showMobileSettings && (
       <div className="sb-header">
         <div className="sb-header-left">
           <button className="sb-close-btn" onClick={onCloseSidebar} aria-label="Закрыть меню"><ArrowLeft size={20} /></button>
@@ -435,7 +437,7 @@ export default function Sidebar({
           <button className="sb-menu-btn" data-testid="sb-menu-btn" onClick={() => setShowMenu(!showMenu)} aria-label="Меню" title="Меню"><MoreVertical size={20} /></button>
           {showMenu && (
             <div className="sb-menu-dropdown" ref={menuRef}>
-              <button className="sb-desktop-only" onClick={() => { setShowMenu(false); setShowProfile(true); }}><User size={16} /> Профиль</button>
+              <button onClick={() => { setShowMenu(false); if (setMobileTab) setMobileTab('profile'); else setShowProfile(true); }}><User size={16} /> Профиль</button>
               <button onClick={() => { setShowMenu(false); setShowSearch(!showSearch); }}><Mail size={16} /> Написать</button>
               <button onClick={() => { setShowMenu(false); setShowCreate(true); }}><Plus size={16} /> Создать группу</button>
               <button onClick={() => { setShowMenu(false); if (onOpenSaved) onOpenSaved(); }}><Bookmark size={16} /> Избранное</button>
@@ -863,10 +865,10 @@ export default function Sidebar({
           onProfileUpdate={() => {}}
         />
       )}
-      {mobileTab === 'profile' && profileSubView === 'settings' && (
-        <div className="sb-settings-panel">
+      {showMobileSettings && (
+        <div className="sb-settings-panel sb-settings-panel-overlay">
           <div className="edit-profile-header">
-            <button className="edit-profile-back" onClick={() => setProfileSubView('main')}><ArrowLeft size={20} /></button>
+            <button className="edit-profile-back" onClick={() => setShowMobileSettings(false)}><ArrowLeft size={20} /></button>
             <h2 className="edit-profile-title">Настройки</h2>
             <div style={{ width: 40 }} />
           </div>
@@ -1020,7 +1022,7 @@ export default function Sidebar({
           onAvatarChange={onAvatarChange}
           connected={connected}
           onOpenEdit={() => setProfileSubView('edit')}
-          onOpenSettings={() => setProfileSubView('settings')}
+          onOpenSettings={() => setShowMobileSettings(true)}
           onLogout={onLogout}
           onBack={() => setMobileTab('chats')}
         />
@@ -1126,7 +1128,7 @@ export default function Sidebar({
 
               <div className="burger-menu-divider" />
 
-              <button className="burger-menu-item" onClick={() => { setShowBurgerDrawer(false); if (setMobileTab) setMobileTab('profile'); setProfileSubView('settings'); }}>
+              <button className="burger-menu-item" onClick={() => { setShowBurgerDrawer(false); setShowMobileSettings(true); }}>
                 <Settings size={20} />
                 <span>Настройки</span>
               </button>
