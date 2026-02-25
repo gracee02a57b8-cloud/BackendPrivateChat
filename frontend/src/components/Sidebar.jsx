@@ -161,9 +161,10 @@ export default function Sidebar({
       bar.style.setProperty('--stories-name-h', `${nameH}px`);
       bar.style.setProperty('--stories-name-gap', `${nameGap}px`);
     };
+    onScroll(); // apply current scroll position immediately
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
-  }, [mobileTab, showContacts]);
+  }, [mobileTab, showContacts, !!storiesHook]);
 
   // Debounced contact search via API (search people by name and tag)
   useEffect(() => {

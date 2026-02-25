@@ -10839,7 +10839,7 @@
   flex-shrink: 0;
   min-width: var(--stories-min-w, 56px);
   scroll-snap-align: start;
-  transition: min-width 0.15s ease;
+  transition: min-width 0.15s ease, gap 0.15s ease;
 }
 
 .stories-bar-ring {
@@ -10851,7 +10851,7 @@
   justify-content: center;
   padding: 2.5px;
   position: relative;
-  transition: transform 0.15s;
+  transition: width 0.15s ease, height 0.15s ease, transform 0.15s;
 }
 .stories-bar-item:active .stories-bar-ring { transform: scale(0.92); }
 
