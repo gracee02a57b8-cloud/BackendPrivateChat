@@ -66,6 +66,14 @@ public class StoryController {
      */
     @GetMapping("/{id}/viewers")
     public ResponseEntity<List<StoryDto.StoryViewDto>> getViewers(@PathVariable String id, Principal principal) {
+        // Only story author can see viewers list
+        StoryDto story = storyService.getStoryById(id);
+        if (story == null) {
+            return ResponseEntity.notFound().build();
+        }
+        if (!story.getAuthor().equals(principal.getName())) {
+            return ResponseEntity.status(403).build();
+        }
         return ResponseEntity.ok(storyService.getStoryViewers(id));
     }
 

@@ -106,6 +106,16 @@ public class StoryService {
     }
 
     /**
+     * Get a single story by ID.
+     */
+    @Transactional(readOnly = true)
+    public StoryDto getStoryById(String storyId) {
+        return storyRepository.findById(storyId)
+                .map(s -> toDto(s, s.getAuthor()))
+                .orElse(null);
+    }
+
+    /**
      * Get viewers of a story (only the author should call this).
      */
     @Transactional(readOnly = true)

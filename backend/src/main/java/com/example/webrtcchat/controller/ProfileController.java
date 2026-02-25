@@ -99,10 +99,18 @@ public class ProfileController {
             user.setBio(bio);
         }
         if (body.containsKey("birthday")) {
-            user.setBirthday(body.get("birthday"));
+            String birthday = body.get("birthday");
+            if (birthday != null && !birthday.isBlank() && !birthday.matches("\\d{4}-\\d{2}-\\d{2}")) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Формат даты: YYYY-MM-DD"));
+            }
+            user.setBirthday(birthday);
         }
         if (body.containsKey("profileColor")) {
-            user.setProfileColor(body.get("profileColor"));
+            String color = body.get("profileColor");
+            if (color != null && !color.isBlank() && !color.matches("#[0-9a-fA-F]{6}")) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Формат цвета: #RRGGBB"));
+            }
+            user.setProfileColor(color);
         }
 
         userRepository.save(user);

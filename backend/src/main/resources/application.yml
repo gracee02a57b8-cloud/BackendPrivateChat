@@ -46,11 +46,11 @@ webrtc:
     url: ${STUN_URL:stun:109.196.102.241:3478}
   turn:
     url: ${TURN_URL:turn:109.196.102.241:3478}
-    secret: ${TURN_SECRET:POwIxndGB65efgJUqTtS3ZNR2z8pQWCoYlDa1FMXibrhLK4v}
+    secret: ${TURN_SECRET:}
 
 vapid:
-  public-key: ${VAPID_PUBLIC_KEY:BFMRaclfNpBYf78fSmmhk40sdr4ZUMH0Rik2mpOzhLgIhLX4euX5CsUj1sScqNRm66FXqyRlF-cQhoTpPGFEoo0}
-  private-key: ${VAPID_PRIVATE_KEY:vCckTyQRRo82VWP6QIbnteDCTb8HcPDjUE41fJCEvOk}
+  public-key: ${VAPID_PUBLIC_KEY:}
+  private-key: ${VAPID_PRIVATE_KEY:}
   subject: ${VAPID_SUBJECT:mailto:admin@barsik.chat}
 
 logging:

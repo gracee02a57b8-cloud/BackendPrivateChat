@@ -106,10 +106,20 @@ public class FileController {
 
             String safeContentType = contentType != null ? contentType : "application/octet-stream";
             String url = "/api/uploads/" + filename;
+            // Strip path components from original name to prevent path info leakage
+            String origName = file.getOriginalFilename();
+            if (origName != null) {
+                origName = origName.replace("\\", "/");
+                if (origName.contains("/")) {
+                    origName = origName.substring(origName.lastIndexOf("/") + 1);
+                }
+            } else {
+                origName = filename;
+            }
             return ResponseEntity.ok(Map.of(
                     "url", url,
                     "filename", filename,
-                    "originalName", file.getOriginalFilename() != null ? file.getOriginalFilename() : filename,
+                    "originalName", origName,
                     "size", file.getSize(),
                     "contentType", safeContentType
             ));
@@ -140,11 +150,13 @@ public class FileController {
                     .header(HttpHeaders.CACHE_CONTROL, "max-age=86400");
 
             boolean inline = contentType.startsWith("image/") || contentType.startsWith("video/") || contentType.startsWith("audio/");
+            String safeFilename = filename.replaceAll("[^a-zA-Z0-9._-]", "_");
             if (Boolean.TRUE.equals(download) || !inline) {
                 builder = builder.header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + filename + "\"");
+                        "attachment; filename=\"" + safeFilename + "\"");
             }
 
+            builder = builder.header("X-Content-Type-Options", "nosniff");
             return builder.body(resource);
         } catch (MalformedURLException e) {
             return ResponseEntity.badRequest().build();
