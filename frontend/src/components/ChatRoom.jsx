@@ -263,8 +263,8 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
     const close = (e) => {
       if (headerMenuRef.current && !headerMenuRef.current.contains(e.target)) setShowHeaderMenu(false);
     };
-    document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
+    document.addEventListener('pointerdown', close);
+    return () => document.removeEventListener('pointerdown', close);
   }, [showHeaderMenu]);
 
   // Close plus attach menu on click outside
@@ -273,8 +273,8 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
     const close = (e) => {
       if (plusMenuRef.current && !plusMenuRef.current.contains(e.target)) setShowPlusMenu(false);
     };
-    document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
+    document.addEventListener('pointerdown', close);
+    return () => document.removeEventListener('pointerdown', close);
   }, [showPlusMenu]);
 
   const handleSubmit = (e) => {
@@ -859,7 +859,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
           return (
             <div className="chat-header-avatar-wrap" onClick={() => setShowUserProfile(true)}>
               <div className="chat-header-avatar chat-header-clickable" style={{ background: av ? 'transparent' : getAvatarColor(otherUser || '') }}>
-                {av ? <img src={av} alt="" className="chat-header-avatar-img" /> : getInitials(otherUser || '?')}
+                {av ? <img src={av} alt="" className="chat-header-avatar-img" decoding="async" /> : getInitials(otherUser || '?')}
               </div>
               {isOnlineNow && <span className="chat-header-online-dot" />}
             </div>
@@ -913,6 +913,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
               onClick={() => onStartCall('audio')}
               disabled={callState !== 'idle' && callState !== undefined}
               title="Позвонить"
+              aria-label="Позвонить"
             >
               <Phone size={18} />
             </button>
@@ -1088,7 +1089,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
                     {!isOwn && isLastInGroup && (
                       <div className="avatar-circle" style={{ background: avatarMap[msg.sender] ? 'transparent' : getAvatarColor(msg.sender) }}>
                         {avatarMap[msg.sender]
-                          ? <img src={avatarMap[msg.sender]} alt="" className="avatar-img" />
+                          ? <img src={avatarMap[msg.sender]} alt="" className="avatar-img" decoding="async" />
                           : getInitials(msg.sender)}
                       </div>
                     )}
@@ -1188,7 +1189,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
 
       {/* Scroll to Bottom */}
       {showScrollBtn && (
-        <button className="scroll-to-bottom" data-testid="scroll-to-bottom" onClick={scrollToBottom}>
+        <button className="scroll-to-bottom" data-testid="scroll-to-bottom" onClick={scrollToBottom} aria-label="Прокрутить вниз">
           <ChevronDown size={18} /> {newMsgCount > 0 && <span className="new-msg-badge">{newMsgCount}</span>}
         </button>
       )}
@@ -1315,6 +1316,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
               onClick={() => setShowPlusMenu(!showPlusMenu)}
               disabled={!connected || uploading || !!editingMsg}
               title="Прикрепить"
+              aria-label="Прикрепить файл"
             >
               <Plus size={22} className={showPlusMenu ? 'rotate-45' : ''} />
             </button>
@@ -1372,6 +1374,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
             className="action-btn emoji-btn"
             onClick={() => setShowEmoji(!showEmoji)}
             title="Эмодзи"
+            aria-label="Эмодзи"
           >
             <Smile size={20} />
           </button>
@@ -1384,6 +1387,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
               onClick={() => setIsRecording(true)}
               disabled={!connected}
               title="Голосовое сообщение"
+              aria-label="Голосовое сообщение"
             >
               <Mic size={20} />
             </button>
@@ -1393,12 +1397,13 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
               onClick={() => setIsRecordingVideo(true)}
               disabled={!connected}
               title="Видеокружок"
+              aria-label="Видеокружок"
             >
               <Video size={20} />
             </button>
             </>
           ) : (
-            <button type="submit" className="action-btn send-btn" data-testid="send-btn" disabled={!connected || (!input.trim() && !uploading)}>
+            <button type="submit" className="action-btn send-btn" data-testid="send-btn" disabled={!connected || (!input.trim() && !uploading)} aria-label="Отправить">
               {editingMsg ? <Pencil size={20} /> : showSchedule && scheduleDate ? <Clock size={20} /> : <SendHorizontal size={20} />}
             </button>
           )}

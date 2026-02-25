@@ -18,6 +18,7 @@ import useConference from '../hooks/useConference';
 import useMediaPermissions from '../hooks/useMediaPermissions';
 import useStories from '../hooks/useStories';
 import appSettings from '../utils/appSettings';
+import { hapticTap } from '../utils/capacitor';
 
 const WS_URL = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
 
@@ -186,6 +187,21 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
       window.removeEventListener('online', handleOnline);
     };
   }, []);
+
+  // ── Android hardware back button ──
+  useEffect(() => {
+    const handler = (e) => {
+      e.preventDefault();
+      // Priority: close chat room → go to chats tab → do nothing (app stays)
+      if (activeRoomId) {
+        setActiveRoomId(null);
+      } else if (mobileTab !== 'chats') {
+        setMobileTab('chats');
+      }
+    };
+    window.addEventListener('capacitor:backButton', handler);
+    return () => window.removeEventListener('capacitor:backButton', handler);
+  }, [activeRoomId, mobileTab]);
 
   // Request browser notification permission & save it
   useEffect(() => {
@@ -1345,24 +1361,24 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
 
       {/* ── Mobile Bottom Navigation (Telegram-style) ── */}
       <nav className="mobile-bottom-nav" data-testid="mobile-bottom-nav">
-        <button className={`bottom-nav-item${mobileTab === 'chats' ? ' active' : ''}`} onClick={() => { setMobileTab('chats'); if (activeRoomId) setActiveRoomId(null); }}>
+        <button className={`bottom-nav-item${mobileTab === 'chats' ? ' active' : ''}`} onClick={() => { hapticTap(); setMobileTab('chats'); if (activeRoomId) setActiveRoomId(null); }} aria-label="Чаты">
           <span className="bottom-nav-icon"><MessageSquare size={22} /></span>
           <span className="bottom-nav-label">Чаты</span>
           {(() => { const t = Object.values(unreadCounts).reduce((s,v) => s+v, 0); return t > 0 ? <span className="bottom-nav-badge">{t > 99 ? '99+' : t}</span> : null; })()}
         </button>
-        <button className={`bottom-nav-item${mobileTab === 'contacts' ? ' active' : ''}`} onClick={() => { setMobileTab('contacts'); if (activeRoomId) setActiveRoomId(null); }}>
+        <button className={`bottom-nav-item${mobileTab === 'contacts' ? ' active' : ''}`} onClick={() => { hapticTap(); setMobileTab('contacts'); if (activeRoomId) setActiveRoomId(null); }} aria-label="Контакты">
           <span className="bottom-nav-icon"><Users size={22} /></span>
           <span className="bottom-nav-label">Контакты</span>
         </button>
-        <button className={`bottom-nav-item${mobileTab === 'settings' ? ' active' : ''}`} onClick={() => { setMobileTab('settings'); if (activeRoomId) setActiveRoomId(null); }}>
+        <button className={`bottom-nav-item${mobileTab === 'settings' ? ' active' : ''}`} onClick={() => { hapticTap(); setMobileTab('settings'); if (activeRoomId) setActiveRoomId(null); }} aria-label="Песочница">
           <span className="bottom-nav-icon"><FlaskConical size={22} /></span>
           <span className="bottom-nav-label">Песочница</span>
         </button>
-        <button className={`bottom-nav-item${mobileTab === 'ai' ? ' active' : ''}`} onClick={() => { setMobileTab('ai'); if (activeRoomId) setActiveRoomId(null); }}>
+        <button className={`bottom-nav-item${mobileTab === 'ai' ? ' active' : ''}`} onClick={() => { hapticTap(); setMobileTab('ai'); if (activeRoomId) setActiveRoomId(null); }} aria-label="AI ассистент">
           <span className="bottom-nav-icon"><Bot size={22} /></span>
           <span className="bottom-nav-label">AI</span>
         </button>
-        <button className={`bottom-nav-item${mobileTab === 'profile' ? ' active' : ''}`} onClick={() => { setMobileTab('profile'); if (activeRoomId) setActiveRoomId(null); }}>
+        <button className={`bottom-nav-item${mobileTab === 'profile' ? ' active' : ''}`} onClick={() => { hapticTap(); setMobileTab('profile'); if (activeRoomId) setActiveRoomId(null); }} aria-label="Профиль">
           <span className="bottom-nav-icon">
             {avatarUrl
               ? <img src={avatarUrl} alt="" className="bottom-nav-avatar" />
