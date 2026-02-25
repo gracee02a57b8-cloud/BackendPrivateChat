@@ -41,6 +41,13 @@ self.addEventListener('push', (event) => {
     ];
   }
 
+  // For tasks — distinct tag so it doesn't replace message notifications
+  if (data.type === 'task') {
+    options.tag = 'barsik-task-' + (data.roomId || 'general');
+    options.requireInteraction = true;
+    options.vibrate = [200, 100, 200, 100, 200];
+  }
+
   event.waitUntil(self.registration.showNotification(title, options));
 });
 

@@ -2,6 +2,7 @@ package com.example.webrtcchat.controller;
 
 import com.example.webrtcchat.dto.TaskDto;
 import com.example.webrtcchat.service.TaskService;
+import com.example.webrtcchat.service.WebPushService;
 import com.example.webrtcchat.types.MessageType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -15,10 +16,13 @@ public class TaskController {
 
     private final TaskService taskService;
     private final ChatWebSocketHandler wsHandler;
+    private final WebPushService webPushService;
 
-    public TaskController(TaskService taskService, ChatWebSocketHandler wsHandler) {
+    public TaskController(TaskService taskService, ChatWebSocketHandler wsHandler,
+                          WebPushService webPushService) {
         this.taskService = taskService;
         this.wsHandler = wsHandler;
+        this.webPushService = webPushService;
     }
 
     @GetMapping
@@ -31,6 +35,14 @@ public class TaskController {
         task.setCreatedBy(auth.getName());
         TaskDto created = taskService.createTask(task);
         wsHandler.broadcastTaskNotification(MessageType.TASK_CREATED, created);
+
+        // Push notification to assignee (even if offline)
+        if (created.getAssignedTo() != null && !created.getAssignedTo().equals(auth.getName())) {
+            webPushService.sendPushToUserAsync(created.getAssignedTo(),
+                    "📋 Новая задача",
+                    auth.getName() + ": " + created.getTitle(),
+                    "task", created.getRoomId());
+        }
         return ResponseEntity.ok(created);
     }
 
@@ -45,6 +57,13 @@ public class TaskController {
         TaskDto updated = taskService.updateTaskStatus(id, body.getStatus());
         if ("DONE".equals(body.getStatus())) {
             wsHandler.broadcastTaskNotification(MessageType.TASK_COMPLETED, updated);
+            // Push notification to creator that task is completed
+            if (updated.getCreatedBy() != null && !updated.getCreatedBy().equals(auth.getName())) {
+                webPushService.sendPushToUserAsync(updated.getCreatedBy(),
+                        "✅ Задача выполнена",
+                        updated.getTitle(),
+                        "task", updated.getRoomId());
+            }
         }
         return ResponseEntity.ok(updated);
     }

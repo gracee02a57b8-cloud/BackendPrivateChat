@@ -89,7 +89,6 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   const typingThrottle = useRef(null);
   const reconnectTimer = useRef(null);
   const reconnectAttempts = useRef(0);
-  const maxReconnectAttempts = 10;
   const unmounted = useRef(false);
   const documentVisible = useRef(true);
   const notifSound = useRef(null);
@@ -183,17 +182,38 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
     }
   }, []);
 
-  // Track tab visibility
+  // Track tab visibility & reconnect WS when user returns to tab
   useEffect(() => {
     const handleVisibility = () => {
       documentVisible.current = !document.hidden;
       // Clear title badge when user returns to tab
       if (!document.hidden) {
         document.title = '🐱 BarsikChat';
+        // Force reconnect if WS is not open when tab becomes visible
+        const ws = wsRef.current;
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+          reconnectAttempts.current = 0;
+          clearTimeout(reconnectTimer.current);
+          // connectWs will be triggered via the 'reconnect' custom event
+          window.dispatchEvent(new Event('ws-reconnect'));
+        }
+      }
+    };
+    const handleOnline = () => {
+      // Browser came back online — force reconnect
+      const ws = wsRef.current;
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        reconnectAttempts.current = 0;
+        clearTimeout(reconnectTimer.current);
+        window.dispatchEvent(new Event('ws-reconnect'));
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('online', handleOnline);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('online', handleOnline);
+    };
   }, []);
 
   // Request browser notification permission & save it
@@ -773,9 +793,9 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
       setConnected(false);
       // Code 4001 = replaced by new session on same device, don't reconnect
       if (e.code === 4001) return;
-      // Auto-reconnect with exponential backoff (R1)
-      if (!unmounted.current && reconnectAttempts.current < maxReconnectAttempts) {
-        const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
+      // Auto-reconnect with exponential backoff (no limit, max 60s delay)
+      if (!unmounted.current) {
+        const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 60000);
         reconnectAttempts.current++;
         reconnectTimer.current = setTimeout(connectWs, delay);
       }
@@ -786,11 +806,18 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
     };
     }
 
+    // Listen for forced reconnect events (visibility change, online event)
+    const handleForceReconnect = () => {
+      if (!unmounted.current) connectWs();
+    };
+    window.addEventListener('ws-reconnect', handleForceReconnect);
+
     connectWs();
 
     return () => {
       unmounted.current = true;
       clearTimeout(reconnectTimer.current);
+      window.removeEventListener('ws-reconnect', handleForceReconnect);
       if (wsRef.current) wsRef.current.close();
     };
   }, [token]);

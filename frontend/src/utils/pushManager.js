@@ -4,10 +4,7 @@
  */
 import appSettings from './appSettings.js';
 
-// VAPID public key — must match the backend private key
-// Generated once; hardcoded here, private key on server
-const VAPID_PUBLIC_KEY = 'BFMRaclfNpBYf78fSmmhk40sdr4ZUMH0Rik2mpOzhLgIhLX4euX5CsUj1sScqNRm66FXqyRlF-cQhoTpPGFEoo0';
-
+let vapidPublicKey = null;
 let swRegistration = null;
 
 function urlBase64ToUint8Array(base64String) {
@@ -37,6 +34,18 @@ export async function registerPush(token) {
   }
 
   try {
+    // Fetch VAPID public key from backend (avoids hardcoding)
+    if (!vapidPublicKey) {
+      const vapidRes = await fetch('/api/push/vapid-key', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!vapidRes.ok) {
+        console.warn('[Push] VAPID key not available (push disabled on server)');
+        return false;
+      }
+      vapidPublicKey = await vapidRes.text();
+    }
+
     // Register the push service worker
     swRegistration = await navigator.serviceWorker.register('/push-sw.js', { scope: '/' });
     console.log('[Push] SW registered');
@@ -60,7 +69,7 @@ export async function registerPush(token) {
       // Subscribe to push
       subscription = await swRegistration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
       });
     }
 
