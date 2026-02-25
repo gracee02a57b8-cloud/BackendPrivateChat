@@ -78,6 +78,7 @@ export default function Sidebar({
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
   const [searchFilter, setSearchFilter] = useState('');
+  const [searchExpanded, setSearchExpanded] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showContacts, setShowContacts] = useState(false);
   const [contactSearchResults, setContactSearchResults] = useState([]);
@@ -111,6 +112,8 @@ export default function Sidebar({
   const filtersRef = useRef(null);
   const contextMenuRef = useRef(null);
   const burgerRef = useRef(null);
+  const storiesBarRef = useRef(null);
+  const searchInputRef = useRef(null);
   const pullStartY = useRef(0);
   const pullActive = useRef(false);
   const chatListRef = useRef(null);
@@ -126,6 +129,41 @@ export default function Sidebar({
     window.addEventListener('appinstalled', () => setInstallPrompt(null));
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
+
+  // Interactive stories bar shrink on chat list scroll (Telegram-style)
+  useEffect(() => {
+    const el = chatListRef.current;
+    const bar = storiesBarRef.current;
+    if (!el || !bar) return;
+    const onScroll = () => {
+      const scrollY = el.scrollTop;
+      const maxScroll = 60; // px to fully collapse
+      const progress = Math.min(scrollY / maxScroll, 1); // 0→1
+      // Ring: 48px → 34px
+      const ring = 48 - progress * 14;
+      // Gap: 8px → 4px
+      const gap = 8 - progress * 4;
+      // Padding: 8px → 3px
+      const pad = 8 - progress * 5;
+      // Min width: 56 → 38
+      const minW = 56 - progress * 18;
+      // Name: visible → hidden
+      const nameOpacity = Math.max(1 - progress * 2.5, 0);
+      const nameH = nameOpacity > 0 ? 16 : 0;
+      // Name gap
+      const nameGap = Math.max(3 - progress * 3, 0);
+
+      bar.style.setProperty('--stories-ring', `${ring}px`);
+      bar.style.setProperty('--stories-gap', `${gap}px`);
+      bar.style.setProperty('--stories-pad', `${pad}px`);
+      bar.style.setProperty('--stories-min-w', `${minW}px`);
+      bar.style.setProperty('--stories-name-opacity', nameOpacity);
+      bar.style.setProperty('--stories-name-h', `${nameH}px`);
+      bar.style.setProperty('--stories-name-gap', `${nameGap}px`);
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [mobileTab, showContacts]);
 
   // Debounced contact search via API (search people by name and tag)
   useEffect(() => {
@@ -390,7 +428,7 @@ export default function Sidebar({
     const roomTypingMap = typingUsers && typingUsers[room.id] ? typingUsers[room.id] : {};
     const roomTypers = Object.keys(roomTypingMap).filter(u => u !== username);
 
-    let previewText = 'Нет сообщений';
+    let previewText = '';
     let previewCheck = null;
     if (roomTypers.length > 0) {
       previewText = roomTypers.length === 1
@@ -411,7 +449,7 @@ export default function Sidebar({
     return (
       <div
         key={room.id}
-        className={`sb-chat-item${activeRoomId === room.id ? ' active' : ''}${pinnedRooms.has(room.id) ? ' pinned' : ''}`}
+        className={`sb-chat-item${activeRoomId === room.id ? ' active' : ''}${pinnedRooms.has(room.id) ? ' pinned' : ''}${unread > 0 ? ' has-unread' : ''}`}
         onClick={() => onSelectRoom(room.id)}
       >
         <div className="sb-chat-avatar-wrap">
@@ -426,8 +464,8 @@ export default function Sidebar({
                 : getInitials(displayName)}
             </div>
           )}
-          {room.type === 'PRIVATE' && (
-            <span className={`sb-online-dot ${isOnline ? 'online' : 'offline'}`} />
+          {room.type === 'PRIVATE' && isOnline && (
+            <span className="sb-online-dot online" />
           )}
         </div>
         <div className="sb-chat-info">
@@ -474,6 +512,7 @@ export default function Sidebar({
             <span className="sb-cat-emoji">🐱</span>
             <span className="sb-brand-name">BarsikChat</span>
           </div>
+          <button className="sb-search-toggle" onClick={() => { setSearchExpanded(e => !e); setTimeout(() => searchInputRef.current?.focus(), 100); }} aria-label="Поиск"><Search size={18} /></button>
         </div>
         <div className="sb-header-right">
           <button className="sb-menu-btn" data-testid="sb-menu-btn" onClick={() => setShowMenu(!showMenu)} aria-label="Меню" title="Меню"><MoreVertical size={20} /></button>
@@ -497,6 +536,7 @@ export default function Sidebar({
         <>
           {/* Stories Bar — always visible between header and filters */}
           {storiesHook && (
+            <div ref={storiesBarRef}>
             <StoriesBar
               groupedStories={storiesHook.groupedStories}
               username={username}
@@ -505,23 +545,36 @@ export default function Sidebar({
               onOpenViewer={(author) => onOpenStoryViewer?.(author)}
               onOpenUpload={() => onOpenStoryUpload?.()}
             />
+            </div>
           )}
 
           {/* Filter tabs */}
           <div className="sb-filters" ref={filtersRef}>
-            {[
+            {[  
               { key: 'all', label: 'Все' },
               { key: 'private', label: 'Личные' },
               { key: 'groups', label: 'Группы' },
-            ].map(f => (
-              <button
-                key={f.key}
-                className={`sb-filter${chatFilter === f.key ? ' active' : ''}`}
-                onClick={() => setChatFilter(f.key)}
-              >
-                {f.label}
-              </button>
-            ))}
+            ].map(f => {
+              // Compute unread count for this filter
+              let filterUnread = 0;
+              if (f.key === 'all') {
+                filterUnread = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
+              } else if (f.key === 'private') {
+                rooms.filter(r => r.type === 'PRIVATE').forEach(r => { filterUnread += (unreadCounts[r.id] || 0); });
+              } else if (f.key === 'groups') {
+                rooms.filter(r => r.type === 'ROOM').forEach(r => { filterUnread += (unreadCounts[r.id] || 0); });
+              }
+              return (
+                <button
+                  key={f.key}
+                  className={`sb-filter${chatFilter === f.key ? ' active' : ''}`}
+                  onClick={() => setChatFilter(f.key)}
+                >
+                  {f.label}
+                  {filterUnread > 0 && <span className="sb-filter-badge">{filterUnread > 99 ? '99+' : filterUnread}</span>}
+                </button>
+              );
+            })}
             {chatFolders.map(folder => (
               <button
                 key={folder.id}
@@ -569,14 +622,17 @@ export default function Sidebar({
           )}
 
           {/* Search */}
-          <div className="sb-search">
+          <div className={`sb-search ${searchExpanded ? 'expanded' : 'collapsed'}`}>
             <span className="sb-search-icon"><Search size={16} /></span>
             <input
+              ref={searchInputRef}
               type="text"
               placeholder="Поиск чатов и людей..."
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
+              onBlur={() => { if (!searchFilter) setSearchExpanded(false); }}
             />
+            {searchFilter && <button className="sb-search-toggle" onClick={() => { setSearchFilter(''); setSearchExpanded(false); }}><X size={14} /></button>}
           </div>
 
           {/* User Search Modal */}
