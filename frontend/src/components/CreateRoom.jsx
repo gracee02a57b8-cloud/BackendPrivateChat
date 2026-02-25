@@ -63,7 +63,7 @@ export default function CreateRoom({ onCreateRoom, onClose, allUsers = [], usern
   };
 
   return (
-    <div className="create-group-overlay">
+    <div className="create-group-overlay" data-testid="create-group">
       <div className="create-group-page">
         {/* Step 1: Select members */}
         {step === 1 && (

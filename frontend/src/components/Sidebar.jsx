@@ -423,7 +423,7 @@ export default function Sidebar({
             {mobileTab === 'ai' && 'AI Помощник'}
             {mobileTab === 'profile' && 'Профиль'}
           </div>
-          <button className="sb-burger-btn" onClick={() => setShowBurgerDrawer(true)} aria-label="Меню">
+          <button className="sb-burger-btn" data-testid="sb-burger-btn" onClick={() => setShowBurgerDrawer(true)} aria-label="Меню">
             <Menu size={22} />
           </button>
           <div className="sb-desktop-brand">
@@ -432,7 +432,7 @@ export default function Sidebar({
           </div>
         </div>
         <div className="sb-header-right">
-          <button className="sb-menu-btn" onClick={() => setShowMenu(!showMenu)} aria-label="Меню" title="Меню"><MoreVertical size={20} /></button>
+          <button className="sb-menu-btn" data-testid="sb-menu-btn" onClick={() => setShowMenu(!showMenu)} aria-label="Меню" title="Меню"><MoreVertical size={20} /></button>
           {showMenu && (
             <div className="sb-menu-dropdown" ref={menuRef}>
               <button className="sb-desktop-only" onClick={() => { setShowMenu(false); setShowProfile(true); }}><User size={16} /> Профиль</button>
@@ -1089,7 +1089,7 @@ export default function Sidebar({
       {/* ══════════  BURGER DRAWER  ══════════ */}
       {showBurgerDrawer && (
         <div className="burger-overlay" onClick={() => setShowBurgerDrawer(false)}>
-          <div className="burger-drawer" ref={burgerRef} onClick={e => e.stopPropagation()}>
+          <div className="burger-drawer" data-testid="burger-drawer" ref={burgerRef} onClick={e => e.stopPropagation()}>
             {/* User profile row */}
             <button className="burger-menu-item burger-user-row" onClick={() => { setShowBurgerDrawer(false); setShowProfile(true); }}>
               <div className="burger-user-avatar" style={{ background: avatarUrl ? 'transparent' : getAvatarColor(username) }}>

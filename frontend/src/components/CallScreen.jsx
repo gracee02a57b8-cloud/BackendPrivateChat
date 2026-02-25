@@ -128,7 +128,7 @@ export default function CallScreen({
 
   // ── Full-screen call view ──
   return (
-    <div className={`call-screen ${isVideo ? 'call-screen-video' : 'call-screen-audio'}`}>
+    <div className={`call-screen ${isVideo ? 'call-screen-video' : 'call-screen-audio'}`} data-testid="call-screen">
       {/* Remote video: full-screen normally, PiP-sized when swapped */}
       <video
         ref={remoteVidEl}
@@ -271,6 +271,7 @@ export default function CallScreen({
 
         <button
           className="call-control-btn call-hangup-btn"
+          data-testid="call-hangup"
           onClick={onEndCall}
           title="Завершить звонок"
         >

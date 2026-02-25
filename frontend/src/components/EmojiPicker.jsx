@@ -29,7 +29,7 @@ export default function EmojiPicker({ onSelect, onClose }) {
     : EMOJI_DATA[activeCategory];
 
   return (
-    <div className="emoji-picker" ref={pickerRef}>
+    <div className="emoji-picker" ref={pickerRef} data-testid="emoji-picker">
       <div className="emoji-search">
         <input
           type="text"

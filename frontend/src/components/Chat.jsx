@@ -1399,7 +1399,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
 
       {/* Connection lost banner */}
       {showConnBanner && (
-        <div className="connection-banner" role="alert">
+        <div className="connection-banner" role="alert" data-testid="connection-banner">
           <span className="connection-banner-icon">⚠️</span>
           <span className="connection-banner-text">Нет соединения с сервером. Переподключение...</span>
         </div>
@@ -1410,12 +1410,12 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
 
       {/* Desktop: hamburger for sidebar drawer */}
       {!sidebarOpen && (
-        <button className="mobile-hamburger desktop-only-hamburger" onClick={() => setSidebarOpen(true)} aria-label="Открыть меню">☰</button>
+        <button className="mobile-hamburger desktop-only-hamburger" onClick={() => setSidebarOpen(true)} aria-label="Открыть меню" data-testid="mobile-hamburger">☰</button>
       )}
 
       {/* Desktop: sidebar overlay */}
       {sidebarOpen && (
-        <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
+        <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} data-testid="sidebar-overlay" />
       )}
 
       <Sidebar
@@ -1654,7 +1654,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
 
       {/* ── FAB Buttons (visible on chats tab, no active room on mobile) ── */}
       {!activeRoomId && mobileTab === 'chats' && (
-        <div className="fab-container">
+        <div className="fab-container" data-testid="fab-container">
           <button className="fab fab-story" onClick={() => setShowStoryUpload(true)} title="Новая история">
             <Camera size={22} />
           </button>
@@ -1687,7 +1687,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
       )}
 
       {/* ── Mobile Bottom Navigation (Telegram-style) ── */}
-      <nav className="mobile-bottom-nav">
+      <nav className="mobile-bottom-nav" data-testid="mobile-bottom-nav">
         <button className={`bottom-nav-item${mobileTab === 'chats' ? ' active' : ''}`} onClick={() => { setMobileTab('chats'); if (activeRoomId) setActiveRoomId(null); }}>
           <span className="bottom-nav-icon"><MessageSquare size={22} /></span>
           <span className="bottom-nav-label">Чаты</span>

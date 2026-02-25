@@ -897,9 +897,9 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
         </div>
       )}
 
-      <div className="chat-header">
+      <div className="chat-header" data-testid="chat-header">
         {/* Back button (mobile) */}
-        <button className="chat-header-back" onClick={onBack} aria-label="Назад"><ArrowLeft size={20} /></button>
+        <button className="chat-header-back" data-testid="chat-header-back" onClick={onBack} aria-label="Назад"><ArrowLeft size={20} /></button>
 
         {/* Header avatar */}
         {activeRoom?.type === 'SAVED_MESSAGES' && (
@@ -969,7 +969,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
             </button>
           )}
           <div className="chat-header-menu-wrap" ref={headerMenuRef}>
-            <button className="chat-header-dots-btn" onClick={() => setShowHeaderMenu(!showHeaderMenu)} aria-label="Ещё">
+            <button className="chat-header-dots-btn" data-testid="chat-header-dots" onClick={() => setShowHeaderMenu(!showHeaderMenu)} aria-label="Ещё">
               <MoreVertical size={20} />
             </button>
             {showHeaderMenu && (
@@ -1250,7 +1250,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
 
       {/* Scroll to Bottom */}
       {showScrollBtn && (
-        <button className="scroll-to-bottom" onClick={scrollToBottom}>
+        <button className="scroll-to-bottom" data-testid="scroll-to-bottom" onClick={scrollToBottom}>
           <ChevronDown size={18} /> {newMsgCount > 0 && <span className="new-msg-badge">{newMsgCount}</span>}
         </button>
       )}
@@ -1345,7 +1345,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
         </div>
       )}
 
-      <form className="message-form" onSubmit={handleSubmit}>
+      <form className="message-form" data-testid="message-form" onSubmit={handleSubmit}>
         {isRecording ? (
           <VoiceRecorder
             token={token}
@@ -1459,7 +1459,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
             </button>
             </>
           ) : (
-            <button type="submit" className="action-btn send-btn" disabled={!connected || (!input.trim() && !uploading)}>
+            <button type="submit" className="action-btn send-btn" data-testid="send-btn" disabled={!connected || (!input.trim() && !uploading)}>
               {editingMsg ? <Pencil size={20} /> : showSchedule && scheduleDate ? <Clock size={20} /> : <SendHorizontal size={20} />}
             </button>
           )}

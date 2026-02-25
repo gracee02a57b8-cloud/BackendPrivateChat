@@ -45,7 +45,7 @@ export default function ConfirmModal({
   }, [onCancel]);
 
   return (
-    <div className="confirm-modal-overlay" onClick={onCancel} role="dialog" aria-modal="true" aria-label={message}>
+    <div className="confirm-modal-overlay" data-testid="confirm-modal" onClick={onCancel} role="dialog" aria-modal="true" aria-label={message}>
       <div className="confirm-modal" onClick={(e) => e.stopPropagation()} ref={modalRef}>
         <div className="confirm-modal-icon">{icon}</div>
         <h3>{message}</h3>

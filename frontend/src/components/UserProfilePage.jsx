@@ -102,9 +102,9 @@ export default function UserProfilePage({ targetUsername, token, onBack, onStart
 
   if (loading) {
     return (
-      <div className="user-profile-page">
+      <div className="user-profile-page" data-testid="user-profile-page">
         <div className="user-profile-header-bar">
-          <button className="user-profile-back" onClick={onBack}><ArrowLeft size={20} /></button>
+          <button className="user-profile-back" data-testid="user-profile-back" onClick={onBack}><ArrowLeft size={20} /></button>
           <div style={{ flex: 1 }} />
         </div>
         <div className="user-profile-loading">Загрузка...</div>
@@ -113,10 +113,10 @@ export default function UserProfilePage({ targetUsername, token, onBack, onStart
   }
 
   return (
-    <div className="user-profile-page">
+    <div className="user-profile-page" data-testid="user-profile-page">
       {/* Top bar */}
       <div className="user-profile-header-bar">
-        <button className="user-profile-back" onClick={onBack}><ArrowLeft size={20} /></button>
+        <button className="user-profile-back" data-testid="user-profile-back" onClick={onBack}><ArrowLeft size={20} /></button>
         <div style={{ flex: 1 }} />
         <div className="user-profile-menu-wrap" ref={menuRef}>
           <button className="user-profile-dots" onClick={() => setShowMenu(!showMenu)}><MoreVertical size={20} /></button>

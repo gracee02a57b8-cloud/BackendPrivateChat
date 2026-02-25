@@ -66,12 +66,12 @@ export default function EditProfilePage({ token, username, onBack, onProfileUpda
   };
 
   return (
-    <div className="edit-profile-page">
+    <div className="edit-profile-page" data-testid="edit-profile-page">
       {/* Header */}
       <div className="edit-profile-header">
-        <button className="edit-profile-back" onClick={onBack}><ArrowLeft size={20} /></button>
+        <button className="edit-profile-back" data-testid="edit-profile-back" onClick={onBack}><ArrowLeft size={20} /></button>
         <h2 className="edit-profile-title">Аккаунт</h2>
-        <button className="edit-profile-save-btn" onClick={handleSave} disabled={saving}>
+        <button className="edit-profile-save-btn" data-testid="edit-profile-save" onClick={handleSave} disabled={saving}>
           {saving ? '...' : <Check size={20} />}
         </button>
       </div>

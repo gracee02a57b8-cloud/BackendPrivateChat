@@ -256,6 +256,7 @@
   outline: none;
   transition: all 0.3s var(--ease-smooth);
   box-sizing: border-box;
+  min-height: 44px;
 }
 
 .login-card input:focus {
@@ -277,6 +278,7 @@
   letter-spacing: -0.01em;
   position: relative;
   overflow: hidden;
+  min-height: 44px;
 }
 
 .login-card button::before {
@@ -360,6 +362,10 @@
   font-size: 0.88rem;
   transition: color 0.2s;
   font-weight: 500;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .login-toggle:hover {
@@ -487,6 +493,8 @@
   padding: 6px;
   border-radius: 10px;
   transition: all 0.2s var(--spring);
+  min-width: 44px;
+  min-height: 44px;
 }
 .sb-burger-btn:hover {
   color: #1a1a2e;
@@ -716,6 +724,11 @@
   border-radius: 50%;
   transition: all 0.2s var(--spring);
   line-height: 1;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .sb-menu-btn:hover {
@@ -800,6 +813,7 @@
   align-items: center;
   gap: 5px;
   font-weight: 500;
+  min-height: 36px;
 }
 
 .sb-filter:hover {
@@ -1199,6 +1213,7 @@
   outline: none;
   color: #1a1a2e;
   font-size: 0.85rem;
+  min-height: 28px;
 }
 
 .sb-search input::placeholder {
@@ -1676,6 +1691,8 @@
   transition: background 0.2s;
   flex-shrink: 0;
   line-height: 1;
+  min-width: 44px;
+  min-height: 44px;
 }
 
 .chat-header-back:hover {
@@ -2305,8 +2322,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 40px;
-  min-height: 40px;
+  min-width: 44px;
+  min-height: 44px;
 }
 
 .action-btn.send-btn {
@@ -2402,6 +2419,11 @@
   line-height: 1;
   flex-shrink: 0;
   margin-bottom: 4px;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .attach-btn:hover {
@@ -3179,6 +3201,8 @@
   align-items: center;
   justify-content: center;
   transition: background 0.15s;
+  min-width: 44px;
+  min-height: 44px;
 }
 .chat-header-dots-btn:hover {
   background: rgba(99, 102, 241, 0.08);
@@ -4390,8 +4414,8 @@
   }
 
   .form-actions .action-btn {
-    min-width: 36px;
-    min-height: 36px;
+    min-width: 44px;
+    min-height: 44px;
     padding: 0.5rem 0.7rem;
   }
 
@@ -4649,8 +4673,8 @@
   }
 
   .form-actions .action-btn {
-    min-width: 34px;
-    min-height: 34px;
+    min-width: 44px;
+    min-height: 44px;
     padding: 0.45rem 0.6rem;
     font-size: 1rem;
     border-radius: 8px;
@@ -4666,6 +4690,8 @@
   .attach-btn {
     font-size: 1.1rem;
     padding: 3px 4px;
+    min-width: 44px;
+    min-height: 44px;
   }
 
   /* --- Schedule picker --- */
@@ -4743,11 +4769,13 @@
   .login-card input {
     padding: 0.6rem 0.8rem 0.6rem 2.2rem;
     font-size: 0.9rem;
+    min-height: 44px;
   }
 
   .login-card button {
     padding: 0.7rem;
     font-size: 0.9rem;
+    min-height: 44px;
   }
 
   .login-features span {
@@ -8743,8 +8771,8 @@
 
   .call-header-btn,
   .search-header-btn {
-    width: 34px;
-    height: 34px;
+    width: 44px;
+    height: 44px;
     font-size: 1rem;
     padding: 0;
   }
@@ -8754,8 +8782,8 @@
     font-size: 0;
     padding: 0.3rem;
     border: none;
-    min-width: 34px;
-    min-height: 34px;
+    min-width: 44px;
+    min-height: 44px;
     justify-content: center;
   }
   .copy-link-btn::before {
@@ -8766,8 +8794,8 @@
   .e2e-badge {
     font-size: 0;
     padding: 0.3rem;
-    min-width: 34px;
-    min-height: 34px;
+    min-width: 44px;
+    min-height: 44px;
   }
   .e2e-badge::before {
     content: '🔒';
@@ -8832,6 +8860,8 @@
   .attach-btn {
     font-size: 1.1rem;
     padding: 2px 4px;
+    min-width: 44px;
+    min-height: 44px;
   }
 
   .form-actions {
@@ -8839,8 +8869,8 @@
   }
 
   .action-btn {
-    min-width: 36px;
-    min-height: 36px;
+    min-width: 44px;
+    min-height: 44px;
     padding: 0.4rem;
     font-size: 1rem;
     border-radius: 50%;
@@ -8848,27 +8878,27 @@
 
   .action-btn.send-btn {
     border-radius: 50%;
-    width: 38px;
-    height: 38px;
-    min-width: 38px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
     padding: 0;
     font-size: 1.1rem;
   }
 
   .action-btn.emoji-btn,
   .action-btn.schedule-btn {
-    width: 36px;
-    height: 36px;
-    min-width: 36px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
     border-radius: 50%;
     padding: 0;
   }
 
   .action-btn.mic-btn,
   .action-btn.video-circle-btn {
-    width: 36px;
-    height: 36px;
-    min-width: 36px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
     border-radius: 50%;
     padding: 0;
   }

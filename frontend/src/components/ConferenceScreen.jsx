@@ -114,7 +114,7 @@ export default function ConferenceScreen({
   }
 
   return (
-    <div className="conf-screen">
+    <div className="conf-screen" data-testid="conf-screen">
       {/* Header */}
       <div className="conf-header">
         <span className="conf-title">
@@ -247,6 +247,7 @@ export default function ConferenceScreen({
 
         <button
           className="conf-control-btn conf-hangup-btn"
+          data-testid="conf-hangup"
           onClick={onLeave}
           title="Покинуть конференцию"
         >

@@ -48,11 +48,11 @@ export default function Login({ onLogin, pendingConfId }) {
   };
 
   return (
-    <div className="login-container">
+    <div className="login-container" data-testid="login-container">
       <div className="login-particles">
         {[...Array(6)].map((_, i) => <div key={i} className="particle" />)}
       </div>
-      <div className="login-card">
+      <div className="login-card" data-testid="login-card">
         <div className="login-logo">🐱</div>
         <h1>BarsikChat</h1>
         {pendingConfId ? (
@@ -65,7 +65,7 @@ export default function Login({ onLogin, pendingConfId }) {
             {isRegister ? 'Создайте аккаунт' : 'Безопасный чат для команды'}
           </p>
         )}
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} data-testid="login-form">
           <div className="login-input-wrapper">
             <span className="login-input-icon">👤</span>
             <input
@@ -99,14 +99,14 @@ export default function Login({ onLogin, pendingConfId }) {
               />
             </div>
           )}
-          <button type="submit" disabled={loading || !username.trim() || !password}>
+          <button type="submit" data-testid="login-submit" disabled={loading || !username.trim() || !password}>
             {loading ? (
               <span className="btn-loading"><span className="spinner" /> {isRegister ? 'Регистрация...' : 'Вход...'}</span>
             ) : (isRegister ? 'Зарегистрироваться' : 'Войти в чат')}
           </button>
         </form>
-        {error && <p className="error">{error}</p>}
-        <p className="login-toggle" onClick={() => { setIsRegister(!isRegister); setError(''); setConfirmPassword(''); }}>
+        {error && <p className="error" data-testid="login-error">{error}</p>}
+        <p className="login-toggle" data-testid="login-toggle" onClick={() => { setIsRegister(!isRegister); setError(''); setConfirmPassword(''); }}>
           {isRegister ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Зарегистрироваться'}
         </p>
         <div className="login-features">

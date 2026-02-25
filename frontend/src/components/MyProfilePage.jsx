@@ -161,7 +161,7 @@ export default function MyProfilePage({ username, avatarUrl, token, wsRef, onAva
   const profileColor = profile?.profileColor || getAvatarColor(username);
 
   return (
-    <div className="my-profile-page">
+    <div className="my-profile-page" data-testid="my-profile-page">
       {/* Header with title and three-dot menu */}
       <div className="my-profile-header">
         <h2 className="my-profile-title">Профиль</h2>
@@ -248,7 +248,7 @@ export default function MyProfilePage({ username, avatarUrl, token, wsRef, onAva
 
       {/* Logout */}
       {onLogout && (
-        <button className="my-profile-logout-btn" onClick={onLogout}>
+        <button className="my-profile-logout-btn" data-testid="my-profile-logout" onClick={onLogout}>
           <LogOut size={16} /> Выйти из аккаунта
         </button>
       )}
