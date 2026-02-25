@@ -571,11 +571,9 @@
 }
 
 .chat-sidebar {
-  width: 290px;
-  min-width: 290px;
-  background: rgba(245, 247, 252, 0.85);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  width: 320px;
+  min-width: 320px;
+  background: #ffffff;
   display: flex;
   flex-direction: column;
   border-right: 1px solid rgba(0, 0, 0, 0.06);
@@ -617,13 +615,12 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 14px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  background: #ffffff;
   position: relative;
   z-index: var(--z-dropdown, 100);
+  min-height: 56px;
 }
 
 .sb-header-left {
@@ -649,18 +646,17 @@
   justify-content: center;
   background: none;
   border: none;
-  color: #6b7a99;
+  color: #9ca3af;
   cursor: pointer;
   padding: 6px;
   border-radius: 10px;
-  transition: all 0.2s var(--spring);
+  transition: color 0.15s ease, background 0.15s ease;
   min-width: 44px;
   min-height: 44px;
 }
 .sb-burger-btn:hover {
   color: #1a1a2e;
-  background: rgba(0, 0, 0, 0.06);
-  transform: scale(1.05);
+  background: #f0f2f5;
 }
 
 /* ── Burger drawer overlay ── */
@@ -685,17 +681,15 @@
   position: fixed;
   top: 0;
   left: 0;
-  width: 280px;
+  width: 300px;
   max-width: 85vw;
   height: 100%;
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(40px) saturate(200%);
-  -webkit-backdrop-filter: blur(40px) saturate(200%);
-  box-shadow: 4px 0 32px rgba(0, 0, 0, 0.1);
-  border-right: 1px solid rgba(255, 255, 255, 0.5);
+  background: #ffffff;
+  box-shadow: 4px 0 40px rgba(0, 0, 0, 0.08);
+  border-right: 1px solid rgba(0, 0, 0, 0.04);
   display: flex;
   flex-direction: column;
-  animation: burgerSlideIn 0.35s var(--ease-out);
+  animation: burgerSlideIn 0.3s var(--ease-out);
   overflow-y: auto;
 }
 @keyframes burgerSlideIn {
@@ -754,7 +748,7 @@
 .burger-menu-item {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 16px;
   width: 100%;
   padding: 13px 22px;
   background: none;
@@ -762,17 +756,17 @@
   color: #2d3748;
   font-size: 0.93rem;
   cursor: pointer;
-  transition: all 0.2s var(--spring);
+  transition: background 0.12s ease;
   text-align: left;
+  font-weight: 500;
 }
 .burger-menu-item:hover {
-  background: rgba(99, 102, 241, 0.06);
-  transform: translateX(2px);
+  background: #f5f5f5;
 }
 .burger-menu-item svg {
-  color: #6b7a99;
+  color: #8b95a5;
   flex-shrink: 0;
-  transition: color 0.2s;
+  transition: color 0.15s;
 }
 .burger-menu-item:hover svg {
   color: #6366f1;
@@ -791,26 +785,25 @@
   gap: 4px;
 }
 .sb-brand-name {
-  font-size: 1.15rem;
+  font-size: 1.2rem;
   font-weight: 700;
   color: #1a1a2e;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 /* ── Animated cat emoji in header ── */
 .sb-cat-emoji {
   display: inline-block;
-  font-size: 1.35em;
-  margin-right: 5px;
+  font-size: 1.3em;
+  margin-right: 4px;
   vertical-align: middle;
-  animation: catBounce 1.5s ease-in-out 1;
   cursor: default;
   position: relative;
   top: -1px;
-  filter: drop-shadow(0 0 6px rgba(99, 102, 241, 0.3));
+  transition: transform 0.2s ease;
 }
 .sb-cat-emoji:hover {
-  animation: catSpin 0.6s ease-in-out;
+  transform: scale(1.15) rotate(-8deg);
 }
 
 @keyframes catBounce {
@@ -878,22 +871,22 @@
 .sb-menu-btn {
   background: none;
   border: none;
-  color: #6b7a99;
-  font-size: 1.4rem;
+  color: #9ca3af;
+  font-size: 1.3rem;
   cursor: pointer;
   padding: 4px 8px;
-  border-radius: 50%;
-  transition: all 0.2s var(--spring);
+  border-radius: 10px;
+  transition: color 0.15s ease, background 0.15s ease;
   line-height: 1;
-  min-width: 44px;
-  min-height: 44px;
+  min-width: 40px;
+  min-height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .sb-menu-btn:hover {
-  background: rgba(0, 0, 0, 0.06);
+  background: #f0f2f5;
   color: #1a1a2e;
 }
 
@@ -901,34 +894,34 @@
   position: absolute;
   top: 100%;
   right: 0;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 14px;
   overflow: hidden;
-  min-width: 200px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  min-width: 210px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0,0,0,0.04);
   z-index: var(--z-dropdown, 100);
-  animation: ctxPopIn 0.2s var(--spring);
+  animation: ctxPopIn 0.15s ease-out;
 }
 
 .sb-menu-dropdown button {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   width: 100%;
   text-align: left;
   padding: 11px 16px;
   background: none;
   border: none;
   color: #2d3748;
-  font-size: 0.85rem;
+  font-size: 0.87rem;
   cursor: pointer;
-  transition: background 0.15s;
-  font-weight: 450;
+  transition: background 0.12s;
+  font-weight: 500;
 }
 
 .sb-menu-dropdown button:hover {
-  background: rgba(99, 102, 241, 0.06);
+  background: #f5f5f5;
 }
 
 /* ===== Header Icon Buttons ===== */
@@ -950,9 +943,9 @@
 /* ===== Filter Tabs (Telegram folders) ===== */
 .sb-filters {
   display: flex;
-  padding: 6px 10px;
-  gap: 5px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  padding: 4px 12px 8px;
+  gap: 2px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
   overflow-x: auto;
   scrollbar-width: none;
   scroll-behavior: smooth;
@@ -961,21 +954,22 @@
 .sb-filters::-webkit-scrollbar { display: none; }
 
 .sb-filter {
-  padding: 5px 12px;
+  padding: 6px 14px;
   background: none;
   border: none;
-  border-radius: 20px;
-  color: #6b7a99;
-  font-size: 0.78rem;
+  border-radius: 8px;
+  color: #8b95a5;
+  font-size: 0.8rem;
   cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease;
+  transition: color 0.18s ease, background 0.18s ease;
   white-space: nowrap;
   display: flex;
   align-items: center;
   gap: 5px;
-  font-weight: 500;
+  font-weight: 600;
   min-height: 32px;
   position: relative;
+  letter-spacing: -0.01em;
 }
 
 .sb-filter:hover {
@@ -984,24 +978,25 @@
 }
 
 .sb-filter.active {
-  color: #fff;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+  color: #6366f1;
+  background: rgba(99, 102, 241, 0.1);
 }
 
 .sb-filter-badge {
   background: #ef4444;
   color: #fff;
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   padding: 1px 5px;
   border-radius: 10px;
   font-weight: 700;
   min-width: 16px;
   text-align: center;
+  line-height: 1.4;
 }
 
 .sb-filter.active .sb-filter-badge {
-  background: rgba(255,255,255,0.35);
+  background: #6366f1;
+  color: #fff;
 }
 
 /* ===== Folder tab in filters ===== */
@@ -1010,16 +1005,15 @@
 }
 .sb-add-folder-btn {
   padding: 6px 10px !important;
-  color: #6b7a99 !important;
+  color: #b0b8c4 !important;
   gap: 0 !important;
   flex-shrink: 0;
-  transition: all 0.25s var(--spring);
+  transition: color 0.15s ease, background 0.15s ease;
   position: relative;
 }
 .sb-add-folder-btn:hover {
   color: #6366f1 !important;
   background: rgba(99, 102, 241, 0.08) !important;
-  transform: scale(1.1);
 }
 
 /* ===== Folder Context Menu ===== */
@@ -1347,27 +1341,28 @@
 
 /* ===== Search ===== */
 .sb-search {
-  padding: 8px 12px;
+  padding: 8px 14px;
   border-bottom: none;
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(0, 0, 0, 0.03);
-  margin: 6px 10px;
-  border-radius: 22px;
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  background: #f0f2f5;
+  margin: 8px 12px;
+  border-radius: 10px;
+  border: 1.5px solid transparent;
   transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
 
 .sb-search:focus-within {
-  border-color: rgba(99, 102, 241, 0.3);
-  background: rgba(255, 255, 255, 0.6);
-  box-shadow: 0 2px 12px rgba(99, 102, 241, 0.08);
+  border-color: #6366f1;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08);
 }
 
 .sb-search-icon {
   font-size: 0.85rem;
   flex-shrink: 0;
+  color: #9ca3af;
 }
 
 .sb-search input {
@@ -1376,8 +1371,9 @@
   border: none;
   outline: none;
   color: #1a1a2e;
-  font-size: 0.85rem;
+  font-size: 0.88rem;
   min-height: 28px;
+  font-weight: 400;
 }
 
 .sb-search input::placeholder {
@@ -1468,15 +1464,27 @@
   flex: 1;
   overflow-y: auto;
   padding: 4px 0;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.sb-chat-list:hover {
+  scrollbar-color: rgba(0,0,0,0.12) transparent;
 }
 
 .sb-chat-list::-webkit-scrollbar {
-  width: 5px;
+  width: 4px;
 }
 
 .sb-chat-list::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.06);
+  background: transparent;
   border-radius: 4px;
+  transition: background 0.3s;
+}
+.sb-chat-list:hover::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+}
+.sb-chat-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
 }
 
 /* в”Ђв”Ђ Section Header в”Ђв”Ђ */
@@ -1496,9 +1504,9 @@
 }
 
 .sb-section-add {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
   border: none;
   background: rgba(99, 102, 241, 0.08);
   color: #6366f1;
@@ -1507,7 +1515,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.25s var(--spring);
+  transition: background 0.15s ease, color 0.15s ease;
   line-height: 1;
   padding: 0;
 }
@@ -1515,7 +1523,6 @@
 .sb-section-add:hover {
   background: #6366f1;
   color: #fff;
-  transform: scale(1.08);
 }
 
 /* в”Ђв”Ђ Chat Item в”Ђв”Ђ */
@@ -1557,22 +1564,22 @@
 }
 
 .sb-pin-btn {
-  font-size: 1.15rem;
+  font-size: 1rem;
   cursor: pointer;
-  padding: 5px;
-  min-width: 36px;
-  min-height: 36px;
+  padding: 4px;
+  min-width: 28px;
+  min-height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: 8px;
   transition: background 0.15s, color 0.15s;
   line-height: 1;
-  color: rgba(0,0,0,0.3);
+  color: rgba(0,0,0,0.2);
 }
 
 .sb-pin-btn:hover {
-  background: rgba(0,0,0,0.06);
+  background: rgba(99,102,241,0.08);
   color: #6366f1;
 }
 
@@ -1582,7 +1589,7 @@
 }
 
 .sb-pin-btn.pinned:hover {
-  color: #ff6b6b;
+  color: #ef4444;
 }
 
 /* Always show pin icon on pinned items */
@@ -1603,16 +1610,17 @@
 }
 
 .sb-chat-avatar {
-  width: 42px;
-  height: 42px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 1.05rem;
   color: #fff;
   overflow: hidden;
+  letter-spacing: -0.02em;
 }
 
 .sb-avatar-img {
@@ -1624,22 +1632,23 @@
 
 /* Saved Messages (Избранное) avatar */
 .sb-saved-avatar {
-  background: linear-gradient(135deg, #34d399, #3b82f6) !important;
-  font-size: 1.4rem !important;
+  background: #6366f1 !important;
+  font-size: 1.3rem !important;
 }
 
 .sb-online-dot {
   position: absolute;
   bottom: 0px;
   right: 0px;
-  width: 11px;
-  height: 11px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
-  border: 2px solid rgba(245, 247, 252, 0.9);
+  border: 2.5px solid #ffffff;
 }
 
 .sb-online-dot.online {
-  background: #10b981;
+  background: #22c55e;
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.2);
 }
 
 .sb-online-dot.offline {
@@ -1661,33 +1670,38 @@
 }
 
 .sb-chat-name {
-  font-size: 0.9rem;
+  font-size: 0.92rem;
   font-weight: 600;
   color: #1a1a2e;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  letter-spacing: -0.01em;
 }
 
 .sb-chat-time {
-  font-size: 0.75rem;
-  color: #9ca3af;
+  font-size: 0.72rem;
+  color: #b0b8c4;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  font-weight: 500;
+  flex-shrink: 0;
+  margin-left: 8px;
 }
 
 .sb-chat-preview {
   font-size: 0.82rem;
-  color: #6b7a99;
+  color: #8b95a5;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   flex: 1;
+  line-height: 1.35;
 }
 
 .sb-unread {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: #6366f1;
   color: #fff;
   font-size: 0.68rem;
   font-weight: 700;
@@ -1697,10 +1711,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 5px;
+  padding: 0 6px;
   flex-shrink: 0;
-  margin-left: 8px;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+  margin-left: 6px;
 }
 
 /* ── Bottom row flex ── */
@@ -1718,12 +1731,13 @@
 
 /* ── Read receipt checks in sidebar ── */
 .sb-check {
-  color: #9ca3af;
-  font-size: 0.75rem;
+  color: #b0b8c4;
+  font-size: 0.72rem;
   font-style: normal;
+  margin-right: 2px;
 }
 .sb-check.read {
-  color: #6366f1;
+  color: #22c55e;
 }
 
 /* ── Unread chat item styling (Telegram-like) ── */
@@ -1738,32 +1752,35 @@
   color: #6366f1;
   font-weight: 600;
 }
+.sb-chat-item.has-unread .sb-unread {
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+}
 
 /* ── Collapsible search toggle ── */
 .sb-search-toggle {
   background: none;
   border: none;
-  color: #6b7a99;
+  color: #9ca3af;
   cursor: pointer;
-  padding: 4px;
-  border-radius: 8px;
+  padding: 6px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s ease;
+  transition: color 0.15s ease, background 0.15s ease;
   margin-left: auto;
   flex-shrink: 0;
 }
 .sb-search-toggle:hover {
-  background: rgba(0, 0, 0, 0.06);
-  color: #1a1a2e;
+  background: #f0f2f5;
+  color: #6366f1;
 }
 
 /* ── Search collapsed state ── */
 .sb-search.collapsed {
   max-height: 0;
-  margin: 0 10px;
-  padding: 0 12px;
+  margin: 0 12px;
+  padding: 0 14px;
   opacity: 0;
   overflow: hidden;
   border-color: transparent;
@@ -1773,7 +1790,7 @@
   max-height: 50px;
   opacity: 1;
   pointer-events: auto;
-  transition: max-height 0.25s ease, opacity 0.2s ease, margin 0.2s ease, padding 0.2s ease;
+  transition: max-height 0.2s ease, opacity 0.18s ease, margin 0.18s ease, padding 0.18s ease;
 }
 
 .sb-empty {
@@ -4301,24 +4318,20 @@
 }
 
 /* ===== Scrollbar Styling ===== */
-.messages::-webkit-scrollbar,
-.sb-chat-list::-webkit-scrollbar {
+.messages::-webkit-scrollbar {
   width: 6px;
 }
 
-.messages::-webkit-scrollbar-track,
-.sb-chat-list::-webkit-scrollbar-track {
+.messages::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.messages::-webkit-scrollbar-thumb,
-.sb-chat-list::-webkit-scrollbar-thumb {
+.messages::-webkit-scrollbar-thumb {
   background: rgba(136, 146, 176, 0.2);
   border-radius: 3px;
 }
 
-.messages::-webkit-scrollbar-thumb:hover,
-.sb-chat-list::-webkit-scrollbar-thumb:hover {
+.messages::-webkit-scrollbar-thumb:hover {
   background: rgba(136, 146, 176, 0.4);
 }
 
@@ -9079,8 +9092,8 @@
   /* On mobile search always visible */
   .sb-search.collapsed {
     max-height: 50px;
-    margin: 6px 10px;
-    padding: 8px 12px;
+    margin: 8px 12px;
+    padding: 8px 14px;
     opacity: 1;
     pointer-events: auto;
   }
@@ -10817,16 +10830,17 @@
 .stories-bar {
   display: flex;
   gap: var(--stories-gap, 8px);
-  padding: var(--stories-pad, 8px) 12px;
+  padding: var(--stories-pad, 10px) 14px;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
-  border-bottom: 1px solid rgba(0,0,0,0.06);
+  border-bottom: 1px solid rgba(0,0,0,0.04);
   flex-shrink: 0;
   scroll-snap-type: x proximity;
   transition: padding 0.15s ease, gap 0.15s ease, opacity 0.15s ease;
   transform-origin: top center;
+  background: #ffffff;
 }
 .stories-bar::-webkit-scrollbar { display: none; }
 
@@ -10856,14 +10870,14 @@
 .stories-bar-item:active .stories-bar-ring { transform: scale(0.92); }
 
 .stories-bar-ring.unviewed {
-  background: linear-gradient(135deg, #7c3aed, #2563eb, #06b6d4);
+  background: linear-gradient(135deg, #6366f1, #8b5cf6, #06b6d4);
 }
 .stories-bar-ring.viewed {
-  background: rgba(0,0,0,0.12);
+  background: rgba(0,0,0,0.08);
 }
 .stories-bar-ring.add {
-  background: rgba(0,0,0,0.04);
-  border: 2px dashed rgba(0,0,0,0.2);
+  background: rgba(0,0,0,0.03);
+  border: 2px dashed rgba(0,0,0,0.15);
   padding: 0.5px;
 }
 
@@ -10904,8 +10918,8 @@
 }
 
 .stories-bar-name {
-  font-size: var(--stories-font, 11px);
-  color: #6b7a99;
+  font-size: var(--stories-font, 10.5px);
+  color: #8b95a5;
   max-width: var(--stories-min-w, 56px);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -10914,6 +10928,8 @@
   opacity: var(--stories-name-opacity, 1);
   max-height: var(--stories-name-h, 16px);
   transition: opacity 0.15s ease, max-height 0.15s ease;
+  font-weight: 500;
+  letter-spacing: -0.01em;
 }
 
 /* ═══════════════════════════════════════════════════════════
