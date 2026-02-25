@@ -185,7 +185,7 @@ function CallLogBubble({ msg, username }) {
   );
 }
 
-export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, onDeleteMessage, onScheduleMessage, scheduledMessages, roomName, username, connected, token, activeRoom, onlineUsers, allUsers = [], typingUsers = [], onTyping, isE2E, e2eEnabled, onToggleE2E, onShowSecurityCode, avatarMap = {}, onStartCall, callState, onLeaveRoom, onBack, onForwardToSaved, onForwardToContacts, onJoinRoom, onJoinConference, showAddMembers, onAddMembers, onDismissAddMembers, onStartPrivateChat, rooms = [], disappearingTimer, onSetDisappearingTimer }) {
+export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, onDeleteMessage, onScheduleMessage, scheduledMessages, roomName, username, connected, token, activeRoom, onlineUsers, allUsers = [], typingUsers = [], onTyping, isE2E, e2eEnabled, onToggleE2E, onShowSecurityCode, avatarMap = {}, onStartCall, callState, onLeaveRoom, onBack, onForwardToSaved, onForwardToContacts, onJoinRoom, onJoinConference, showAddMembers, onAddMembers, onDismissAddMembers, onStartPrivateChat, rooms = [], disappearingTimer, onSetDisappearingTimer, e2eInvite, onAcceptE2E, onDeclineE2E, e2eDeclined }) {
   const [input, setInput] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
@@ -1061,6 +1061,20 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
       )}
 
       <div className="messages" ref={messagesContainerRef}>
+        {/* E2E Invitation Banner */}
+        {e2eInvite && (
+          <div className="e2e-invite-banner">
+            <div className="e2e-invite-banner-icon">🔒</div>
+            <div className="e2e-invite-banner-text">
+              <strong>{e2eInvite.sender}</strong> включил(а) шифрование.
+              <br />Присоединиться к секретному чату?
+            </div>
+            <div className="e2e-invite-banner-actions">
+              <button className="e2e-invite-yes" onClick={onAcceptE2E}>Да</button>
+              <button className="e2e-invite-no" onClick={onDeclineE2E}>Нет</button>
+            </div>
+          </div>
+        )}
         {/* Pinned message banner */}
         {pinnedMsgId && (() => {
           const pinned = messages.find(m => m.id === pinnedMsgId);
@@ -1179,6 +1193,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
                         <div className="message-body">
                           {linkifyContent(msg.content, onJoinRoom, onJoinConference)}
                           <span className="msg-meta">
+                            {(msg.encrypted || msg.groupEncrypted) && <span className="e2e-lock-badge" title="Зашифровано"><Lock size={10} /></span>}
                             {msg.edited && <span className="edited-badge">ред. </span>}
                             {disappearingTimer > 0 && <span className="disappearing-badge"><Timer size={10} /></span>}
                             {msg.timestamp}
@@ -1195,6 +1210,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
                       {/* Meta for file-only messages */}
                       {!msg.content && (
                         <span className="msg-meta standalone">
+                          {(msg.encrypted || msg.groupEncrypted) && <span className="e2e-lock-badge" title="Зашифровано"><Lock size={10} /></span>}
                           {msg.edited && <span className="edited-badge">ред. </span>}
                           {disappearingTimer > 0 && <span className="disappearing-badge"><Timer size={10} /></span>}
                           {msg.timestamp}

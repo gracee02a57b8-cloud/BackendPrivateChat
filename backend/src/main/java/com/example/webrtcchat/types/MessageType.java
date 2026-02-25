@@ -31,6 +31,11 @@ public enum MessageType {
     // E2E group key distribution (relay to target user)
     GROUP_KEY,
 
+    // E2E encryption invitation signaling
+    E2E_INVITE,         // initiator → room: "I enabled E2E, please accept"
+    E2E_ACCEPT,         // participant → room: "I accepted E2E"
+    E2E_DECLINE,        // participant → room: "I declined E2E"
+
     // Group invite signaling
     GROUP_INVITE,
     GROUP_INVITE_ACCEPT,

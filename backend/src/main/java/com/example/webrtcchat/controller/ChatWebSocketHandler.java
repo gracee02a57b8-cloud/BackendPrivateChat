@@ -207,6 +207,14 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
+        // Handle E2E encryption invitation signaling — broadcast to room members
+        if (incoming.getType() == MessageType.E2E_INVITE
+                || incoming.getType() == MessageType.E2E_ACCEPT
+                || incoming.getType() == MessageType.E2E_DECLINE) {
+            handleE2EInvite(username, incoming);
+            return;
+        }
+
         // Regular CHAT message
         incoming.setSender(username);
         incoming.setTimestamp(now());
@@ -848,6 +856,34 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             sendSafe(targetSession, serialize(incoming));
         }
         // If target is offline the invite is lost — they can still join via link
+    }
+
+    /**
+     * Handle E2E encryption invitation signaling (E2E_INVITE, E2E_ACCEPT, E2E_DECLINE).
+     * Broadcasts the message to all room members except the sender.
+     */
+    private void handleE2EInvite(String sender, MessageDto incoming) {
+        String roomId = incoming.getRoomId();
+        if (roomId == null || roomId.isEmpty()) return;
+        if (!isUserInRoom(sender, roomId)) return;
+
+        incoming.setSender(sender);
+        incoming.setTimestamp(now());
+
+        // Broadcast to all room members except sender
+        RoomDto room = roomService.getRoomById(roomId);
+        if (room == null) return;
+
+        String json = serialize(incoming);
+        if (json == null) return;
+
+        room.getMembers().forEach(member -> {
+            if (member.equals(sender)) return;
+            WebSocketSession s = userSessions.get(member);
+            if (s != null && s.isOpen()) {
+                sendSafe(s, json);
+            }
+        });
     }
 
     /**

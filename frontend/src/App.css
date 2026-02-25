@@ -11398,3 +11398,79 @@
   to { transform: translateY(0); opacity: 1; }
 }
 .spin { animation: spin 1s linear infinite; }
+
+/* ===== E2E Encryption Invite Banner ===== */
+.e2e-invite-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #1e3a5f 0%, #1a2744 100%);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 14px;
+  padding: 14px 18px;
+  margin: 12px 16px 8px;
+  animation: slideUpModal 0.3s ease;
+}
+.e2e-invite-banner-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+.e2e-invite-banner-text {
+  flex: 1;
+  font-size: 0.88rem;
+  color: #e2e8f0;
+  line-height: 1.4;
+}
+.e2e-invite-banner-text strong {
+  color: #60a5fa;
+}
+.e2e-invite-banner-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.e2e-invite-yes {
+  background: #22c55e;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.e2e-invite-yes:hover { background: #16a34a; }
+.e2e-invite-no {
+  background: rgba(255,255,255,0.08);
+  color: #94a3b8;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  padding: 8px 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.e2e-invite-no:hover { background: rgba(255,255,255,0.15); color: #fff; }
+
+/* E2E invite popup (global overlay, matches group-invite-popup style) */
+.e2e-invite-popup .e2e-invite-desc {
+  font-size: 0.88rem;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+/* ===== E2E Lock Badge ===== */
+.e2e-lock-badge {
+  display: inline-flex;
+  align-items: center;
+  color: #22c55e;
+  margin-right: 3px;
+  vertical-align: middle;
+  opacity: 0.85;
+}
+.e2e-lock-badge svg {
+  width: 10px;
+  height: 10px;
+}

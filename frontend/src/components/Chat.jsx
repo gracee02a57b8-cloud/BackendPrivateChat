@@ -69,6 +69,19 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
       return saved ? new Set(JSON.parse(saved)) : new Set();
     } catch { return new Set(); }
   });
+  // E2E invitation popup state: { roomId, sender, roomName }
+  const [e2eInvite, setE2eInvite] = useState(null);
+  // Track who declined E2E per room: { roomId: Set<username> }
+  const [e2eDeclined, setE2eDeclined] = useState(() => {
+    try {
+      const saved = localStorage.getItem('e2eDeclined');
+      if (!saved) return {};
+      const parsed = JSON.parse(saved);
+      const result = {};
+      for (const [k, v] of Object.entries(parsed)) result[k] = new Set(v);
+      return result;
+    } catch { return {}; }
+  });
   const wsRef = useRef(null);
   const loadedRooms = useRef(new Set());
   const activeRoomIdRef = useRef(null);
@@ -411,6 +424,80 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
         if (roomId && roomName) {
           setGroupInvite({ sender: msg.sender, roomId, roomName });
         }
+        return;
+      }
+
+      // Handle E2E_INVITE — show invitation modal
+      if (msg.type === 'E2E_INVITE') {
+        const roomName = msg.extra?.roomName || msg.roomId;
+        setE2eInvite({ roomId: msg.roomId, sender: msg.sender, roomName });
+        // System message
+        setMessagesByRoom(prev => ({
+          ...prev,
+          [msg.roomId]: [...(prev[msg.roomId] || []), {
+            id: `e2e-sys-${Date.now()}`,
+            type: 'JOIN',
+            content: `🔒 ${msg.sender} включил(а) шифрование`,
+            sender: 'system',
+            timestamp: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+            roomId: msg.roomId,
+          }],
+        }));
+        return;
+      }
+
+      // Handle E2E_ACCEPT — show system notification
+      if (msg.type === 'E2E_ACCEPT') {
+        setMessagesByRoom(prev => ({
+          ...prev,
+          [msg.roomId]: [...(prev[msg.roomId] || []), {
+            id: `e2e-sys-${Date.now()}`,
+            type: 'JOIN',
+            content: `🔒 ${msg.sender} присоединился(-ась) к секретному чату`,
+            sender: 'system',
+            timestamp: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+            roomId: msg.roomId,
+          }],
+        }));
+        // Remove from declined if was there
+        setE2eDeclined(prev => {
+          const next = { ...prev };
+          if (next[msg.roomId]) {
+            const s = new Set(next[msg.roomId]);
+            s.delete(msg.sender);
+            next[msg.roomId] = s;
+            const toSave = {};
+            for (const [k, v] of Object.entries(next)) toSave[k] = [...v];
+            localStorage.setItem('e2eDeclined', JSON.stringify(toSave));
+          }
+          return next;
+        });
+        return;
+      }
+
+      // Handle E2E_DECLINE — show system notification, track declined user
+      if (msg.type === 'E2E_DECLINE') {
+        setMessagesByRoom(prev => ({
+          ...prev,
+          [msg.roomId]: [...(prev[msg.roomId] || []), {
+            id: `e2e-sys-${Date.now()}`,
+            type: 'JOIN',
+            content: `🔓 ${msg.sender} не участвует в секретном чате`,
+            sender: 'system',
+            timestamp: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+            roomId: msg.roomId,
+          }],
+        }));
+        setE2eDeclined(prev => {
+          const next = { ...prev };
+          if (!next[msg.roomId]) next[msg.roomId] = new Set();
+          next[msg.roomId] = new Set(next[msg.roomId]);
+          next[msg.roomId].add(msg.sender);
+          const toSave = {};
+          for (const [k, v] of Object.entries(next)) toSave[k] = [...v];
+          localStorage.setItem('e2eDeclined', JSON.stringify(toSave));
+          return next;
+        });
         return;
       }
 
@@ -1304,6 +1391,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   const isE2E = isPrivateE2E || isGroupE2E;
 
   const toggleE2E = useCallback((roomId) => {
+    const wasEnabled = e2eRooms.has(roomId);
     setE2eRooms(prev => {
       const next = new Set(prev);
       if (next.has(roomId)) {
@@ -1314,7 +1402,106 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
       localStorage.setItem('e2eRooms', JSON.stringify([...next]));
       return next;
     });
-  }, []);
+    // When enabling E2E, send E2E_INVITE to all room members
+    if (!wasEnabled && wsRef.current?.readyState === WebSocket.OPEN) {
+      const room = rooms.find(r => r.id === roomId);
+      wsRef.current.send(JSON.stringify({
+        type: 'E2E_INVITE',
+        roomId,
+        sender: username,
+        extra: { roomName: room?.name || roomId },
+      }));
+      // Add system message locally
+      setMessagesByRoom(prev => ({
+        ...prev,
+        [roomId]: [...(prev[roomId] || []), {
+          id: `e2e-sys-${Date.now()}`,
+          type: 'JOIN',
+          content: `🔒 ${username} включил(а) шифрование`,
+          sender: 'system',
+          timestamp: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+          roomId,
+        }],
+      }));
+    }
+  }, [e2eRooms, rooms, username]);
+
+  // Accept E2E invite — enable E2E for this room + notify others
+  const acceptE2EInvite = useCallback((roomId) => {
+    setE2eRooms(prev => {
+      const next = new Set(prev);
+      next.add(roomId);
+      localStorage.setItem('e2eRooms', JSON.stringify([...next]));
+      return next;
+    });
+    // Remove from declined if was declined before
+    setE2eDeclined(prev => {
+      const next = { ...prev };
+      if (next[roomId]) {
+        const s = new Set(next[roomId]);
+        s.delete(username);
+        next[roomId] = s;
+        const toSave = {};
+        for (const [k, v] of Object.entries(next)) toSave[k] = [...v];
+        localStorage.setItem('e2eDeclined', JSON.stringify(toSave));
+      }
+      return next;
+    });
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: 'E2E_ACCEPT',
+        roomId,
+        sender: username,
+      }));
+    }
+    // System message locally
+    setMessagesByRoom(prev => ({
+      ...prev,
+      [roomId]: [...(prev[roomId] || []), {
+        id: `e2e-sys-${Date.now()}`,
+        type: 'JOIN',
+        content: `🔒 ${username} присоединился(-ась) к секретному чату`,
+        sender: 'system',
+        timestamp: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+        roomId,
+      }],
+    }));
+    setE2eInvite(null);
+  }, [username]);
+
+  // Decline E2E invite
+  const declineE2EInvite = useCallback((roomId) => {
+    setE2eDeclined(prev => {
+      const next = { ...prev };
+      if (!next[roomId]) next[roomId] = new Set();
+      next[roomId] = new Set(next[roomId]);
+      next[roomId].add(username);
+      const toSave = {};
+      for (const [k, v] of Object.entries(next)) toSave[k] = [...v];
+      localStorage.setItem('e2eDeclined', JSON.stringify(toSave));
+      return next;
+    });
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: 'E2E_DECLINE',
+        roomId,
+        sender: username,
+      }));
+    }
+    // System message locally
+    setMessagesByRoom(prev => ({
+      ...prev,
+      [roomId]: [...(prev[roomId] || []), {
+        id: `e2e-sys-${Date.now()}`,
+        type: 'JOIN',
+        content: `🔓 ${username} не участвует в секретном чате`,
+        sender: 'system',
+        timestamp: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+        roomId,
+      }],
+    }));
+    setE2eInvite(null);
+  }, [username]);
 
   const showSecurityCode = async () => {
     const peer = getPeerUsername(activeRoom);
@@ -1504,6 +1691,10 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           rooms={rooms}
           disappearingTimer={disappearingTimers[activeRoomId] || 0}
           onSetDisappearingTimer={(seconds) => setDisappearingTimer(activeRoomId, seconds)}
+          e2eInvite={e2eInvite?.roomId === activeRoomId ? e2eInvite : null}
+          onAcceptE2E={() => acceptE2EInvite(activeRoomId)}
+          onDeclineE2E={() => declineE2EInvite(activeRoomId)}
+          e2eDeclined={e2eDeclined[activeRoomId] || new Set()}
         />
       )}
       {showAddMembersPanel && (
@@ -1537,6 +1728,23 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
                 setGroupInvite(null);
               }}>Присоединиться</button>
               <button className="group-invite-decline" onClick={() => setGroupInvite(null)}>Отклонить</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* E2E invite popup (when invite is for a non-active room or user hasn't responded yet) */}
+      {e2eInvite && e2eInvite.roomId !== activeRoomId && (
+        <div className="group-invite-overlay">
+          <div className="group-invite-popup e2e-invite-popup">
+            <div className="group-invite-icon">🔒</div>
+            <h3 className="group-invite-title">Секретный чат</h3>
+            <p className="group-invite-text">
+              <strong>{e2eInvite.sender}</strong> включил(а) шифрование в чате <strong>«{e2eInvite.roomName}»</strong>
+            </p>
+            <p className="e2e-invite-desc">Хотите присоединиться к секретному чату?</p>
+            <div className="group-invite-actions">
+              <button className="group-invite-accept" onClick={() => acceptE2EInvite(e2eInvite.roomId)}>Да</button>
+              <button className="group-invite-decline" onClick={() => declineE2EInvite(e2eInvite.roomId)}>Нет</button>
             </div>
           </div>
         </div>
