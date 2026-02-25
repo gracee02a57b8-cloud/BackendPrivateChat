@@ -1,27 +1,6 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: barsik-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${DB_NAME:-barsikdb}
-      POSTGRES_USER: ${DB_USER:-barsik}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-barsik}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    # Port NOT exposed externally (C5) — only accessible within barsik-net
-    networks:
-      - barsik-net
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-barsik} -d ${DB_NAME:-barsikdb}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-          cpus: "1.0"
+  # PostgreSQL moved to server 2 (85.239.44.28)
+  # Redis moved to server 2 (85.239.44.28)
 
   backend:
     build:
@@ -39,7 +18,7 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:*,http://barsik-frontend:*}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       APP_LOG_LEVEL: ${APP_LOG_LEVEL:-INFO}
-      DB_HOST: barsik-db
+      DB_HOST: ${DB_HOST:-85.239.44.28}
       DB_PORT: 5432
       DB_NAME: ${DB_NAME:-barsikdb}
       DB_USER: ${DB_USER:-barsik}
@@ -50,9 +29,6 @@ services:
     volumes:
       - uploads_data:/app/uploads
     # Port NOT exposed externally — only reachable via nginx on barsik-net
-    depends_on:
-      postgres:
-        condition: service_healthy
     networks:
       - barsik-net
     deploy:
@@ -87,7 +63,6 @@ services:
 
 volumes:
   uploads_data:
-  postgres_data:
 
 networks:
   barsik-net:
