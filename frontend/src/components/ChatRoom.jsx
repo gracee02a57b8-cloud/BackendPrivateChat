@@ -6,14 +6,12 @@ import VoiceMessage from './VoiceMessage';
 import VideoCircleRecorder from './VideoCircleRecorder';
 import VideoCircleMessage from './VideoCircleMessage';
 import UserProfilePage from './UserProfilePage';
-import e2eManager from '../crypto/E2EManager';
-import useDecryptedUrl from '../hooks/useDecryptedUrl';
 import { copyToClipboard } from '../utils/clipboard';
 import { showToast } from './Toast';
 import GroupInfoPanel from './GroupInfoPanel';
 import ForwardContactPicker from './ForwardContactPicker';
 import { getAvatarColor, getInitials, formatLastSeen } from '../utils/avatar';
-import { ArrowLeft, Bookmark, Phone, Search, Lock, Link, ChevronUp, ChevronDown, X, Pin, Paperclip, MessageSquare, Check, CheckCheck, Reply, Forward, Clipboard, Pencil, Trash2, Clock, Mic, Video, SendHorizontal, FolderOpen, Smile, Unlock, Download, MoreVertical, Plus, Timer, CheckSquare } from 'lucide-react';
+import { ArrowLeft, Bookmark, Phone, Search, Link, ChevronUp, ChevronDown, X, Pin, Paperclip, MessageSquare, Check, CheckCheck, Reply, Forward, Clipboard, Pencil, Trash2, Clock, Mic, Video, SendHorizontal, FolderOpen, Smile, Download, MoreVertical, Plus, Timer, CheckSquare } from 'lucide-react';
 
 function formatFileSize(bytes) {
   if (bytes < 1024) return bytes + ' Б';
@@ -68,43 +66,6 @@ function linkifyContent(text, onJoinRoom, onJoinConference) {
     }
     return part;
   });
-}
-
-/** Small wrapper for images that may need E2E decryption */
-function DecryptedImage({ fileUrl, fileKey, fileName, fileSize, formatFileSize }) {
-  const url = useDecryptedUrl(fileUrl, fileKey, 'image/jpeg');
-  return (
-    <div className="file-attachment image-attachment">
-      {url ? (
-        <a href={url} target="_blank" rel="noopener noreferrer">
-          <img src={url} alt={fileName || 'image'} />
-        </a>
-      ) : (
-        <div style={{ padding: 16, opacity: 0.5 }}><Unlock size={14} /> Расшифровка...</div>
-      )}
-      <div className="file-info">
-        <span className="file-name">{fileName}</span>
-        <span className="file-size">{formatFileSize(fileSize)}</span>
-      </div>
-    </div>
-  );
-}
-
-/** Wrapper for file downloads that may need E2E decryption */
-function DecryptedFile({ fileUrl, fileKey, fileName, fileSize, formatFileSize }) {
-  const url = useDecryptedUrl(fileUrl, fileKey, 'application/octet-stream');
-  return (
-    <div className="file-attachment">
-      <a href={url ? `${url}${fileKey ? '' : '?download=true'}` : '#'} className="file-download" download={fileName}>
-        <span className="file-icon"><Paperclip size={16} /></span>
-        <div className="file-info">
-          <span className="file-name">{fileName}</span>
-          <span className="file-size">{formatFileSize(fileSize)}</span>
-        </div>
-        <span className="download-icon">{url ? <Download size={16} /> : <Unlock size={16} />}</span>
-      </a>
-    </div>
-  );
 }
 
 function formatDateDivider(dateStr) {
@@ -185,7 +146,7 @@ function CallLogBubble({ msg, username }) {
   );
 }
 
-export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, onDeleteMessage, onScheduleMessage, scheduledMessages, roomName, username, connected, token, activeRoom, onlineUsers, allUsers = [], typingUsers = [], onTyping, isE2E, e2eEnabled, onToggleE2E, onShowSecurityCode, avatarMap = {}, onStartCall, callState, onLeaveRoom, onBack, onForwardToSaved, onForwardToContacts, onJoinRoom, onJoinConference, showAddMembers, onAddMembers, onDismissAddMembers, onStartPrivateChat, rooms = [], disappearingTimer, onSetDisappearingTimer, e2eInvite, onAcceptE2E, onDeclineE2E, e2eDeclined }) {
+export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, onDeleteMessage, onScheduleMessage, scheduledMessages, roomName, username, connected, token, activeRoom, onlineUsers, allUsers = [], typingUsers = [], onTyping, avatarMap = {}, onStartCall, callState, onLeaveRoom, onBack, onForwardToSaved, onForwardToContacts, onJoinRoom, onJoinConference, showAddMembers, onAddMembers, onDismissAddMembers, onStartPrivateChat, rooms = [], disappearingTimer, onSetDisappearingTimer }) {
   const [input, setInput] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
@@ -461,22 +422,8 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
     setUploading(true);
     setUploadProgress(0);
 
-    let uploadBlob = file;
-    let fileKey = null;
-
-    // Encrypt file for E2E private rooms
-    if (isE2E) {
-      try {
-        const result = await e2eManager.encryptFile(file);
-        uploadBlob = result.encryptedBlob;
-        fileKey = result.fileKey;
-      } catch (err) {
-        console.warn('[E2E] File encrypt failed, uploading plaintext:', err);
-      }
-    }
-
     const formData = new FormData();
-    formData.append('file', uploadBlob, file.name);
+    formData.append('file', file, file.name);
 
     const xhr = new XMLHttpRequest();
     xhr.open('POST', '/api/upload/file');
@@ -499,7 +446,6 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
           fileSize: data.size,
           fileType: data.contentType,
         };
-        if (fileKey) fileData.fileKey = fileKey;
         onSendMessage(input.trim() || '', fileData);
         setInput('');
       } else {
@@ -823,8 +769,6 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
           duration={msg.duration}
           thumbnailUrl={msg.thumbnailUrl}
           isOwn={msg.sender === username}
-          fileKey={msg._fileKey}
-          thumbnailKey={msg._thumbnailKey}
         />
       );
     }
@@ -838,16 +782,12 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
           duration={msg.duration}
           waveformData={msg.waveform}
           isOwn={msg.sender === username}
-          fileKey={msg._fileKey}
         />
       );
     }
 
     const isImage = msg.fileType && msg.fileType.startsWith('image/');
     if (isImage) {
-      if (msg._fileKey) {
-        return <DecryptedImage fileUrl={msg.fileUrl} fileKey={msg._fileKey} fileName={msg.fileName} fileSize={msg.fileSize} formatFileSize={formatFileSize} />;
-      }
       return (
         <div className="file-attachment image-attachment">
           <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer">
@@ -859,9 +799,6 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
           </div>
         </div>
       );
-    }
-    if (msg._fileKey) {
-      return <DecryptedFile fileUrl={msg.fileUrl} fileKey={msg._fileKey} fileName={msg.fileName} fileSize={msg.fileSize} formatFileSize={formatFileSize} />;
     }
     return (
       <div className="file-attachment">
@@ -974,17 +911,6 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
             </button>
             {showHeaderMenu && (
               <div className="chat-header-dropdown">
-                {activeRoom?.type !== 'SAVED_MESSAGES' && (
-                  <button onClick={() => { onToggleE2E?.(); setShowHeaderMenu(false); }} className={e2eEnabled ? 'e2e-toggle-on' : ''}>
-                    {e2eEnabled ? <Lock size={16} /> : <Unlock size={16} />}
-                    {e2eEnabled ? 'Шифрование включено' : 'Включить шифрование'}
-                  </button>
-                )}
-                {isE2E && (
-                  <button onClick={() => { onShowSecurityCode(); setShowHeaderMenu(false); }}>
-                    <Lock size={16} /> Код безопасности
-                  </button>
-                )}
                 <button onClick={() => { openSearch(); setShowHeaderMenu(false); }}>
                   <Search size={16} /> Поиск
                 </button>
@@ -1061,20 +987,6 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
       )}
 
       <div className="messages" ref={messagesContainerRef}>
-        {/* E2E Invitation Banner */}
-        {e2eInvite && (
-          <div className="e2e-invite-banner">
-            <div className="e2e-invite-banner-icon">🔒</div>
-            <div className="e2e-invite-banner-text">
-              <strong>{e2eInvite.sender}</strong> включил(а) шифрование.
-              <br />Присоединиться к секретному чату?
-            </div>
-            <div className="e2e-invite-banner-actions">
-              <button className="e2e-invite-yes" onClick={onAcceptE2E}>Да</button>
-              <button className="e2e-invite-no" onClick={onDeclineE2E}>Нет</button>
-            </div>
-          </div>
-        )}
         {/* Pinned message banner */}
         {pinnedMsgId && (() => {
           const pinned = messages.find(m => m.id === pinnedMsgId);
@@ -1193,7 +1105,6 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
                         <div className="message-body">
                           {linkifyContent(msg.content, onJoinRoom, onJoinConference)}
                           <span className="msg-meta">
-                            {(msg.encrypted || msg.groupEncrypted) && <span className="e2e-lock-badge" title="Зашифровано"><Lock size={10} /></span>}
                             {msg.edited && <span className="edited-badge">ред. </span>}
                             {disappearingTimer > 0 && <span className="disappearing-badge"><Timer size={10} /></span>}
                             {msg.timestamp}
@@ -1210,7 +1121,6 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
                       {/* Meta for file-only messages */}
                       {!msg.content && (
                         <span className="msg-meta standalone">
-                          {(msg.encrypted || msg.groupEncrypted) && <span className="e2e-lock-badge" title="Зашифровано"><Lock size={10} /></span>}
                           {msg.edited && <span className="edited-badge">ред. </span>}
                           {disappearingTimer > 0 && <span className="disappearing-badge"><Timer size={10} /></span>}
                           {msg.timestamp}
@@ -1365,7 +1275,6 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
         {isRecording ? (
           <VoiceRecorder
             token={token}
-            isE2E={isE2E}
             onSend={(voiceData) => {
               setIsRecording(false);
               onSendMessage('', voiceData);
@@ -1375,7 +1284,6 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
         ) : isRecordingVideo ? (
           <VideoCircleRecorder
             token={token}
-            isE2E={isE2E}
             onSend={(videoData) => {
               setIsRecordingVideo(false);
               onSendMessage('', videoData);

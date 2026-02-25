@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { getAvatarColor } from '../utils/avatar';
-import { Lock, ChevronDown, ChevronUp, SwitchCamera, Maximize2 } from 'lucide-react';
+import { SwitchCamera, Maximize2 } from 'lucide-react';
 
 function formatDuration(seconds) {
   const m = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -25,7 +25,6 @@ export default function CallScreen({
   onEndCall,
   onToggleMute,
   onToggleVideo,
-  securityCode,
   onUpgradeToConference,
   isMinimized,
   onMinimize,
@@ -38,9 +37,6 @@ export default function CallScreen({
   const localVidEl = useRef(null);
   const remoteVidEl = useRef(null);
   const remoteAudioEl = useRef(null);
-
-  // Expandable security code
-  const [securityExpanded, setSecurityExpanded] = useState(false);
 
   // Swap local/remote video — CSS-only swap, refs stay stable
   const [videoSwapped, setVideoSwapped] = useState(false);
@@ -209,25 +205,6 @@ export default function CallScreen({
           <video ref={remoteVidEl} style={{ display: 'none' }} autoPlay playsInline />
           <video ref={localVidEl} style={{ display: 'none' }} autoPlay playsInline muted />
         </>
-      )}
-
-      {/* Feature #3: Expandable security code */}
-      {securityCode && callState === 'active' && (
-        <div
-          className={`call-security-code ${securityExpanded ? 'expanded' : ''}`}
-          onClick={() => setSecurityExpanded(v => !v)}
-        >
-          <span className="call-security-icon"><Lock size={12} /></span>
-          {securityExpanded ? (
-            <>
-              <span className="call-security-label">Код безопасности</span>
-              <span className="call-security-digits">{securityCode}</span>
-              <ChevronUp size={14} className="call-security-chevron" />
-            </>
-          ) : (
-            <ChevronDown size={14} className="call-security-chevron" />
-          )}
-        </div>
       )}
 
       {/* Controls bar */}

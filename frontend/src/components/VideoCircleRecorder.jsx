@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import e2eManager from '../crypto/E2EManager';
 
 /**
  * VideoCircleRecorder — Telegram-style video circle recorder.
@@ -7,7 +6,7 @@ import e2eManager from '../crypto/E2EManager';
  * Records front camera in a circular preview with 30-second max.
  * Shows a ring timer (SVG), generates a thumbnail on stop, uploads both.
  */
-export default function VideoCircleRecorder({ onSend, onCancel, token, isE2E }) {
+export default function VideoCircleRecorder({ onSend, onCancel, token }) {
   const [recording, setRecording] = useState(false);
   const [duration, setDuration] = useState(0);
   const [uploading, setUploading] = useState(false);
@@ -194,39 +193,19 @@ export default function VideoCircleRecorder({ onSend, onCancel, token, isE2E }) 
       setUploadProgress(0);
 
       try {
-        // Encrypt video for E2E rooms
-        let videoUploadBlob = blob;
-        let fileKey = null;
-        if (isE2E) {
-          try {
-            const enc = await e2eManager.encryptFile(blob);
-            videoUploadBlob = enc.encryptedBlob;
-            fileKey = enc.fileKey;
-          } catch (err) { console.warn('[E2E] Video encrypt failed:', err); }
-        }
-
         // Upload video
         const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
         const videoData = await uploadBlob(
-          videoUploadBlob,
+          blob,
           `video_circle_${Date.now()}.${ext}`,
           (p) => setUploadProgress(p)
         );
 
-        // Upload thumbnail (also encrypt if E2E)
+        // Upload thumbnail
         let thumbnailUrl = null;
-        let thumbnailKey = null;
         const thumbBlob = await thumbnailPromise;
         if (thumbBlob) {
-          let thumbUploadBlob = thumbBlob;
-          if (isE2E) {
-            try {
-              const enc = await e2eManager.encryptFile(thumbBlob);
-              thumbUploadBlob = enc.encryptedBlob;
-              thumbnailKey = enc.fileKey;
-            } catch (err) { console.warn('[E2E] Thumb encrypt failed:', err); }
-          }
-          const thumbData = await uploadBlob(thumbUploadBlob, `thumb_${Date.now()}.jpg`);
+          const thumbData = await uploadBlob(thumbBlob, `thumb_${Date.now()}.jpg`);
           thumbnailUrl = thumbData.url;
         }
 
@@ -242,8 +221,6 @@ export default function VideoCircleRecorder({ onSend, onCancel, token, isE2E }) 
           thumbnailUrl,
           isVideoCircle: true,
         };
-        if (fileKey) videoResult.fileKey = fileKey;
-        if (thumbnailKey) videoResult.thumbnailKey = thumbnailKey;
         onSend(videoResult);
       } catch (err) {
         setUploading(false);

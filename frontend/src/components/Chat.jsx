@@ -6,7 +6,6 @@ import TaskPanel from './TaskPanel';
 import TaskNotificationPopup from './TaskNotificationPopup';
 import ReplyNotificationPopup from './ReplyNotificationPopup';
 import MessageNotificationPopup from './MessageNotificationPopup';
-import SecurityCodeModal from './SecurityCodeModal';
 import IncomingCallModal from './IncomingCallModal';
 import CallScreen from './CallScreen';
 import ConferenceScreen from './ConferenceScreen';
@@ -18,9 +17,6 @@ import useWebRTC from '../hooks/useWebRTC';
 import useConference from '../hooks/useConference';
 import useMediaPermissions from '../hooks/useMediaPermissions';
 import useStories from '../hooks/useStories';
-import e2eManager from '../crypto/E2EManager';
-import cryptoStore from '../crypto/CryptoStore';
-import groupCrypto from '../crypto/GroupCrypto';
 import appSettings from '../utils/appSettings';
 
 const WS_URL = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
@@ -48,12 +44,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mobileTab, setMobileTabRaw] = useState(() => sessionStorage.getItem('mobileTab') || 'chats');
   const setMobileTab = (tab) => { setMobileTabRaw(tab); sessionStorage.setItem('mobileTab', tab); };
-  const [e2eReady, setE2eReady] = useState(false);
-  const [securityCode, setSecurityCode] = useState(null);
-  const [securityCodePeer, setSecurityCodePeer] = useState(null);
-  const [e2eUnavailable, setE2eUnavailable] = useState(false);
   const [avatarMap, setAvatarMap] = useState({});
-  const [callSecurityCode, setCallSecurityCode] = useState(null);
   const [isCallMinimized, setIsCallMinimized] = useState(false);
   const [isConfMinimized, setIsConfMinimized] = useState(false);
   const [newlyCreatedRoomId, setNewlyCreatedRoomId] = useState(null);
@@ -62,26 +53,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   const [showStoryUpload, setShowStoryUpload] = useState(false);
   const [storyViewerAuthor, setStoryViewerAuthor] = useState(null);
   const [disappearingTimers, setDisappearingTimers] = useState({});
-  // E2E encryption opt-in: only rooms explicitly enabled by user
-  const [e2eRooms, setE2eRooms] = useState(() => {
-    try {
-      const saved = localStorage.getItem('e2eRooms');
-      return saved ? new Set(JSON.parse(saved)) : new Set();
-    } catch { return new Set(); }
-  });
-  // E2E invitation popup state: { roomId, sender, roomName }
-  const [e2eInvite, setE2eInvite] = useState(null);
-  // Track who declined E2E per room: { roomId: Set<username> }
-  const [e2eDeclined, setE2eDeclined] = useState(() => {
-    try {
-      const saved = localStorage.getItem('e2eDeclined');
-      if (!saved) return {};
-      const parsed = JSON.parse(saved);
-      const result = {};
-      for (const [k, v] of Object.entries(parsed)) result[k] = new Set(v);
-      return result;
-    } catch { return {}; }
-  });
+
   const wsRef = useRef(null);
   const loadedRooms = useRef(new Set());
   const activeRoomIdRef = useRef(null);
@@ -92,7 +64,6 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   const unmounted = useRef(false);
   const documentVisible = useRef(true);
   const notifSound = useRef(null);
-  const pendingSent = useRef([]); // queue for restoring own encrypted message content
   const roomsRef = useRef([]); // always-current rooms for ws.onmessage closure
 
   // WebRTC calls hook
@@ -310,20 +281,6 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
     fetchContacts();
     unmounted.current = false;
 
-    // Initialize E2E encryption
-    e2eManager.initialize(token).then(() => {
-      setE2eReady(e2eManager.isReady());
-      // Clean up old pending sent entries (older than 1 hour)
-      cryptoStore.getAll('sentMessages').then(all => {
-        const cutoff = Date.now() - 60 * 60 * 1000;
-        for (const s of all) {
-          if (s.id && s.id.startsWith('pending_') && (s.savedAt || 0) < cutoff) {
-            cryptoStore.delete('sentMessages', s.id).catch(() => {});
-          }
-        }
-      }).catch(() => {});
-    }).catch(err => console.warn('[E2E] Init error:', err));
-
     function connectWs() {
       if (unmounted.current) return;
 
@@ -447,80 +404,6 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
         return;
       }
 
-      // Handle E2E_INVITE — show invitation modal
-      if (msg.type === 'E2E_INVITE') {
-        const roomName = msg.extra?.roomName || msg.roomId;
-        setE2eInvite({ roomId: msg.roomId, sender: msg.sender, roomName });
-        // System message
-        setMessagesByRoom(prev => ({
-          ...prev,
-          [msg.roomId]: [...(prev[msg.roomId] || []), {
-            id: `e2e-sys-${Date.now()}`,
-            type: 'JOIN',
-            content: `🔒 ${msg.sender} включил(а) шифрование`,
-            sender: 'system',
-            timestamp: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
-            roomId: msg.roomId,
-          }],
-        }));
-        return;
-      }
-
-      // Handle E2E_ACCEPT — show system notification
-      if (msg.type === 'E2E_ACCEPT') {
-        setMessagesByRoom(prev => ({
-          ...prev,
-          [msg.roomId]: [...(prev[msg.roomId] || []), {
-            id: `e2e-sys-${Date.now()}`,
-            type: 'JOIN',
-            content: `🔒 ${msg.sender} присоединился(-ась) к секретному чату`,
-            sender: 'system',
-            timestamp: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
-            roomId: msg.roomId,
-          }],
-        }));
-        // Remove from declined if was there
-        setE2eDeclined(prev => {
-          const next = { ...prev };
-          if (next[msg.roomId]) {
-            const s = new Set(next[msg.roomId]);
-            s.delete(msg.sender);
-            next[msg.roomId] = s;
-            const toSave = {};
-            for (const [k, v] of Object.entries(next)) toSave[k] = [...v];
-            localStorage.setItem('e2eDeclined', JSON.stringify(toSave));
-          }
-          return next;
-        });
-        return;
-      }
-
-      // Handle E2E_DECLINE — show system notification, track declined user
-      if (msg.type === 'E2E_DECLINE') {
-        setMessagesByRoom(prev => ({
-          ...prev,
-          [msg.roomId]: [...(prev[msg.roomId] || []), {
-            id: `e2e-sys-${Date.now()}`,
-            type: 'JOIN',
-            content: `🔓 ${msg.sender} не участвует в секретном чате`,
-            sender: 'system',
-            timestamp: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
-            roomId: msg.roomId,
-          }],
-        }));
-        setE2eDeclined(prev => {
-          const next = { ...prev };
-          if (!next[msg.roomId]) next[msg.roomId] = new Set();
-          next[msg.roomId] = new Set(next[msg.roomId]);
-          next[msg.roomId].add(msg.sender);
-          const toSave = {};
-          for (const [k, v] of Object.entries(next)) toSave[k] = [...v];
-          localStorage.setItem('e2eDeclined', JSON.stringify(toSave));
-          return next;
-        });
-        return;
-      }
-
       // Handle TYPING indicator
       if (msg.type === 'TYPING') {
         const rid = msg.roomId;
@@ -598,15 +481,6 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
         return;
       }
 
-      // Handle GROUP_KEY — E2E group key distribution
-      if (msg.type === 'GROUP_KEY') {
-        const extra = msg.extra || {};
-        if (extra.roomId && msg.sender) {
-          await groupCrypto.receiveKey(msg.sender, extra.roomId, msg);
-        }
-        return;
-      }
-
       // Handle AVATAR_UPDATE — update avatarMap for all users in real time
       if (msg.type === 'AVATAR_UPDATE') {
         setAvatarMap(prev => ({ ...prev, [msg.sender]: msg.content || '' }));
@@ -627,108 +501,6 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
 
       const roomId = msg.roomId;
       if (!roomId) return; // ignore messages without room
-
-      // Decrypt E2E message if encrypted
-      if (msg.encrypted && msg.sender !== username) {
-        let cacheHit = false;
-
-        // FIX #2: Check plaintext cache FIRST — prevents re-decryption on
-        // WebSocket reconnect / duplicate delivery, which would corrupt the
-        // Double Ratchet session (OTK consumed, ratchet advanced, etc.)
-        if (msg.id) {
-          try {
-            const cached = await cryptoStore.getDecryptedContent(msg.id);
-            if (cached) {
-              msg.content = cached.content;
-              if (cached.fileKey) msg._fileKey = cached.fileKey;
-              if (cached.thumbnailKey) msg._thumbnailKey = cached.thumbnailKey;
-              cacheHit = true;
-            }
-          } catch { /* cache miss */ }
-        }
-
-        if (!cacheHit) {
-          try {
-            let result;
-            if (msg.groupEncrypted) {
-              result = await groupCrypto.decrypt(roomId, msg.encryptedContent, msg.iv);
-            } else {
-              result = await e2eManager.decrypt(msg.sender, msg);
-            }
-            if (result.error) {
-              msg.content = '🔒 Не удалось расшифровать';
-              msg._decryptError = true;
-            } else {
-              msg.content = result.text;
-              if (result.fileKey) msg._fileKey = result.fileKey;
-              if (result.thumbnailKey) msg._thumbnailKey = result.thumbnailKey;
-              if (msg.id) {
-                cryptoStore.saveDecryptedContent(msg.id, result.text, result.fileKey, result.thumbnailKey).catch(() => {});
-              }
-            }
-          } catch (err) {
-            console.error('[E2E] Decrypt error:', err);
-            msg.content = '🔒 Не удалось расшифровать';
-            msg._decryptError = true;
-          }
-        }
-      }
-
-      // Restore own encrypted message from pending queue & persist locally
-      if (msg.encrypted && msg.sender === username) {
-        const idx = pendingSent.current.findIndex(p => p.roomId === msg.roomId);
-        if (idx !== -1) {
-          const pending = pendingSent.current[idx];
-          msg.content = pending.content;
-          msg._fileKey = pending.fileKey;
-          msg._thumbnailKey = pending.thumbnailKey;
-          pendingSent.current.splice(idx, 1);
-          // Persist to IndexedDB so history reload works
-          if (msg.id) {
-            cryptoStore.saveSentContent(msg.id, pending.content, pending.fileKey, pending.thumbnailKey).catch(() => {});
-            cryptoStore.saveDecryptedContent(msg.id, pending.content, pending.fileKey, pending.thumbnailKey).catch(() => {});
-          }
-        } else if (msg.id) {
-          // FIX #4: pendingSent ref may be empty after component remount —
-          // fall back to IndexedDB caches (sentMessages / decryptedMessages)
-          try {
-            let found = false;
-            const cached = await cryptoStore.getSentContent(msg.id);
-            if (cached) {
-              msg.content = cached.content;
-              if (cached.fileKey) msg._fileKey = cached.fileKey;
-              if (cached.thumbnailKey) msg._thumbnailKey = cached.thumbnailKey;
-              found = true;
-            }
-            if (!found) {
-              const dcached = await cryptoStore.getDecryptedContent(msg.id);
-              if (dcached) {
-                msg.content = dcached.content;
-                if (dcached.fileKey) msg._fileKey = dcached.fileKey;
-                if (dcached.thumbnailKey) msg._thumbnailKey = dcached.thumbnailKey;
-                found = true;
-              }
-            }
-            // Last resort: search for pending_${roomId}_* entries saved before send
-            if (!found) {
-              const allSent = await cryptoStore.getAll('sentMessages');
-              const prefix = `pending_${msg.roomId}_`;
-              const pending = allSent
-                .filter(s => s.id && s.id.startsWith(prefix))
-                .sort((a, b) => (a.savedAt || 0) - (b.savedAt || 0))[0];
-              if (pending) {
-                msg.content = pending.content;
-                if (pending.fileKey) msg._fileKey = pending.fileKey;
-                if (pending.thumbnailKey) msg._thumbnailKey = pending.thumbnailKey;
-                // Migrate to real ID and clean up pending entry
-                cryptoStore.saveSentContent(msg.id, pending.content, pending.fileKey, pending.thumbnailKey).catch(() => {});
-                cryptoStore.saveDecryptedContent(msg.id, pending.content, pending.fileKey, pending.thumbnailKey).catch(() => {});
-                cryptoStore.delete('sentMessages', pending.id).catch(() => {});
-              }
-            }
-          } catch { /* best effort */ }
-        }
-      }
 
       setMessagesByRoom((prev) => ({
         ...prev,
@@ -841,115 +613,6 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
       if (!res.ok) throw new Error(res.status);
       const data = await res.json();
       if (data.length > 0) {
-        // Decrypt / restore E2E messages in history
-        for (const msg of data) {
-          if (!msg.encrypted) continue;
-          if (msg.sender !== username) {
-            // Check local cache FIRST to avoid re-decrypting (prevents session
-            // corruption when the same initial X3DH message is processed twice —
-            // once in real-time and again from history load)
-            if (msg.id) {
-              try {
-                const cached = await cryptoStore.getDecryptedContent(msg.id);
-                if (cached) {
-                  msg.content = cached.content;
-                  msg._fileKey = cached.fileKey;
-                  msg._thumbnailKey = cached.thumbnailKey;
-                  continue;
-                }
-              } catch { /* cache miss — proceed to decrypt */ }
-            }
-            try {
-              let result;
-              if (msg.groupEncrypted) {
-                // Group E2E — decrypt with shared room key
-                result = await groupCrypto.decrypt(roomId, msg.encryptedContent, msg.iv);
-              } else if (e2eManager.isReady()) {
-                // Private E2E — decrypt via Double Ratchet
-                result = await e2eManager.decrypt(msg.sender, msg);
-              }
-              if (!result || result.error) {
-                // Decrypt failed — try local plaintext cache
-                try {
-                  const cached = await cryptoStore.getDecryptedContent(msg.id);
-                  if (cached) {
-                    msg.content = cached.content;
-                    msg._fileKey = cached.fileKey;
-                    msg._thumbnailKey = cached.thumbnailKey;
-                  } else {
-                    msg.content = '🔒 Не удалось расшифровать';
-                    msg._decryptError = true;
-                  }
-                } catch {
-                  msg.content = '🔒 Не удалось расшифровать';
-                  msg._decryptError = true;
-                }
-              } else {
-                msg.content = result.text;
-                if (result.fileKey) msg._fileKey = result.fileKey;
-                if (result.thumbnailKey) msg._thumbnailKey = result.thumbnailKey;
-                // Cache decrypted plaintext for future history loads
-                if (msg.id) {
-                  cryptoStore.saveDecryptedContent(msg.id, result.text, result.fileKey, result.thumbnailKey).catch(() => {});
-                }
-              }
-            } catch {
-              // Decrypt threw — try local plaintext cache
-              try {
-                const cached = await cryptoStore.getDecryptedContent(msg.id);
-                if (cached) {
-                  msg.content = cached.content;
-                  msg._fileKey = cached.fileKey;
-                  msg._thumbnailKey = cached.thumbnailKey;
-                } else {
-                  msg.content = '🔒 Не удалось расшифровать';
-                  msg._decryptError = true;
-                }
-              } catch {
-                msg.content = '🔒 Не удалось расшифровать';
-                msg._decryptError = true;
-              }
-            }
-          } else {
-            // Own messages — restore from local IndexedDB cache
-            try {
-              let found = false;
-              const cached = await cryptoStore.getSentContent(msg.id);
-              if (cached) {
-                msg.content = cached.content;
-                msg._fileKey = cached.fileKey;
-                msg._thumbnailKey = cached.thumbnailKey;
-                found = true;
-              }
-              if (!found) {
-                const dcached = await cryptoStore.getDecryptedContent(msg.id);
-                if (dcached) {
-                  msg.content = dcached.content;
-                  msg._fileKey = dcached.fileKey;
-                  msg._thumbnailKey = dcached.thumbnailKey;
-                  found = true;
-                }
-              }
-              // Last resort: search pending entries
-              if (!found && roomId) {
-                const allSent = await cryptoStore.getAll('sentMessages');
-                const prefix = `pending_${roomId}_`;
-                const pending = allSent
-                  .filter(s => s.id && s.id.startsWith(prefix))
-                  .sort((a, b) => (a.savedAt || 0) - (b.savedAt || 0))[0];
-                if (pending) {
-                  msg.content = pending.content;
-                  if (pending.fileKey) msg._fileKey = pending.fileKey;
-                  if (pending.thumbnailKey) msg._thumbnailKey = pending.thumbnailKey;
-                  // Migrate to real ID
-                  cryptoStore.saveSentContent(msg.id, pending.content, pending.fileKey, pending.thumbnailKey).catch(() => {});
-                  cryptoStore.saveDecryptedContent(msg.id, pending.content, pending.fileKey, pending.thumbnailKey).catch(() => {});
-                  cryptoStore.delete('sentMessages', pending.id).catch(() => {});
-                }
-              }
-            } catch { /* ignore */ }
-          }
-        }
         setMessagesByRoom((prev) => ({ ...prev, [roomId]: data }));
       }
     } catch (err) {
@@ -1034,74 +697,6 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
     }
     if (mentions) {
       msg.mentions = mentions;
-    }
-
-    // E2E encrypt for private rooms (only if user enabled E2E for this room)
-    const room = rooms.find(r => r.id === activeRoomId);
-    if (room?.type === 'PRIVATE' && e2eReady && e2eRooms.has(activeRoomId)) {
-      const peerUser = getPeerUsername(room);
-      if (peerUser) {
-        try {
-          const peerHasE2E = await e2eManager.peerHasE2E(token, peerUser);
-          if (peerHasE2E) {
-            const fileE2E = fileData?.fileKey
-              ? { fileKey: fileData.fileKey, ...(fileData.thumbnailKey ? { thumbnailKey: fileData.thumbnailKey } : {}) }
-              : undefined;
-            const encrypted = await e2eManager.encrypt(peerUser, content || '', token, fileE2E);
-            Object.assign(msg, encrypted);
-            // Strip plaintext — server must never see the real content
-            msg.content = '\ud83d\udd12';
-            if (msg.replyToContent) msg.replyToContent = '\ud83d\udd12';
-            // Queue for restoring own message when server echoes it back
-            const sentText = content || '';
-            const sentFK = fileData?.fileKey || null;
-            const sentTK = fileData?.thumbnailKey || null;
-            pendingSent.current.push({
-              roomId: activeRoomId,
-              content: sentText,
-              fileKey: sentFK,
-              thumbnailKey: sentTK,
-            });
-            // FIX #4: Persist plaintext immediately (survives page refresh)
-            const pendingKey = `pending_${activeRoomId}_${Date.now()}`;
-            cryptoStore.saveSentContent(pendingKey, sentText, sentFK, sentTK).catch(() => {});
-          }
-        } catch (err) {
-          console.warn('[E2E] Encrypt failed, sending plaintext:', err);
-        }
-      }
-    }
-
-    // E2E encrypt for group rooms (only if user enabled E2E for this room)
-    if (room?.type === 'ROOM' && e2eReady && e2eRooms.has(activeRoomId)) {
-      try {
-        // Generate group key if we don't have one yet, and distribute
-        if (!(await groupCrypto.hasGroupKey(activeRoomId))) {
-          await groupCrypto.generateGroupKey(activeRoomId);
-          await groupCrypto.distributeKey(wsRef.current, activeRoomId, room.members || [], username, token);
-        }
-        const payload = fileData?.fileKey
-          ? JSON.stringify({ text: content || '', fileKey: fileData.fileKey, ...(fileData.thumbnailKey ? { thumbnailKey: fileData.thumbnailKey } : {}) })
-          : (content || '');
-        const encrypted = await groupCrypto.encrypt(activeRoomId, payload);
-        Object.assign(msg, encrypted);
-        msg.content = '\ud83d\udd12';
-        if (msg.replyToContent) msg.replyToContent = '\ud83d\udd12';
-        const gText = content || '';
-        const gFK = fileData?.fileKey || null;
-        const gTK = fileData?.thumbnailKey || null;
-        pendingSent.current.push({
-          roomId: activeRoomId,
-          content: gText,
-          fileKey: gFK,
-          thumbnailKey: gTK,
-        });
-        // FIX #4: Persist plaintext immediately (group messages)
-        const gPendingKey = `pending_${activeRoomId}_${Date.now()}`;
-        cryptoStore.saveSentContent(gPendingKey, gText, gFK, gTK).catch(() => {});
-      } catch (err) {
-        console.warn('[GroupE2E] Encrypt failed, sending plaintext:', err);
-      }
     }
 
     wsRef.current.send(JSON.stringify(msg));
@@ -1411,146 +1006,6 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
     return parts.find((p) => p !== username) || null;
   };
 
-  // E2E is now opt-in: only active if user explicitly enabled it for this room
-  const isRoomE2E = activeRoomId && e2eRooms.has(activeRoomId);
-  const isPrivateE2E = activeRoom?.type === 'PRIVATE' && e2eReady && isRoomE2E;
-  const isGroupE2E = activeRoom?.type === 'ROOM' && e2eReady && isRoomE2E;
-  const isE2E = isPrivateE2E || isGroupE2E;
-
-  const toggleE2E = useCallback((roomId) => {
-    const wasEnabled = e2eRooms.has(roomId);
-    setE2eRooms(prev => {
-      const next = new Set(prev);
-      if (next.has(roomId)) {
-        next.delete(roomId);
-      } else {
-        next.add(roomId);
-      }
-      localStorage.setItem('e2eRooms', JSON.stringify([...next]));
-      return next;
-    });
-    // When enabling E2E, send E2E_INVITE to all room members
-    if (!wasEnabled && wsRef.current?.readyState === WebSocket.OPEN) {
-      const room = rooms.find(r => r.id === roomId);
-      wsRef.current.send(JSON.stringify({
-        type: 'E2E_INVITE',
-        roomId,
-        sender: username,
-        extra: { roomName: room?.name || roomId },
-      }));
-      // Add system message locally
-      setMessagesByRoom(prev => ({
-        ...prev,
-        [roomId]: [...(prev[roomId] || []), {
-          id: `e2e-sys-${Date.now()}`,
-          type: 'JOIN',
-          content: `🔒 ${username} включил(а) шифрование`,
-          sender: 'system',
-          timestamp: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
-          roomId,
-        }],
-      }));
-    }
-  }, [e2eRooms, rooms, username]);
-
-  // Accept E2E invite — enable E2E for this room + notify others
-  const acceptE2EInvite = useCallback((roomId) => {
-    setE2eRooms(prev => {
-      const next = new Set(prev);
-      next.add(roomId);
-      localStorage.setItem('e2eRooms', JSON.stringify([...next]));
-      return next;
-    });
-    // Remove from declined if was declined before
-    setE2eDeclined(prev => {
-      const next = { ...prev };
-      if (next[roomId]) {
-        const s = new Set(next[roomId]);
-        s.delete(username);
-        next[roomId] = s;
-        const toSave = {};
-        for (const [k, v] of Object.entries(next)) toSave[k] = [...v];
-        localStorage.setItem('e2eDeclined', JSON.stringify(toSave));
-      }
-      return next;
-    });
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({
-        type: 'E2E_ACCEPT',
-        roomId,
-        sender: username,
-      }));
-    }
-    // System message locally
-    setMessagesByRoom(prev => ({
-      ...prev,
-      [roomId]: [...(prev[roomId] || []), {
-        id: `e2e-sys-${Date.now()}`,
-        type: 'JOIN',
-        content: `🔒 ${username} присоединился(-ась) к секретному чату`,
-        sender: 'system',
-        timestamp: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
-        roomId,
-      }],
-    }));
-    setE2eInvite(null);
-  }, [username]);
-
-  // Decline E2E invite
-  const declineE2EInvite = useCallback((roomId) => {
-    setE2eDeclined(prev => {
-      const next = { ...prev };
-      if (!next[roomId]) next[roomId] = new Set();
-      next[roomId] = new Set(next[roomId]);
-      next[roomId].add(username);
-      const toSave = {};
-      for (const [k, v] of Object.entries(next)) toSave[k] = [...v];
-      localStorage.setItem('e2eDeclined', JSON.stringify(toSave));
-      return next;
-    });
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({
-        type: 'E2E_DECLINE',
-        roomId,
-        sender: username,
-      }));
-    }
-    // System message locally
-    setMessagesByRoom(prev => ({
-      ...prev,
-      [roomId]: [...(prev[roomId] || []), {
-        id: `e2e-sys-${Date.now()}`,
-        type: 'JOIN',
-        content: `🔓 ${username} не участвует в секретном чате`,
-        sender: 'system',
-        timestamp: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
-        roomId,
-      }],
-    }));
-    setE2eInvite(null);
-  }, [username]);
-
-  const showSecurityCode = async () => {
-    const peer = getPeerUsername(activeRoom);
-    if (!peer) return;
-    try {
-      const code = await e2eManager.getSecurityCode(peer, token);
-      if (code) {
-        setSecurityCode(code);
-        setSecurityCodePeer(peer);
-        setE2eUnavailable(false);
-      } else {
-        setSecurityCode(null);
-        setSecurityCodePeer(peer);
-        setE2eUnavailable(true);
-      }
-    } catch {
-      setSecurityCode(null);
-      setSecurityCodePeer(peer);
-      setE2eUnavailable(true);
-    }
-  };
-
   // Upgrade 1:1 call → conference: create conference, invite peer, close old 1:1 PC
   const upgradeToConference = useCallback(async () => {
     if (webrtc.callState !== 'active') return;
@@ -1587,17 +1042,12 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
     }
   }, [webrtc, conference, wsRef]);
 
-  // Compute security code when call becomes active (Bug 5)
+  // Reset call minimize when call ends
   useEffect(() => {
-    if (webrtc.callState === 'active' && webrtc.callPeer && e2eReady) {
-      e2eManager.getSecurityCode(webrtc.callPeer, token)
-        .then(code => setCallSecurityCode(code || null))
-        .catch(() => setCallSecurityCode(null));
-    } else if (webrtc.callState === 'idle') {
-      setCallSecurityCode(null);
+    if (webrtc.callState === 'idle') {
       setIsCallMinimized(false);
     }
-  }, [webrtc.callState, webrtc.callPeer, e2eReady, token]);
+  }, [webrtc.callState]);
 
   // Reset conference minimize when conference ends
   useEffect(() => {
@@ -1694,10 +1144,6 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           allUsers={allUsers}
           typingUsers={activeTypingUsers}
           onTyping={sendTyping}
-          isE2E={isE2E}
-          e2eEnabled={isRoomE2E}
-          onToggleE2E={() => toggleE2E(activeRoomId)}
-          onShowSecurityCode={showSecurityCode}
           avatarMap={avatarMap}
           onStartCall={(type) => {
             const peer = getPeerUsername(activeRoom);
@@ -1722,10 +1168,6 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           rooms={rooms}
           disappearingTimer={disappearingTimers[activeRoomId] || 0}
           onSetDisappearingTimer={(seconds) => setDisappearingTimer(activeRoomId, seconds)}
-          e2eInvite={e2eInvite?.roomId === activeRoomId ? e2eInvite : null}
-          onAcceptE2E={() => acceptE2EInvite(activeRoomId)}
-          onDeclineE2E={() => declineE2EInvite(activeRoomId)}
-          e2eDeclined={e2eDeclined[activeRoomId] || new Set()}
         />
       )}
       {showAddMembersPanel && (
@@ -1763,31 +1205,8 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           </div>
         </div>
       )}
-      {/* E2E invite popup (when invite is for a non-active room or user hasn't responded yet) */}
-      {e2eInvite && e2eInvite.roomId !== activeRoomId && (
-        <div className="group-invite-overlay">
-          <div className="group-invite-popup e2e-invite-popup">
-            <div className="group-invite-icon">🔒</div>
-            <h3 className="group-invite-title">Секретный чат</h3>
-            <p className="group-invite-text">
-              <strong>{e2eInvite.sender}</strong> включил(а) шифрование в чате <strong>«{e2eInvite.roomName}»</strong>
-            </p>
-            <p className="e2e-invite-desc">Хотите присоединиться к секретному чату?</p>
-            <div className="group-invite-actions">
-              <button className="group-invite-accept" onClick={() => acceptE2EInvite(e2eInvite.roomId)}>Да</button>
-              <button className="group-invite-decline" onClick={() => declineE2EInvite(e2eInvite.roomId)}>Нет</button>
-            </div>
-          </div>
-        </div>
-      )}
-      {(securityCode || e2eUnavailable) && (
-        <SecurityCodeModal
-          securityCode={securityCode}
-          peerUsername={securityCodePeer}
-          unavailable={e2eUnavailable}
-          onClose={() => { setSecurityCode(null); setSecurityCodePeer(null); setE2eUnavailable(false); }}
-        />
-      )}
+
+
       {replyNotification && (
         <ReplyNotificationPopup
           notification={replyNotification}
@@ -1859,7 +1278,6 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           onEndCall={webrtc.endCall}
           onToggleMute={webrtc.toggleMute}
           onToggleVideo={webrtc.toggleVideo}
-          securityCode={callSecurityCode}
           onUpgradeToConference={upgradeToConference}
           isMinimized={isCallMinimized}
           onMinimize={() => setIsCallMinimized(true)}

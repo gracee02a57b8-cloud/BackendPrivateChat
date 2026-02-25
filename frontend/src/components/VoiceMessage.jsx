@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import useDecryptedUrl from '../hooks/useDecryptedUrl';
 
 /**
  * VoiceMessage — Telegram-style voice message player.
@@ -7,8 +6,8 @@ import useDecryptedUrl from '../hooks/useDecryptedUrl';
  * Features: play/pause, waveform visualization with progress,
  * speed toggle (1×, 1.5×, 2×), duration display.
  */
-export default function VoiceMessage({ fileUrl, duration, waveformData, isOwn, fileKey }) {
-  const audioUrl = useDecryptedUrl(fileUrl, fileKey, 'audio/webm');
+export default function VoiceMessage({ fileUrl, duration, waveformData, isOwn }) {
+  const audioUrl = fileUrl;
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0); // 0..1
   const [currentTime, setCurrentTime] = useState(0);
