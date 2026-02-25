@@ -179,6 +179,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
   const [showForwardPicker, setShowForwardPicker] = useState(false);
   const [forwardMessages, setForwardMessages] = useState([]);
   const [showDisappearingPicker, setShowDisappearingPicker] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searchIndex, setSearchIndex] = useState(0);
@@ -798,9 +799,14 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
     if (isImage) {
       return (
         <div className="file-attachment image-attachment">
-          <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer">
-            <img src={msg.fileUrl} alt={msg.fileName || 'image'} loading="lazy" />
-          </a>
+          <img
+            src={msg.fileUrl}
+            alt={msg.fileName || 'image'}
+            loading="lazy"
+            decoding="async"
+            style={{ cursor: 'zoom-in' }}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLightboxImage({ url: msg.fileUrl, name: msg.fileName }); }}
+          />
           <div className="file-info">
             <span className="file-name">{msg.fileName}</span>
             <span className="file-size">{formatFileSize(msg.fileSize)}</span>
@@ -1018,9 +1024,9 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
         {messages.length === 0 && (
           <div className="empty-chat">
             <div className="empty-chat-content">
-              <span className="empty-chat-icon"><MessageSquare size={40} /></span>
+              <span className="empty-chat-icon" style={{ fontSize: '3rem' }}>💬</span>
               <p>Нет сообщений</p>
-              <span className="empty-chat-hint">Начните общение прямо сейчас!</span>
+              <span className="empty-chat-hint">Напишите первое сообщение — начните общение!</span>
             </div>
           </div>
         )}
@@ -1122,7 +1128,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
                             {disappearingTimer > 0 && <span className="disappearing-badge"><Timer size={10} /></span>}
                             {msg.timestamp}
                             {isOwn && (msg.type === 'CHAT' || msg.type === 'VOICE' || msg.type === 'VIDEO_CIRCLE') && (
-                              <span className={`msg-check ${msg.status === 'READ' ? 'read' : ''}`}>
+                              <span className={`msg-check ${msg.status === 'READ' ? 'read' : msg.status === 'DELIVERED' ? 'delivered' : ''}`}>
                                 {msg.status === 'READ' ? <CheckCheck size={14} /> : msg.status === 'DELIVERED' ? <CheckCheck size={14} /> : <Check size={14} />}
                               </span>
                             )}
@@ -1138,7 +1144,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
                           {disappearingTimer > 0 && <span className="disappearing-badge"><Timer size={10} /></span>}
                           {msg.timestamp}
                           {isOwn && (msg.type === 'CHAT' || msg.type === 'VOICE' || msg.type === 'VIDEO_CIRCLE') && (
-                            <span className={`msg-check ${msg.status === 'READ' ? 'read' : ''}`}>
+                            <span className={`msg-check ${msg.status === 'READ' ? 'read' : msg.status === 'DELIVERED' ? 'delivered' : ''}`}>
                               {msg.status === 'READ' ? <CheckCheck size={14} /> : msg.status === 'DELIVERED' ? <CheckCheck size={14} /> : <Check size={14} />}
                             </span>
                           )}
@@ -1408,6 +1414,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
             </button>
           )}
         </div>
+        <div className="send-shortcut-hint">Ctrl + Enter — отправить</div>
         </>
         )}
       </form>
@@ -1508,6 +1515,17 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Image Lightbox */}
+      {lightboxImage && (
+        <div className="lightbox-overlay" onClick={() => setLightboxImage(null)}>
+          <img src={lightboxImage.url} alt={lightboxImage.name || 'image'} onClick={e => e.stopPropagation()} />
+          <button className="lightbox-close" onClick={() => setLightboxImage(null)} aria-label="Закрыть">
+            <X size={22} />
+          </button>
+          {lightboxImage.name && <span className="lightbox-filename">{lightboxImage.name}</span>}
         </div>
       )}
     </div>

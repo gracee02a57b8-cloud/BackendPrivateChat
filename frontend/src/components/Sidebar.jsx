@@ -694,7 +694,20 @@ export default function Sidebar({
                   ))}
                 </>
               )}
-              {rooms.length === 0 && !searchFilter.trim() && (
+              {rooms.length === 0 && !searchFilter.trim() && !connected && (
+                <>
+                  {[...Array(6)].map((_, i) => (
+                    <div className="skeleton-chat-item" key={`sk-${i}`}>
+                      <div className="skeleton-avatar" />
+                      <div className="skeleton-lines">
+                        <div className="skeleton-line" style={{ width: `${60 + (i % 3) * 15}%` }} />
+                        <div className="skeleton-line short" style={{ width: `${35 + (i % 4) * 10}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+              {rooms.length === 0 && !searchFilter.trim() && connected && (
                 <div className="sb-empty"><span><MessageSquare size={32} /></span><p>Нет чатов</p></div>
               )}
               {rooms.length > 0 && getSortedRooms().length === 0 && chatFilter === 'unread' && (
