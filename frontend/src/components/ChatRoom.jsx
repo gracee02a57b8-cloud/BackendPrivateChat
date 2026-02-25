@@ -838,7 +838,7 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
         {/* Back button (mobile) */}
         <button className="chat-header-back" data-testid="chat-header-back" onClick={onBack} aria-label="Назад"><ArrowLeft size={20} /></button>
 
-        {/* Header avatar */}
+        {/* Header avatar with online dot */}
         {activeRoom?.type === 'SAVED_MESSAGES' && (
           <div className="chat-header-avatar sb-saved-avatar">
             <Bookmark size={20} />
@@ -847,9 +847,13 @@ export default function ChatRoom({ id, messages, onSendMessage, onEditMessage, o
         {activeRoom?.type === 'PRIVATE' && (() => {
           const otherUser = getOtherUserInPM();
           const av = avatarMap[otherUser];
+          const isOnlineNow = otherUser && onlineUsers?.includes(otherUser);
           return (
-            <div className="chat-header-avatar chat-header-clickable" onClick={() => setShowUserProfile(true)} style={{ background: av ? 'transparent' : getAvatarColor(otherUser || '') }}>
-              {av ? <img src={av} alt="" className="chat-header-avatar-img" /> : getInitials(otherUser || '?')}
+            <div className="chat-header-avatar-wrap" onClick={() => setShowUserProfile(true)}>
+              <div className="chat-header-avatar chat-header-clickable" style={{ background: av ? 'transparent' : getAvatarColor(otherUser || '') }}>
+                {av ? <img src={av} alt="" className="chat-header-avatar-img" /> : getInitials(otherUser || '?')}
+              </div>
+              {isOnlineNow && <span className="chat-header-online-dot" />}
             </div>
           );
         })()}
