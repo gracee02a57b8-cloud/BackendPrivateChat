@@ -78,6 +78,32 @@ function App() {
     setView('chat');
   };
 
+  // Auto-relogin when token expires (403) — uses remembered credentials
+  const handleTokenExpired = async () => {
+    const curUser = localStorage.getItem('username');
+    if (!curUser) { handleLogout(); return; }
+    try {
+      const remembered = JSON.parse(localStorage.getItem('barsik_remembered') || '{}');
+      const pwd = remembered[curUser];
+      if (!pwd) { handleLogout(); return; }
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: curUser, password: pwd }),
+      });
+      if (!res.ok) { handleLogout(); return; }
+      const data = await res.json();
+      if (data.token) {
+        handleLogin(data.token, data.username, data.role, data.avatarUrl, data.tag);
+        console.log('[Auth] Token auto-refreshed for', curUser);
+      } else {
+        handleLogout();
+      }
+    } catch {
+      handleLogout();
+    }
+  };
+
   const handleAddAccount = () => {
     // Save current account to the list before logging out
     const curUser = localStorage.getItem('username');
@@ -175,6 +201,7 @@ function App() {
       avatarUrl={avatarUrl}
       onAvatarChange={setAvatarUrl}
       onLogout={handleLogout}
+      onTokenExpired={handleTokenExpired}
       onAddAccount={handleAddAccount}
       onSwitchAccount={handleSwitchAccount}
       savedAccounts={savedAccounts}

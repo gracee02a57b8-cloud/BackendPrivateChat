@@ -22,7 +22,7 @@ import { hapticTap } from '../utils/capacitor';
 
 const WS_URL = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
 
-export default function Chat({ token, username, avatarUrl, onAvatarChange, onLogout, onAddAccount, onSwitchAccount, savedAccounts, joinRoomId, joinConfId, onShowNews }) {
+export default function Chat({ token, username, avatarUrl, onAvatarChange, onLogout, onTokenExpired, onAddAccount, onSwitchAccount, savedAccounts, joinRoomId, joinConfId, onShowNews }) {
   const [rooms, setRooms] = useState([]);
   const [activeRoomId, setActiveRoomIdRaw] = useState(() => {
     const saved = sessionStorage.getItem('activeRoomId');
@@ -66,6 +66,22 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   const documentVisible = useRef(true);
   const notifSound = useRef(null);
   const roomsRef = useRef([]); // always-current rooms for ws.onmessage closure
+  const tokenExpiredHandled = useRef(false); // prevent double-firing token refresh
+
+  // Authenticated fetch: detects 403 (expired token) and triggers auto-relogin
+  const authFetch = useCallback((url, options = {}) => {
+    return fetch(url, options).then(res => {
+      if (res.status === 401 || res.status === 403) {
+        if (!tokenExpiredHandled.current) {
+          tokenExpiredHandled.current = true;
+          console.warn('[Auth] Token expired, attempting re-login...');
+          onTokenExpired?.();
+        }
+        throw new Error('TOKEN_EXPIRED');
+      }
+      return res;
+    });
+  }, [onTokenExpired]);
 
   // WebRTC calls hook
   const webrtc = useWebRTC({ wsRef, username, token });
@@ -314,7 +330,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
         reconnectAttempts.current = 0;
         fetchUsers();
         if (joinRoomId) {
-          fetch(`/api/rooms/join/${joinRoomId}`, {
+          authFetch(`/api/rooms/join/${joinRoomId}`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}` },
           })
@@ -581,6 +597,15 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
       setConnected(false);
       // Code 4001 = replaced by new session on same device, don't reconnect
       if (e.code === 4001) return;
+      // Code 1003 (NOT_ACCEPTABLE) or reason "Invalid token" = expired JWT, trigger re-login
+      if (e.code === 1003 || (e.reason && e.reason.includes('Invalid token'))) {
+        console.warn('[WS] Token rejected by server, attempting re-login...');
+        if (!tokenExpiredHandled.current) {
+          tokenExpiredHandled.current = true;
+          onTokenExpired?.();
+        }
+        return;
+      }
       // Auto-reconnect with exponential backoff (no limit, max 60s delay)
       if (!unmounted.current) {
         const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 60000);
@@ -611,19 +636,19 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   }, [token]);
 
   const fetchRooms = () => {
-    fetch('/api/rooms', {
+    authFetch('/api/rooms', {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => { if (!res.ok) throw new Error(res.status); return res.json(); })
       .then((data) => setRooms(data))
-      .catch(console.error);
+      .catch(e => { if (e.message !== 'TOKEN_EXPIRED') console.error(e); });
   };
 
   const loadRoomHistory = async (roomId) => {
     if (loadedRooms.current.has(roomId)) return;
     loadedRooms.current.add(roomId);
     try {
-      const res = await fetch(`/api/rooms/${roomId}/history`, {
+      const res = await authFetch(`/api/rooms/${roomId}/history`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error(res.status);
@@ -632,23 +657,23 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
         setMessagesByRoom((prev) => ({ ...prev, [roomId]: data }));
       }
     } catch (err) {
-      console.error('[Chat] loadRoomHistory error:', err);
+      if (err.message !== 'TOKEN_EXPIRED') console.error('[Chat] loadRoomHistory error:', err);
     }
   };
 
   const fetchUsers = () => {
-    fetch('/api/chat/users', {
+    authFetch('/api/chat/users', {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => { if (!res.ok) throw new Error(res.status); return res.json(); })
       .then((data) => setOnlineUsers(data))
-      .catch(console.error);
+      .catch(e => { if (e.message !== 'TOKEN_EXPIRED') console.error(e); });
     // Also refresh all contacts with online status
     fetchContacts();
   };
 
   const fetchContacts = () => {
-    fetch('/api/chat/contacts', {
+    authFetch('/api/chat/contacts', {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => { if (!res.ok) throw new Error(res.status); return res.json(); })
@@ -659,10 +684,10 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
         data.forEach(u => { if (u.avatarUrl) map[u.username] = u.avatarUrl; });
         setAvatarMap(prev => ({ ...prev, ...map }));
       })
-      .catch(console.error);
+      .catch(e => { if (e.message !== 'TOKEN_EXPIRED') console.error(e); });
 
     // Also fetch personal contacts list
-    fetch('/api/contacts', {
+    authFetch('/api/contacts', {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(res => res.ok ? res.json() : [])
@@ -756,7 +781,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
 
   const startPrivateChat = async (targetUser) => {
     try {
-      const res = await fetch(`/api/rooms/private/${targetUser}`, {
+      const res = await authFetch(`/api/rooms/private/${targetUser}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -775,7 +800,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
       if (groupPhoto) {
         const formData = new FormData();
         formData.append('file', groupPhoto);
-        const uploadRes = await fetch('/api/upload', {
+        const uploadRes = await authFetch('/api/upload', {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
           body: formData,
@@ -785,7 +810,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
           avatarUrl = uploadData.url;
         }
       }
-      const res = await fetch('/api/rooms/create', {
+      const res = await authFetch('/api/rooms/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ name, description: description || undefined, avatarUrl: avatarUrl || undefined }),
@@ -804,7 +829,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
 
   const joinRoom = async (roomId) => {
     try {
-      const res = await fetch(`/api/rooms/join/${roomId}`, {
+      const res = await authFetch(`/api/rooms/join/${roomId}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -814,14 +839,14 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
       selectRoom(room.id);
       return room;
     } catch (err) {
-      console.error(err);
+      if (err.message !== 'TOKEN_EXPIRED') console.error(err);
       return null;
     }
   };
 
   const openSavedChat = async () => {
     try {
-      const res = await fetch('/api/rooms/saved', {
+      const res = await authFetch('/api/rooms/saved', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -841,7 +866,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
   const forwardToSaved = async (msg) => {
     try {
       // Ensure saved room exists
-      const res = await fetch('/api/rooms/saved', {
+      const res = await authFetch('/api/rooms/saved', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -887,7 +912,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
       if (target.startsWith('user:')) {
         const targetUser = target.replace('user:', '');
         try {
-          const res = await fetch(`/api/rooms/private/${targetUser}`, {
+          const res = await authFetch(`/api/rooms/private/${targetUser}`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}` },
           });
@@ -971,7 +996,7 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
       return;
     }
     try {
-      const res = await fetch(`/api/rooms/${roomId}`, {
+      const res = await authFetch(`/api/rooms/${roomId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
