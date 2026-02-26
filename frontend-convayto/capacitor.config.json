@@ -1,0 +1,8 @@
+{
+  "appId": "com.barsik.chat",
+  "appName": "BarsikChat",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}

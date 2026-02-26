@@ -9,9 +9,9 @@ export const getRedirectUrl = () => {
 };
 
 // App settings
-export const APP_NAME = "Convayto";
-export const APP_VERSION = "v1.0.4";
-export const DEFAULT_BIO = `Hey there! I'm using ${APP_NAME}!`;
+export const APP_NAME = "BarsikChat";
+export const APP_VERSION = "v1.0.0";
+export const DEFAULT_BIO = `Привет! Я использую ${APP_NAME}!`;
 export const DARK_THEME = "dark";
 export const LIGHT_THEME = "light";
 export const LOCAL_STORAGE_KEY = "theme";
@@ -19,9 +19,9 @@ export const LOCAL_STORAGE_KEY = "theme";
 // Lengths and limits for various fields
 export const MAX_BIO_LENGTH = 140;
 export const MAX_NAME_LENGTH = 70;
-export const MIN_USERNAME_LENGTH = 4;
-export const MAX_USERNAME_LENGTH = 30;
-export const MIN_PASSWORD_LENGTH = 6;
+export const MIN_USERNAME_LENGTH = 3;
+export const MAX_USERNAME_LENGTH = 20;
+export const MIN_PASSWORD_LENGTH = 8;
 export const MINIMUM_SEARCH_LENGTH = 2;
 export const MAX_PREFETCHED_CONVERSATIONS = 10;
 export const MAX_MESSAGES_PER_PAGE = 25;

@@ -1,36 +1,31 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { signup as apiSignup } from "./apiAuth";
 import toast from "react-hot-toast";
-import { getRedirectUrl } from "../../config";
 
 export function useSignup() {
+  const queryClient = useQueryClient();
+
   const {
-    mutate: querySignup,
+    mutate: signup,
     isPending,
     error,
     isSuccess,
   } = useMutation({
-    mutationFn: ({ email, password, fullname, username, redirectTo }) =>
-      apiSignup({ email, password, fullname, username, redirectTo }),
+    mutationFn: ({ username, password, tag }) =>
+      apiSignup({ username, password, tag }),
     onMutate: () => {
-      toast.loading("Signing up...");
+      toast.loading("Регистрация...");
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      queryClient.setQueriesData(["user"], data);
       toast.dismiss();
+      toast.success("Аккаунт создан!");
     },
-
     onError: (error) => {
       toast.dismiss();
       toast.error(error.message);
     },
   });
 
-  // This is just for developement purpose. We need to dynamically itentify the environment wheather it is production or local so that we don't need to change the link manually every time
-  const triggerResetPassword = ({ email, password, fullname, username }) => {
-    const redirectTo = `${getRedirectUrl()}/account-confirmation`;
-
-    querySignup({ email, password, fullname, username, redirectTo });
-  };
-
-  return { signup: triggerResetPassword, isPending, error, isSuccess };
+  return { signup, isPending, error, isSuccess };
 }

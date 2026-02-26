@@ -14,7 +14,7 @@ import LogoLarge from "../../components/LogoLarge";
 import { APP_NAME } from "../../config";
 
 function Signin() {
-  document.title = APP_NAME + " - Sign in";
+  document.title = APP_NAME + " — Вход";
   const { signin, isPending } = useSignin();
   const navigate = useNavigate();
   const { isAuthenticated } = useUser();
@@ -26,7 +26,7 @@ function Signin() {
     trigger,
   } = useForm({
     defaultValues: {
-      email: "",
+      username: "",
       password: "",
     },
   });
@@ -38,12 +38,12 @@ function Signin() {
   }, [isAuthenticated, navigate]);
 
   const onSubmit = (data) => {
-    const { email, password } = data;
+    const { username, password } = data;
 
-    if (!email || !password) return;
+    if (!username || !password) return;
 
     signin(
-      { email, password },
+      { username, password },
       {
         onSuccess: () => {
           navigate("/chat", {
@@ -59,28 +59,25 @@ function Signin() {
       <LogoLarge />
 
       <FormContainer onSubmit={handleSubmit(onSubmit)}>
-        <Heading addClass="text-3xl">Sign in</Heading>
+        <Heading addClass="text-3xl">Вход в аккаунт</Heading>
 
         <Controller
-          name="email"
+          name="username"
           control={control}
           rules={{
-            required: "Enter your email.",
-            pattern: {
-              value: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/,
-              message: "Invalid email. Please enter a valid email.",
-            },
+            required: "Введите имя пользователя.",
           }}
           render={({ field }) => (
             <InputBox
-              type="email"
+              type="text"
               value={field.value || ""}
               onChange={field.onChange}
-              placeholder="Email"
-              htmlFor="email"
-              error={errors.email?.message}
-              onBlur={() => trigger("email")}
+              placeholder="Имя пользователя"
+              htmlFor="username"
+              error={errors.username?.message}
+              onBlur={() => trigger("username")}
               disabled={isPending}
+              autoFocus
             />
           )}
         />
@@ -88,13 +85,13 @@ function Signin() {
         <Controller
           name="password"
           control={control}
-          rules={{ required: "Enter a password." }}
+          rules={{ required: "Введите пароль." }}
           render={({ field }) => (
             <InputBox
               type="password"
               value={field.value || ""}
               onChange={field.onChange}
-              placeholder="Password"
+              placeholder="Пароль"
               htmlFor="password"
               error={errors.password?.message}
               onBlur={() => trigger("password")}
@@ -103,23 +100,20 @@ function Signin() {
           )}
         />
 
-        <TextLink to="/reset-password" addClass="mb-4">
-          Forgot password?
-        </TextLink>
-
         <SubmitBtn disabled={isPending}>
           {isPending ? (
             <>
               <Loader size="small" />
-              <span className="ml-2">Signing in...</span>
+              <span className="ml-2">Вход...</span>
             </>
           ) : (
-            <span>Sign in</span>
+            <span>Войти</span>
           )}
         </SubmitBtn>
 
         <p>
-          Don't have an account? <TextLink to="/signup">Sign up</TextLink>
+          Нет аккаунта?{" "}
+          <TextLink to="/signup">Зарегистрироваться</TextLink>
         </p>
       </FormContainer>
     </MainContainer>

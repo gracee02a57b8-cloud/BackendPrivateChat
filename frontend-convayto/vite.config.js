@@ -8,5 +8,15 @@ export default defineConfig({
     port: 3000,
     host: "0.0.0.0",
     open: false,
+    proxy: {
+      "/api": {
+        target: "http://46.149.71.106",
+        changeOrigin: true,
+      },
+      "/ws": {
+        target: "ws://46.149.71.106",
+        ws: true,
+      },
+    },
   },
 });
