@@ -43,7 +43,7 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      context: ./frontend-v2
       dockerfile: Dockerfile
     container_name: barsik-frontend
     restart: unless-stopped
