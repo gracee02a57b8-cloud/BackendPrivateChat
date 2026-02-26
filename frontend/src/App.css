@@ -717,7 +717,7 @@ button, a, [role="button"], input, textarea, select, label,
   position: relative;
   margin-left: auto;
   flex-shrink: 0;
-  display: none;
+  display: flex;
   align-items: center;
   gap: 10px;
 }
