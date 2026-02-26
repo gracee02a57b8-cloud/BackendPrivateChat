@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { copyToClipboard } from '../utils/clipboard';
 import { getAvatarColor } from '../utils/avatar';
-import { ArrowLeft, MoreVertical, Link, Camera, Pencil, Settings, LogOut } from 'lucide-react';
+import { ArrowLeft, MoreVertical, Link, Camera, Pencil, Settings, LogOut, Sun, Moon, Monitor } from 'lucide-react';
 
 export default function MyProfilePage({ username, avatarUrl, token, wsRef, onAvatarChange, connected, onOpenEdit, onOpenSettings, onLogout, onBack }) {
   const [profile, setProfile] = useState(null);
@@ -13,6 +13,7 @@ export default function MyProfilePage({ username, avatarUrl, token, wsRef, onAva
   const [uploading, setUploading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
+  const [theme, setTheme] = useState(() => localStorage.getItem('barsik_theme') || 'auto');
   const menuRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -51,6 +52,16 @@ export default function MyProfilePage({ username, avatarUrl, token, wsRef, onAva
     }
     return username;
   };
+
+  const handleCycleTheme = () => {
+    const next = theme === 'auto' ? 'dark' : theme === 'dark' ? 'light' : 'auto';
+    setTheme(next);
+    localStorage.setItem('barsik_theme', next);
+    window.dispatchEvent(new Event('theme-changed'));
+  };
+
+  const themeIcon = theme === 'dark' ? <Moon size={16} /> : theme === 'light' ? <Sun size={16} /> : <Monitor size={16} />;
+  const themeLabel = theme === 'dark' ? 'Тёмная тема' : theme === 'light' ? 'Светлая тема' : 'Авто (системная)';
 
   const handleCopyLink = () => {
     const url = `${window.location.origin}/@${username}`;
@@ -181,6 +192,10 @@ export default function MyProfilePage({ username, avatarUrl, token, wsRef, onAva
               <button onClick={handleCopyLink}>
                 <span className="my-profile-dropdown-icon"><Link size={16} /></span>
                 {copied ? 'Скопировано!' : 'Копировать ссылку'}
+              </button>
+              <button onClick={handleCycleTheme}>
+                <span className="my-profile-dropdown-icon">{themeIcon}</span>
+                {themeLabel}
               </button>
             </div>
           )}

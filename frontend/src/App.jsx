@@ -41,6 +41,27 @@ function App() {
     }
   }, []);
 
+  // ── Theme management: sync dark-mode class with system preference in "auto" mode ──
+  useEffect(() => {
+    const applyTheme = () => {
+      const t = localStorage.getItem('barsik_theme') || 'auto';
+      const mq = window.matchMedia('(prefers-color-scheme: dark)');
+      const dark = t === 'dark' || (t === 'auto' && mq.matches);
+      document.documentElement.classList.toggle('dark-mode', dark);
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute('content', dark ? '#13131c' : '#e8eef5');
+    };
+    applyTheme();
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = () => applyTheme();
+    mq.addEventListener('change', handler);
+    window.addEventListener('theme-changed', handler);
+    return () => {
+      mq.removeEventListener('change', handler);
+      window.removeEventListener('theme-changed', handler);
+    };
+  }, []);
+
   const saveAccountToList = (accUsername, accRole, accAvatarUrl, accTag) => {
     setSavedAccounts(prev => {
       const filtered = prev.filter(a => a.username !== accUsername);

@@ -14,6 +14,17 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
     <title>BarsikChat</title>
+    <script>
+      // Apply theme BEFORE first paint to prevent flash
+      (function() {
+        var t = localStorage.getItem('barsik_theme') || 'auto';
+        var dark = t === 'dark' || (t === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (dark) document.documentElement.classList.add('dark-mode');
+        // Update meta theme-color
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', dark ? '#13131c' : '#e8eef5');
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
