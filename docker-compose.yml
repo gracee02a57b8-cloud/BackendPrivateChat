@@ -43,33 +43,39 @@ services:
 
   frontend:
     build:
-      context: ./frontend-v2
+      context: ./frontend-tg
       dockerfile: Dockerfile
-    container_name: barsik-frontend
+    container_name: barsik-frontend-next
     restart: unless-stopped
     environment:
-      - DOMAIN=${DOMAIN:-}
-    ports:
-      - "80:8080"
-      - "443:8443"
-    volumes:
-      - /etc/letsencrypt:/etc/letsencrypt:ro
-    depends_on:
-      backend:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 5s
+      - NODE_ENV=production
+    # Port NOT exposed externally — only reachable via nginx on barsik-net
     networks:
       - barsik-net
     deploy:
       resources:
         limits:
-          memory: 128M
+          memory: 256M
           cpus: "0.5"
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: barsik-nginx
+    restart: unless-stopped
+    ports:
+      - "80:8080"
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - barsik-net
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+          cpus: "0.25"
 
 volumes:
   uploads_data:
