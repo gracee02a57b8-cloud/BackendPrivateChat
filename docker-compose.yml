@@ -41,34 +41,16 @@ services:
           memory: 768M
           cpus: "2.0"
 
-  frontend:
-    build:
-      context: ./frontend-tg
-      dockerfile: Dockerfile
-    container_name: barsik-frontend-next
-    restart: unless-stopped
-    environment:
-      - NODE_ENV=production
-    # Port NOT exposed externally — only reachable via nginx on barsik-net
-    networks:
-      - barsik-net
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-          cpus: "0.5"
-
   nginx:
     build:
-      context: ./nginx
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: nginx/Dockerfile
     container_name: barsik-nginx
     restart: unless-stopped
     ports:
       - "80:8080"
     depends_on:
       - backend
-      - frontend
     networks:
       - barsik-net
     deploy:
