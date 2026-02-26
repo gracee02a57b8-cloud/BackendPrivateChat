@@ -12487,8 +12487,8 @@ html.dark-mode .sb-settings-arrow { color: var(--color-text-muted); }
 html.dark-mode .login-container {
   background: linear-gradient(145deg, #0d0d14 0%, #111120 40%, #13131e 100%);
   background-image:
-html.dark-mode radial-gradient(ellipse at 20% 50%, rgba(129, 140, 248, 0.06) 0%, transparent 50%),
-  radial-gradient(ellipse at 80% 20%, rgba(167, 139, 250, 0.05) 0%, transparent 50%);
+    radial-gradient(ellipse at 20% 50%, rgba(129, 140, 248, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(167, 139, 250, 0.05) 0%, transparent 50%);
 }
 html.dark-mode .particle { background: rgba(129, 140, 248, 0.15); }
 html.dark-mode .login-card {
@@ -12933,10 +12933,10 @@ html.dark-mode .lightbox-overlay { background: rgba(0, 0, 0, 0.92); }
 }
 
 html.dark-mode .skeleton {
-html.dark-mode background: linear-gradient(90deg,
-html.dark-mode rgba(255,255,255,0.03) 25%,
-html.dark-mode rgba(255,255,255,0.07) 50%,
-  rgba(255,255,255,0.03) 75%
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0.03) 25%,
+    rgba(255,255,255,0.07) 50%,
+    rgba(255,255,255,0.03) 75%
   );
   background-size: 200% 100%;
 }
