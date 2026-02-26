@@ -301,6 +301,11 @@ export default function Chat({ token, username, avatarUrl, onAvatarChange, onLog
     activeRoomIdRef.current = activeRoomId;
   }, [activeRoomId]);
 
+  // Reset token-expired flag when a new token is received (after auto-relogin)
+  useEffect(() => {
+    tokenExpiredHandled.current = false;
+  }, [token]);
+
   // Delay showing connection banner to avoid flash during initial WS handshake
   useEffect(() => {
     if (connected) { setShowConnBanner(false); return; }
