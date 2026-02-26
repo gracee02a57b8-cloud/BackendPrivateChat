@@ -11,7 +11,7 @@ import StoriesBar from './StoriesBar';
 import { copyToClipboard } from '../utils/clipboard';
 import appSettings from '../utils/appSettings';
 import { getAvatarColor, getInitials, formatLastSeen } from '../utils/avatar';
-import { ArrowLeft, MoreVertical, User, Mail, Plus, Bookmark, Download, X, Search, Users, MessageSquare, Pin, Phone, Star, Newspaper, ClipboardList, Link, Volume2, Bell, BellOff, Settings, LogOut, ChevronDown, ChevronUp, FolderPlus, Trash2, Check, CheckCircle, Edit3, ArrowUpDown, Folder, Menu, UserPlus, Clock, Info, RefreshCw, Smartphone } from 'lucide-react';
+import { ArrowLeft, MoreVertical, User, Mail, Plus, Bookmark, Download, X, Search, Users, MessageSquare, Pin, Phone, Star, Newspaper, ClipboardList, Link, Volume2, Bell, BellOff, Settings, LogOut, ChevronDown, ChevronUp, FolderPlus, Trash2, Check, CheckCircle, Edit3, ArrowUpDown, Folder, Menu, UserPlus, Clock, Info, RefreshCw, Smartphone, Sun, Moon, Monitor } from 'lucide-react';
 
 function formatTime(ts) {
   if (!ts) return '';
@@ -108,6 +108,16 @@ export default function Sidebar({
   const [folderContextMenu, setFolderContextMenu] = useState(null);
   const [settingsFolderView, setSettingsFolderView] = useState(null); // null | folderId
   const [showBurgerDrawer, setShowBurgerDrawer] = useState(false);
+  const [theme, setTheme] = useState(() => localStorage.getItem('barsik_theme') || 'auto');
+
+  const handleCycleTheme = () => {
+    const next = theme === 'auto' ? 'dark' : theme === 'dark' ? 'light' : 'auto';
+    setTheme(next);
+    localStorage.setItem('barsik_theme', next);
+    window.dispatchEvent(new Event('theme-changed'));
+  };
+  const themeIcon = theme === 'dark' ? <Moon size={20} /> : theme === 'light' ? <Sun size={20} /> : <Monitor size={20} />;
+  const themeLabel = theme === 'dark' ? 'Тёмная тема' : theme === 'light' ? 'Светлая тема' : 'Авто (системная)';
   const menuRef = useRef(null);
   const filtersRef = useRef(null);
   const contextMenuRef = useRef(null);
@@ -893,6 +903,11 @@ export default function Sidebar({
               <span className="sb-settings-label">Войти по ссылке</span>
               <span className="sb-settings-arrow">›</span>
             </button>
+            <button className="sb-settings-item" onClick={handleCycleTheme}>
+              <span className="sb-settings-icon">{theme === 'dark' ? <Moon size={18} /> : theme === 'light' ? <Sun size={18} /> : <Monitor size={18} />}</span>
+              <span className="sb-settings-label">{themeLabel}</span>
+              <span className="sb-settings-arrow">›</span>
+            </button>
             {installPrompt && (
               <button className="sb-settings-item" onClick={handleInstall}>
                 <span className="sb-settings-icon"><Download size={18} /></span>
@@ -1200,6 +1215,11 @@ export default function Sidebar({
               <button className="burger-menu-item" onClick={() => { setShowBurgerDrawer(false); setShowContacts(true); }}>
                 <Users size={20} />
                 <span>Контакты</span>
+              </button>
+
+              <button className="burger-menu-item" onClick={() => { handleCycleTheme(); }}>
+                {themeIcon}
+                <span>{themeLabel}</span>
               </button>
 
               <div className="burger-menu-divider" />
