@@ -1,6 +1,6 @@
 // Chage the production/local URL according to the environment
 export const REDIRECT_URL_LOCAL = "http://localhost:3000";
-export const REDIRECT_URL_PRODUCTION = "https://convayto.vercel.app";
+export const REDIRECT_URL_PRODUCTION = "http://46.149.71.106";
 
 export const getRedirectUrl = () => {
   return import.meta.env.MODE === "production"

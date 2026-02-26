@@ -13,7 +13,7 @@ const USERS = [
     fullname: "Алексей Петров",
     username: "alexey",
     email: "alexey@demo.com",
-    bio: "Hey there! I'm using Convayto!",
+    bio: "Привет! Я использую BarsikChat!",
     avatar_url: "https://i.pravatar.cc/150?img=11",
   },
   {

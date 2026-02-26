@@ -4,129 +4,115 @@ const PrivacyPolicy = () => {
   return (
     <MainContainer>
       <div className="mx-auto max-w-4xl px-4 py-8 leading-relaxed">
-        <h1 className="mb-8 text-3xl font-bold">Privacy Policy</h1>
+        <h1 className="mb-8 text-3xl font-bold">Политика конфиденциальности</h1>
 
         <section className="mb-6">
-          <h2 className="mb-3 text-xl font-semibold">1. Introduction</h2>
+          <h2 className="mb-3 text-xl font-semibold">1. Введение</h2>
           <p>
-            Convayto ("we", "our", or "us") is committed to protecting your
-            privacy. This Privacy Policy explains how we collect, use, and
-            protect your information when you use our application.
+            BarsikChat («мы», «наш» или «нас») стремится защитить вашу
+            конфиденциальность. Настоящая политика объясняет, как мы собираем,
+            используем и защищаем вашу информацию при использовании приложения.
           </p>
         </section>
 
         <section className="mb-6">
           <h2 className="mb-3 text-xl font-semibold">
-            2. Information We Collect
+            2. Собираемая информация
           </h2>
-          <p className="mb-3">We collect the following information:</p>
+          <p className="mb-3">Мы собираем следующую информацию:</p>
           <ul className="list-disc space-y-2 pl-6">
             <li>
-              <strong>Account Information:</strong> Email, username, full name,
-              and profile picture
+              <strong>Данные аккаунта:</strong> имя пользователя, тег и пароль
             </li>
             <li>
-              <strong>Message Data:</strong> Content of messages you send
-              through the app
+              <strong>Данные сообщений:</strong> содержание сообщений, которые
+              вы отправляете через приложение
             </li>
             <li>
-              <strong>Usage Data:</strong> How you interact with the application
+              <strong>Данные использования:</strong> как вы взаимодействуете
+              с приложением
             </li>
             <li>
-              <strong>Device Information:</strong> IP address, browser type, and
-              device type
+              <strong>Данные устройства:</strong> IP-адрес, тип браузера
+              и устройства
             </li>
           </ul>
         </section>
 
         <section className="mb-6">
           <h2 className="mb-3 text-xl font-semibold">
-            3. How We Use Your Information
+            3. Использование информации
           </h2>
-          <p className="mb-3">We use collected information to:</p>
+          <p className="mb-3">Мы используем собранную информацию для:</p>
           <ul className="list-disc space-y-2 pl-6">
-            <li>Provide and maintain the Convayto service</li>
-            <li>Authenticate your account and manage your session</li>
-            <li>Deliver messages between users</li>
-            <li>Improve application functionality and user experience</li>
-            <li>Comply with legal obligations</li>
+            <li>Предоставления и поддержки сервиса BarsikChat</li>
+            <li>Аутентификации вашего аккаунта и управления сессиями</li>
+            <li>Доставки сообщений между пользователями</li>
+            <li>Улучшения функциональности и пользовательского опыта</li>
+            <li>Соблюдения правовых обязательств</li>
           </ul>
         </section>
 
         <section className="mb-6">
-          <h2 className="mb-3 text-xl font-semibold">4. Data Storage</h2>
+          <h2 className="mb-3 text-xl font-semibold">4. Хранение данных</h2>
           <p>
-            Your data is stored securely using Supabase, a PostgreSQL-based
-            backend service. Supabase implements industry-standard security
-            practices including encryption, Row-Level Security policies, and
-            regular backups.
+            Ваши данные надёжно хранятся в базе данных PostgreSQL с применением
+            стандартных практик безопасности, включая шифрование паролей
+            и регулярное резервное копирование.
           </p>
         </section>
 
         <section className="mb-6">
-          <h2 className="mb-3 text-xl font-semibold">5. Data Sharing</h2>
+          <h2 className="mb-3 text-xl font-semibold">5. Передача данных</h2>
           <p>
-            We do not sell, trade, or rent your personal information to third
-            parties. Your data may be shared only to the extent necessary to
-            provide the service (e.g., your profile is visible to other users
-            for chat purposes).
+            Мы не продаём, не обмениваем и не сдаём в аренду вашу личную
+            информацию третьим лицам. Данные могут быть переданы только в той
+            мере, которая необходима для предоставления сервиса.
           </p>
         </section>
 
         <section className="mb-6">
-          <h2 className="mb-3 text-xl font-semibold">6. Your Rights</h2>
-          <p className="mb-3">You have the right to:</p>
+          <h2 className="mb-3 text-xl font-semibold">6. Ваши права</h2>
+          <p className="mb-3">Вы имеете право:</p>
           <ul className="list-disc space-y-2 pl-6">
-            <li>Access your personal data</li>
-            <li>Request correction of inaccurate information</li>
-            <li>Request deletion of your account and associated data</li>
-            <li>Opt-out of non-essential data collection</li>
+            <li>Получить доступ к своим персональным данным</li>
+            <li>Запросить исправление неточной информации</li>
+            <li>Запросить удаление аккаунта и связанных данных</li>
+            <li>Отказаться от необязательного сбора данных</li>
           </ul>
-          <p className="mt-3">
-            To exercise these rights, contact us through GitHub issues or the
-            contact information provided in the application.
-          </p>
         </section>
 
         <section className="mb-6">
-          <h2 className="mb-3 text-xl font-semibold">7. Security</h2>
+          <h2 className="mb-3 text-xl font-semibold">7. Безопасность</h2>
           <p>
-            We implement Row-Level Security at the database level, password
-            hashing, and secure session management. However, no method of
-            transmission over the internet is 100% secure. We encourage you to
-            use strong passwords and secure connections.
+            Мы применяем хеширование паролей, JWT-аутентификацию и безопасное
+            управление сессиями. Однако ни один способ передачи данных через
+            интернет не является на 100% безопасным. Мы рекомендуем использовать
+            надёжные пароли.
           </p>
         </section>
 
         <section className="mb-6">
           <h2 className="mb-3 text-xl font-semibold">
-            8. Changes to This Policy
+            8. Изменения политики
           </h2>
           <p>
-            We may update this Privacy Policy periodically. Changes will be
-            effective when posted to the application. Your continued use of
-            Convayto constitutes acceptance of the updated policy.
+            Мы можем периодически обновлять настоящую политику. Изменения
+            вступают в силу с момента публикации в приложении. Продолжение
+            использования BarsikChat означает принятие обновлённой политики.
           </p>
         </section>
 
         <section className="mb-6">
-          <h2 className="mb-3 text-xl font-semibold">9. Contact Us</h2>
+          <h2 className="mb-3 text-xl font-semibold">9. Контакты</h2>
           <p>
-            For questions about this Privacy Policy, please open an issue on our{" "}
-            <a
-              href="https://github.com/CodeWithAlamin/Convayto"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-500 hover:underline"
-            >
-              GitHub repository
-            </a>
-            .
+            По вопросам о настоящей политике конфиденциальности свяжитесь
+            с администрацией через приложение.
           </p>
         </section>
 
         <footer className="mt-12 border-t border-bgSecondary pt-6 dark:border-bgSecondary-dark">
-          <p className="text-sm opacity-70">Last updated: January 23, 2026</p>
+          <p className="text-sm opacity-70">Последнее обновление: 23 января 2026</p>
         </footer>
       </div>
     </MainContainer>

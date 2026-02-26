@@ -10,47 +10,47 @@ const LandingPage = () => {
   const features = [
     {
       icon: <MdChat className="h-8 w-8" />,
-      title: "Real-Time Chat",
+      title: "Чат в реальном времени",
       description:
-        "Send and receive messages instantly with Supabase Realtime for live message updates.",
+        "Мгновенная отправка и получение сообщений через WebSocket-соединение.",
     },
     {
       icon: <MdSecurity className="h-8 w-8" />,
-      title: "Secure Authentication",
+      title: "Безопасная авторизация",
       description:
-        "Built-in user authentication with secure password handling and session management via Supabase.",
+        "Надёжная аутентификация с JWT-токенами и защищённым хранением паролей.",
     },
     {
       icon: <MdSpeed className="h-8 w-8" />,
-      title: "Lightning Fast",
+      title: "Молниеносная скорость",
       description:
-        "Optimized performance with React Query, infinite pagination, and intelligent data prefetching.",
+        "Оптимизированная производительность с React Query, пагинацией и интеллектуальной загрузкой данных.",
     },
     {
       icon: <FaMobile className="h-8 w-8" />,
-      title: "Fully Responsive",
+      title: "Адаптивный дизайн",
       description:
-        "Seamlessly works on desktop, tablet, and mobile devices with adaptive UI design.",
+        "Работает на ПК, планшетах и смартфонах с автоматической адаптацией интерфейса.",
     },
     {
       icon: <FaShieldAlt className="h-8 w-8" />,
-      title: "Profile Management",
+      title: "Управление профилем",
       description:
-        "Customize your profile with profile pictures and personal information with full control.",
+        "Настройте аватар и личную информацию с полным контролем над данными.",
     },
     {
       icon: <IoSparkles className="h-8 w-8" />,
-      title: "Dark Mode Support",
+      title: "Тёмная тема",
       description:
-        "Toggle between light and dark themes for a comfortable experience at any time of day.",
+        "Переключайтесь между светлой и тёмной темами для комфортного использования.",
     },
   ];
 
   const stats = [
-    { number: "100%", label: "Open Source" },
-    { number: "Real-Time", label: "Messaging" },
-    { number: "Secure", label: "Authentication" },
-    { number: "Responsive", label: "Design" },
+    { number: "WebSocket", label: "Реальное время" },
+    { number: "JWT", label: "Авторизация" },
+    { number: "React", label: "Интерфейс" },
+    { number: "Spring", label: "Бэкенд" },
   ];
 
   return (
@@ -60,26 +60,22 @@ const LandingPage = () => {
         <div className="mx-auto max-w-5xl text-center">
           {/* Logo */}
           <div className="mb-8 flex justify-center">
-            <img
-              src="/images/convayto-logo.png"
-              alt="Convayto Logo"
-              className="h-24 w-auto sm:h-32"
-            />
+            <span className="text-8xl sm:text-9xl">🐱</span>
           </div>
 
           {/* Main Heading */}
           <h1 className="mb-6 text-4xl font-bold sm:text-5xl lg:text-6xl">
-            Connect Instantly,
+            Общайся мгновенно,
             <span className="bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
               {" "}
-              Chat Seamlessly
+              чатся свободно
             </span>
           </h1>
 
           {/* Subheading */}
           <p className="text-textSecondary dark:text-textSecondary-dark mb-8 text-lg sm:text-xl">
-            Experience real-time messaging with security and performance at its
-            core. Built with React and Supabase for a modern chat experience.
+            Современный мессенджер с обменом сообщениями в реальном времени,
+            безопасностью и высокой производительностью.
           </p>
 
           {/* CTA Buttons */}
@@ -88,25 +84,16 @@ const LandingPage = () => {
               onClick={() => navigate("/signup")}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 px-8 py-4 font-semibold text-white transition duration-300 hover:shadow-lg hover:shadow-blue-500/50"
             >
-              Get Started
+              Регистрация
               <FaArrowRight className="h-4 w-4" />
             </button>
             <button
               onClick={() => navigate("/signin")}
               className="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-current px-8 py-4 font-semibold transition duration-300 hover:bg-opacity-10 hover:backdrop-blur"
             >
-              Sign In
+              Войти
               <FaArrowRight className="h-4 w-4" />
             </button>
-          </div>
-
-          {/* Hero Image */}
-          <div className="mt-12 sm:mt-16">
-            <img
-              src="/images/convayto-mockup.jpg"
-              alt="Convayto Mockup"
-              className="mx-auto w-full max-w-sm rounded-lg shadow-lg sm:max-w-md sm:shadow-xl md:max-w-2xl md:rounded-xl md:shadow-2xl"
-            />
           </div>
         </div>
       </section>
@@ -134,10 +121,10 @@ const LandingPage = () => {
         <div className="mx-auto max-w-5xl">
           <div className="mb-16 text-center">
             <h2 className="mb-4 text-3xl font-bold sm:text-4xl">
-              Powerful Features Built for You
+              Мощные возможности для вас
             </h2>
             <p className="text-textSecondary dark:text-textSecondary-dark text-lg">
-              Everything you need for seamless real-time communication
+              Всё необходимое для удобного общения в реальном времени
             </p>
           </div>
 
@@ -166,16 +153,16 @@ const LandingPage = () => {
           <div className="grid gap-12 sm:grid-cols-2 lg:gap-16">
             <div>
               <h2 className="mb-6 text-3xl font-bold sm:text-4xl">
-                Why Choose Convayto?
+                Почему BarsikChat?
               </h2>
               <ul className="space-y-4">
                 {[
-                  "Open source and transparent",
-                  "Built with modern technologies",
-                  "Focused on user privacy",
-                  "Continuous improvements",
-                  "Active community support",
-                  "Free to use and deploy",
+                  "Быстрая доставка сообщений",
+                  "Современный стек технологий",
+                  "Фокус на приватности",
+                  "Постоянные улучшения",
+                  "Адаптивный интерфейс",
+                  "Обмен файлами и фото",
                 ].map((item, index) => (
                   <li key={index} className="flex items-start gap-3">
                     <span className="mt-1 inline-block h-2 w-2 rounded-full bg-blue-500"></span>
@@ -190,7 +177,7 @@ const LandingPage = () => {
                   <div className="text-6xl text-white">💬</div>
                 </div>
                 <p className="text-lg font-semibold">
-                  Join thousands of users chatting on Convayto
+                  Присоединяйся к BarsikChat!
                 </p>
               </div>
             </div>
@@ -203,23 +190,23 @@ const LandingPage = () => {
         <div className="mx-auto max-w-5xl">
           <div className="mb-16 text-center">
             <h2 className="mb-4 text-3xl font-bold sm:text-4xl">
-              Built With Modern Technology
+              Современные технологии
             </h2>
             <p className="text-textSecondary dark:text-textSecondary-dark text-lg">
-              Using industry-leading tools and frameworks
+              Лучшие инструменты и фреймворки
             </p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { name: "React", description: "UI Library" },
-              { name: "Supabase", description: "Backend & Database" },
-              { name: "Tailwind CSS", description: "Styling" },
-              { name: "React Query", description: "Data Fetching" },
-              { name: "React Router", description: "Routing" },
-              { name: "React Hook Form", description: "Form Management" },
-              { name: "Vite", description: "Build Tool" },
-              { name: "Supabase Realtime", description: "Real-Time Updates" },
+              { name: "React", description: "UI-библиотека" },
+              { name: "Spring Boot", description: "Бэкенд" },
+              { name: "PostgreSQL", description: "База данных" },
+              { name: "React Query", description: "Загрузка данных" },
+              { name: "React Router", description: "Маршрутизация" },
+              { name: "Tailwind CSS", description: "Стилизация" },
+              { name: "Vite", description: "Сборщик" },
+              { name: "WebSocket", description: "Реальное время" },
             ].map((tech, index) => (
               <div
                 key={index}
@@ -243,18 +230,17 @@ const LandingPage = () => {
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
                 <FaShieldAlt className="h-6 w-6 text-red-600 dark:text-red-400" />
               </div>
-              <h2 className="text-2xl font-bold">Privacy & Security</h2>
+              <h2 className="text-2xl font-bold">Приватность и безопасность</h2>
             </div>
             <p className="text-textSecondary dark:text-textSecondary-dark mb-4 text-lg">
-              Built on Supabase infrastructure with secure authentication and
-              protected access control. Your data is handled by industry-trusted
-              services.
+              Безопасная аутентификация и защищённый контроль доступа.
+              Ваши данные надёжно защищены.
             </p>
             <ul className="text-textSecondary dark:text-textSecondary-dark space-y-2">
-              <li>✓ Secure authentication via Supabase Auth</li>
-              <li>✓ Password hashing and encryption</li>
-              <li>✓ Protected routes and access control</li>
-              <li>✓ Open source for transparency</li>
+              <li>✓ JWT-аутентификация</li>
+              <li>✓ Хеширование паролей</li>
+              <li>✓ Защищённые маршруты и контроль доступа</li>
+              <li>✓ WebSocket с токен-авторизацией</li>
             </ul>
           </div>
         </div>
@@ -264,17 +250,17 @@ const LandingPage = () => {
       <section className="w-full px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="mb-6 text-3xl font-bold sm:text-4xl">
-            Ready to Start Chatting?
+            Готов начать общение?
           </h2>
           <p className="text-textSecondary dark:text-textSecondary-dark mb-8 text-lg">
-            Create your account now and connect with others in real-time. It
-            only takes a minute.
+            Создай аккаунт и начни общаться в реальном времени. Это займёт
+            всего минуту.
           </p>
           <button
             onClick={() => navigate("/signup")}
             className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 px-12 py-4 text-lg font-semibold text-white transition duration-300 hover:shadow-lg hover:shadow-blue-500/50"
           >
-            Get Started Now
+            Начать сейчас
             <FaArrowRight className="h-5 w-5" />
           </button>
         </div>
@@ -285,37 +271,27 @@ const LandingPage = () => {
         <div className="mx-auto max-w-5xl">
           <div className="grid gap-8 sm:grid-cols-3">
             <div>
-              <h3 className="mb-4 font-semibold">About</h3>
+              <h3 className="mb-4 font-semibold">О нас</h3>
               <ul className="text-textSecondary dark:text-textSecondary-dark space-y-2 text-sm">
                 <li>
                   <a
                     href="/about"
                     className="hover:text-textPrimary dark:hover:text-textPrimary-dark"
                   >
-                    About Convayto
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="https://github.com/CodeWithAlamin/Convayto"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-textPrimary dark:hover:text-textPrimary-dark"
-                  >
-                    GitHub
+                    О BarsikChat
                   </a>
                 </li>
               </ul>
             </div>
             <div>
-              <h3 className="mb-4 font-semibold">Legal</h3>
+              <h3 className="mb-4 font-semibold">Правовая информация</h3>
               <ul className="text-textSecondary dark:text-textSecondary-dark space-y-2 text-sm">
                 <li>
                   <Link
                     to="/privacy"
                     className="hover:text-textPrimary dark:hover:text-textPrimary-dark"
                   >
-                    Privacy Policy
+                    Политика конфиденциальности
                   </Link>
                 </li>
                 <li>
@@ -323,41 +299,21 @@ const LandingPage = () => {
                     to="/terms"
                     className="hover:text-textPrimary dark:hover:text-textPrimary-dark"
                   >
-                    Terms of Service
+                    Условия использования
                   </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h3 className="mb-4 font-semibold">Connect</h3>
-              <ul className="text-textSecondary dark:text-textSecondary-dark space-y-2 text-sm">
-                <li>
-                  <a
-                    href="https://x.com/CodeWithAlamin"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-textPrimary dark:hover:text-textPrimary-dark"
-                  >
-                    Twitter
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="https://www.linkedin.com/in/CodeWithAlamin"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-textPrimary dark:hover:text-textPrimary-dark"
-                  >
-                    LinkedIn
-                  </a>
-                </li>
-              </ul>
+              <h3 className="mb-4 font-semibold">BarsikChat</h3>
+              <p className="text-textSecondary dark:text-textSecondary-dark text-sm">
+                Современный мессенджер для быстрого и безопасного общения.
+              </p>
             </div>
           </div>
           <div className="text-textSecondary dark:text-textSecondary-dark mt-8 border-t border-bgSecondary pt-8 text-center text-sm dark:border-bgSecondary-dark">
             <p>
-              © {new Date().getFullYear()} Convayto. All rights reserved.
-              Licensed under Apache 2.0
+              © {new Date().getFullYear()} BarsikChat. Все права защищены.
             </p>
           </div>
         </div>

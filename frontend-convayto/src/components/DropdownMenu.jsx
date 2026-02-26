@@ -52,10 +52,10 @@ export default function DropdownMenu() {
           </Menu.TogglerItem>
 
           <Menu.LinkItem
-            href={`https://github.com/CodeWithAlamin/${APP_NAME}/issues`}
+            href="#"
           >
             <RiBugLine />
-            <div>Report Bug</div>
+            <div>Сообщить об ошибке</div>
           </Menu.LinkItem>
 
           <Menu.RouteItem to={"/about"}>
