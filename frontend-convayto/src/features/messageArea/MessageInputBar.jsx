@@ -1,4 +1,4 @@
-import { RiSendPlaneFill, RiAttachmentLine, RiMicLine, RiStopFill, RiVideoChatLine } from "react-icons/ri";
+import { RiSendPlaneFill, RiAttachmentLine, RiMicLine, RiStopFill, RiVideoChatLine, RiCloseLine, RiReplyLine } from "react-icons/ri";
 import { useUser } from "../authentication/useUser";
 import { useRef, useState, useCallback } from "react";
 import { useSendNewMessage } from "./useSendNewMessage";
@@ -9,7 +9,7 @@ import { sendFileMessage, sendVoiceMessage, sendVideoCircle } from "./apiMessage
 import { useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 
-function MessageInputBar() {
+function MessageInputBar({ replyTo, setReplyTo }) {
   const {
     convInfo,
     isPending: isPendingConvInfo,
@@ -73,9 +73,17 @@ function MessageInputBar() {
       sender_id: myUserId,
       created_at: new Date(),
       optimistic: true,
+      ...(replyTo
+        ? {
+            replyToId: replyTo.id,
+            replyToSender: replyTo.sender_id,
+            replyToContent: replyTo.content || "📎 Вложение",
+          }
+        : {}),
     };
 
     setNewMessage("");
+    setReplyTo?.(null);
     sendNewMessage(messageObj, {
       onError: (_, message) => setNewMessage(message.content),
     });
@@ -345,6 +353,27 @@ function MessageInputBar() {
 
   return (
     <div className="px-4 py-2">
+      {/* Reply preview bar */}
+      {replyTo && (
+        <div className="mx-auto mb-1.5 flex max-w-3xl items-center gap-2 rounded-xl bg-bgPrimary px-3 py-2 shadow dark:bg-LightShade/20">
+          <RiReplyLine className="flex-shrink-0 text-lg text-bgAccent dark:text-bgAccent-dark" />
+          <div className="min-w-0 flex-1 border-l-2 border-bgAccent pl-2 dark:border-bgAccent-dark">
+            <p className="truncate text-xs font-semibold text-bgAccent dark:text-bgAccent-dark">
+              {replyTo.sender_id || ""}
+            </p>
+            <p className="truncate text-xs text-textPrimary/60 dark:text-textPrimary-dark/60">
+              {replyTo.content || "📎 Вложение"}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setReplyTo?.(null)}
+            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-lg transition hover:bg-LightShade/20"
+          >
+            <RiCloseLine />
+          </button>
+        </div>
+      )}
       <form className="mx-auto grid max-w-3xl grid-cols-[auto_1fr_auto_auto_auto] items-center gap-1 overflow-hidden rounded-full border border-transparent bg-bgPrimary shadow-lg dark:border-LightShade/20 dark:bg-LightShade/20">
         {/* File attachment */}
         <label

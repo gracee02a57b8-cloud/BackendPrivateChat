@@ -1,9 +1,10 @@
 import { useUser } from "../authentication/useUser";
 import { formatTime } from "../../utils/common";
 import useConvInfo from "./useConvInfo";
-import { useState, useRef, useEffect } from "react";
-import { RiShareForwardLine, RiPlayFill, RiPauseFill, RiDownloadLine } from "react-icons/ri";
-import ForwardMessageModal from "../../components/ForwardMessageModal";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { RiPlayFill, RiPauseFill, RiDownloadLine, RiCheckboxCircleLine, RiCheckboxBlankCircleLine } from "react-icons/ri";
+import MessageContextMenu from "../../components/MessageContextMenu";
+import toast from "react-hot-toast";
 
 // ---------- Вспомогательные компоненты ----------
 
@@ -99,7 +100,7 @@ function VideoCirclePlayer({ fileUrl, duration }) {
   );
 }
 
-function FileAttachment({ fileUrl, fileName, fileType, isOwn }) {
+function FileAttachment({ fileUrl, fileName, fileType }) {
   const isImage = fileType?.startsWith("image/");
   const isVideo = fileType?.startsWith("video/");
   const isAudio = fileType?.startsWith("audio/");
@@ -135,15 +136,142 @@ function FileAttachment({ fileUrl, fileName, fileType, isOwn }) {
   );
 }
 
+// ---------- Bubble wrapper with context menu + selection ----------
+
+function BubbleWrapper({
+  children,
+  message,
+  isOwn,
+  isGroup,
+  selectionMode,
+  isSelected,
+  toggleSelectMessage,
+  enterSelectionMode,
+  onReply,
+  onForward,
+  onDeleteLocal,
+  onDeleteForAll,
+  bubbleClass,
+  noBubble = false,
+}) {
+  const [contextMenu, setContextMenu] = useState(null);
+
+  const handleContextMenu = useCallback(
+    (e) => {
+      e.preventDefault();
+      if (selectionMode) return;
+      setContextMenu({ x: e.clientX, y: e.clientY });
+    },
+    [selectionMode],
+  );
+
+  const handleClick = useCallback(() => {
+    if (selectionMode) {
+      toggleSelectMessage?.(message);
+    }
+  }, [selectionMode, toggleSelectMessage, message]);
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(message?.content || "").then(() => {
+      toast.success("Скопировано");
+    });
+  }, [message]);
+
+  const handlePin = useCallback(() => {
+    toast("Закрепление — в разработке", { icon: "📌" });
+  }, []);
+
+  const handleSelect = useCallback(() => {
+    enterSelectionMode?.(message);
+  }, [enterSelectionMode, message]);
+
+  return (
+    <div
+      className={`flex items-end gap-1.5 ${isOwn ? "flex-row-reverse" : ""} ${
+        selectionMode ? "cursor-pointer" : ""
+      } ${isSelected ? "bg-bgAccent/10 dark:bg-bgAccent-dark/10 -mx-2 px-2 rounded-lg" : ""}`}
+      onContextMenu={handleContextMenu}
+      onClick={handleClick}
+    >
+      {/* Selection checkbox */}
+      {selectionMode && (
+        <span className="flex-shrink-0 py-2 text-xl">
+          {isSelected ? (
+            <RiCheckboxCircleLine className="text-bgAccent dark:text-bgAccent-dark" />
+          ) : (
+            <RiCheckboxBlankCircleLine className="opacity-40" />
+          )}
+        </span>
+      )}
+
+      {/* Message bubble */}
+      {noBubble ? (
+        <div className={`group relative ${isOwn ? "self-end" : ""} my-1 w-fit max-w-[80%]`}>
+          {children}
+        </div>
+      ) : (
+        <div
+          className={`group relative ${
+            isOwn
+              ? "self-end rounded-br-none bg-gradient-to-br from-bgAccent to-bgAccentDim text-textPrimary-dark before:absolute before:bottom-0 before:right-0 before:h-0 before:w-0 before:translate-x-full before:border-l-8 before:border-t-8 before:border-l-bgAccentDim before:border-t-transparent before:content-[''] dark:from-bgAccent-dark dark:to-bgAccentDim-dark before:dark:border-l-bgAccentDim-dark"
+              : "rounded-bl-none bg-bgPrimary before:absolute before:bottom-0 before:left-0 before:h-0 before:w-0 before:-translate-x-full before:border-r-8 before:border-t-8 before:border-r-bgPrimary before:border-t-transparent before:content-[''] dark:bg-LightShade/20 before:dark:border-r-LightShade/20"
+          } my-1 w-fit max-w-[80%] rounded-2xl px-4 py-2 shadow-md before:shadow-md ${bubbleClass || ""}`}
+        >
+          {children}
+        </div>
+      )}
+
+      {/* Context menu */}
+      {contextMenu && (
+        <MessageContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          isOwn={isOwn}
+          onReply={() => onReply?.(message)}
+          onCopy={handleCopy}
+          onForward={() => onForward?.(message)}
+          onPin={handlePin}
+          onSelect={handleSelect}
+          onDelete={() => onDeleteLocal?.(message)}
+          onDeleteForAll={() => onDeleteForAll?.(message)}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
+    </div>
+  );
+}
+
 // ---------- Основной компонент ----------
 
-function MessageItem({ message }) {
+function MessageItem({
+  message,
+  selectionMode,
+  isSelected,
+  toggleSelectMessage,
+  enterSelectionMode,
+  onReply,
+  onForward,
+  onDeleteLocal,
+  onDeleteForAll,
+}) {
   const { user } = useUser();
   const { convInfo } = useConvInfo();
   const isGroup = convInfo?.isGroup;
   const isOwn = message?.sender_id === user.id;
-  const [showForward, setShowForward] = useState(false);
-  const [hovered, setHovered] = useState(false);
+
+  const commonProps = {
+    message,
+    isOwn,
+    isGroup,
+    selectionMode,
+    isSelected,
+    toggleSelectMessage,
+    enterSelectionMode,
+    onReply,
+    onForward,
+    onDeleteLocal,
+    onDeleteForAll,
+  };
 
   // Call log messages
   if (message?.type === "CALL_LOG") {
@@ -160,64 +288,28 @@ function MessageItem({ message }) {
   // Voice message
   if (message?.type === "VOICE" && message?.fileUrl) {
     return (
-      <>
-        <div
-          className={`group relative ${
-            isOwn
-              ? "self-end rounded-br-none bg-gradient-to-br from-bgAccent to-bgAccentDim text-textPrimary-dark before:absolute before:bottom-0 before:right-0 before:h-0 before:w-0 before:translate-x-full before:border-l-8 before:border-t-8 before:border-l-bgAccentDim before:border-t-transparent before:content-[''] dark:from-bgAccent-dark dark:to-bgAccentDim-dark before:dark:border-l-bgAccentDim-dark"
-              : "rounded-bl-none bg-bgPrimary before:absolute before:bottom-0 before:left-0 before:h-0 before:w-0 before:-translate-x-full before:border-r-8 before:border-t-8 before:border-r-bgPrimary before:border-t-transparent before:content-[''] dark:bg-LightShade/20 before:dark:border-r-LightShade/20"
-          } my-1 w-fit max-w-[80%] rounded-2xl px-4 py-2 shadow-md before:shadow-md`}
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
-        >
-          {isGroup && !isOwn && message?.sender_id && (
-            <p className="mb-1 text-xs font-bold text-bgAccent dark:text-bgAccent-dark">{message.sender_id}</p>
-          )}
-          <VoicePlayer fileUrl={message.fileUrl} duration={message.duration} />
-          <span className="float-right ml-2 mt-1 select-none text-xs opacity-70">
-            {formatTime(message?.created_at)}
-          </span>
-          {hovered && (
-            <button
-              onClick={() => setShowForward(true)}
-              className={`absolute top-1 ${isOwn ? "-left-8" : "-right-8"} flex h-6 w-6 items-center justify-center rounded-full bg-LightShade/30 text-xs text-textPrimary/60 transition hover:bg-LightShade/50 dark:text-textPrimary-dark/60`}
-              title="Переслать"
-            >
-              <RiShareForwardLine />
-            </button>
-          )}
-        </div>
-        <ForwardMessageModal isOpen={showForward} onClose={() => setShowForward(false)} message={message} />
-      </>
+      <BubbleWrapper {...commonProps}>
+        {isGroup && !isOwn && message?.sender_id && (
+          <p className="mb-1 text-xs font-bold text-bgAccent dark:text-bgAccent-dark">{message.sender_id}</p>
+        )}
+        <VoicePlayer fileUrl={message.fileUrl} duration={message.duration} />
+        <span className="float-right ml-2 mt-1 select-none text-xs opacity-70">
+          {formatTime(message?.created_at)}
+        </span>
+      </BubbleWrapper>
     );
   }
 
   // Video circle
   if (message?.type === "VIDEO_CIRCLE" && message?.fileUrl) {
     return (
-      <>
-        <div
-          className={`group relative ${isOwn ? "self-end" : ""} my-1 w-fit max-w-[80%]`}
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
-        >
-          {isGroup && !isOwn && message?.sender_id && (
-            <p className="mb-1 text-xs font-bold text-bgAccent dark:text-bgAccent-dark">{message.sender_id}</p>
-          )}
-          <VideoCirclePlayer fileUrl={message.fileUrl} duration={message.duration} />
-          <p className="mt-1 text-center text-xs opacity-50">{formatTime(message?.created_at)}</p>
-          {hovered && (
-            <button
-              onClick={() => setShowForward(true)}
-              className={`absolute top-1 ${isOwn ? "-left-8" : "-right-8"} flex h-6 w-6 items-center justify-center rounded-full bg-LightShade/30 text-xs text-textPrimary/60 transition hover:bg-LightShade/50 dark:text-textPrimary-dark/60`}
-              title="Переслать"
-            >
-              <RiShareForwardLine />
-            </button>
-          )}
-        </div>
-        <ForwardMessageModal isOpen={showForward} onClose={() => setShowForward(false)} message={message} />
-      </>
+      <BubbleWrapper {...commonProps} noBubble>
+        {isGroup && !isOwn && message?.sender_id && (
+          <p className="mb-1 text-xs font-bold text-bgAccent dark:text-bgAccent-dark">{message.sender_id}</p>
+        )}
+        <VideoCirclePlayer fileUrl={message.fileUrl} duration={message.duration} />
+        <p className="mt-1 text-center text-xs opacity-50">{formatTime(message?.created_at)}</p>
+      </BubbleWrapper>
     );
   }
 
@@ -225,69 +317,50 @@ function MessageItem({ message }) {
   const hasFile = message?.fileUrl && message?.type !== "VOICE" && message?.type !== "VIDEO_CIRCLE";
 
   return (
-    <>
-      <div
-        className={`group relative ${
-          isOwn
-            ? "self-end rounded-br-none bg-gradient-to-br from-bgAccent to-bgAccentDim text-textPrimary-dark before:absolute before:bottom-0 before:right-0 before:h-0 before:w-0 before:translate-x-full before:border-l-8 before:border-t-8 before:border-l-bgAccentDim before:border-t-transparent before:content-[''] dark:from-bgAccent-dark dark:to-bgAccentDim-dark before:dark:border-l-bgAccentDim-dark"
-            : "rounded-bl-none bg-bgPrimary before:absolute before:bottom-0 before:left-0 before:h-0 before:w-0 before:-translate-x-full before:border-r-8 before:border-t-8 before:border-r-bgPrimary before:border-t-transparent before:content-[''] dark:bg-LightShade/20 before:dark:border-r-LightShade/20"
-        } my-1 w-fit max-w-[80%] rounded-2xl px-4 py-2 shadow-md before:shadow-md`}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-      >
-        {isGroup && !isOwn && message?.sender_id && (
-          <p className="mb-0.5 text-xs font-bold text-bgAccent dark:text-bgAccent-dark">
-            {message.sender_id}
-          </p>
-        )}
+    <BubbleWrapper {...commonProps}>
+      {isGroup && !isOwn && message?.sender_id && (
+        <p className="mb-0.5 text-xs font-bold text-bgAccent dark:text-bgAccent-dark">
+          {message.sender_id}
+        </p>
+      )}
 
-        {/* File attachment (image / video / document) */}
-        {hasFile && (
-          <div className="mb-1">
-            <FileAttachment
-              fileUrl={message.fileUrl}
-              fileName={message.fileName}
-              fileType={message.fileType}
-              isOwn={isOwn}
-            />
-          </div>
-        )}
+      {/* Reply reference */}
+      {message?.replyToContent && (
+        <div className="mb-1 rounded-lg border-l-2 border-bgAccent bg-white/10 px-2 py-1 text-xs dark:border-bgAccent-dark">
+          <p className="font-bold opacity-70">{message.replyToSender || ""}</p>
+          <p className="truncate opacity-60">{message.replyToContent}</p>
+        </div>
+      )}
 
-        {/* Text content (skip if only an attachment marker) */}
-        {message?.content && !message.content.startsWith("📎 ") && (
-          <p>
-            {message.content}
-            <span className="float-right ml-2 mt-2 select-none text-xs opacity-70">
-              {formatTime(message?.created_at)}
-            </span>
-          </p>
-        )}
+      {/* File attachment */}
+      {hasFile && (
+        <div className="mb-1">
+          <FileAttachment
+            fileUrl={message.fileUrl}
+            fileName={message.fileName}
+            fileType={message.fileType}
+          />
+        </div>
+      )}
 
-        {/* If content is only file marker, show time */}
-        {(!message?.content || message.content.startsWith("📎 ")) && (
-          <span className="block select-none text-right text-xs opacity-70">
+      {/* Text content */}
+      {message?.content && !message.content.startsWith("📎 ") && (
+        <p>
+          {message.content}
+          <span className="float-right ml-2 mt-2 select-none text-xs opacity-70">
+            {message?.edited && <span className="mr-1 italic">ред.</span>}
             {formatTime(message?.created_at)}
           </span>
-        )}
+        </p>
+      )}
 
-        {/* Forward button */}
-        {hovered && (
-          <button
-            onClick={() => setShowForward(true)}
-            className={`absolute top-1 ${isOwn ? "-left-8" : "-right-8"} flex h-6 w-6 items-center justify-center rounded-full bg-LightShade/30 text-xs text-textPrimary/60 transition hover:bg-LightShade/50 dark:text-textPrimary-dark/60`}
-            title="Переслать"
-          >
-            <RiShareForwardLine />
-          </button>
-        )}
-      </div>
-
-      <ForwardMessageModal
-        isOpen={showForward}
-        onClose={() => setShowForward(false)}
-        message={message}
-      />
-    </>
+      {/* If content is only file marker, show time */}
+      {(!message?.content || message.content.startsWith("📎 ")) && (
+        <span className="block select-none text-right text-xs opacity-70">
+          {formatTime(message?.created_at)}
+        </span>
+      )}
+    </BubbleWrapper>
   );
 }
 

@@ -6,7 +6,16 @@ import useIntersectionObserver from "./useIntersectionObserver";
 import useScrollBehavior from "./useScrollBehavior";
 import ShortTextMessage from "../../components/ShortTextMessage";
 
-function Messages() {
+function Messages({
+  selectionMode,
+  selectedMessages,
+  toggleSelectMessage,
+  enterSelectionMode,
+  onReply,
+  onForward,
+  onDeleteLocal,
+  onDeleteForAll,
+}) {
   const {
     pages,
     isFetchingNextPage,
@@ -27,25 +36,20 @@ function Messages() {
   // Top ref depends on hasNextPage so we need to update it when it changes
   useEffect(() => {
     if (topRef.current) {
-      // Set the top element after 1 second to avoid fetching the next page immediately when user loads the page first time.
       const timeoutId = setTimeout(() => {
         setTopElement(topRef.current);
       }, 1000);
-
       return () => clearTimeout(timeoutId);
     }
   }, [hasNextPage]);
 
-  // Fetch next page when the bottom ref is in view
+  // Fetch next page when the top ref is in view
   useEffect(() => {
     if (isIntersectingTop && hasNextPage) {
       fetchNextPage();
     }
   }, [isIntersectingTop, hasNextPage, fetchNextPage]);
 
-  ////////////
-  // Scroll behavior hook
-  ////////////
   useScrollBehavior({
     pages,
     bottomRef,
@@ -54,15 +58,7 @@ function Messages() {
     isIntersectingBtm,
   });
 
-  /////////////
-  // show an error message when there is an error
-  /////////////
-
   if (error) return <ShortTextMessage>⚠️ {error.message}</ShortTextMessage>;
-
-  /////////////
-  // show a loader when fetching the first page
-  /////////////
 
   if (isLoading)
     return (
@@ -91,9 +87,19 @@ function Messages() {
               page.length ? (
                 <span key={index} className="flex w-full flex-col">
                   {page.map((message) => (
-                    <MessageItem key={message.id} message={message} />
+                    <MessageItem
+                      key={message.id}
+                      message={message}
+                      selectionMode={selectionMode}
+                      isSelected={selectedMessages?.some((m) => m.id === message.id)}
+                      toggleSelectMessage={toggleSelectMessage}
+                      enterSelectionMode={enterSelectionMode}
+                      onReply={onReply}
+                      onForward={onForward}
+                      onDeleteLocal={onDeleteLocal}
+                      onDeleteForAll={onDeleteForAll}
+                    />
                   ))}
-
                   {index === 0 && <span ref={lastPageBtm}></span>}
                 </span>
               ) : (
