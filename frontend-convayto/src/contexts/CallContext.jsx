@@ -34,6 +34,7 @@ function CallProvider({ children }) {
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
+  const [isMinimized, setIsMinimized] = useState(false);
 
   const pcRef = useRef(null);
   const durationRef = useRef(null);
@@ -76,6 +77,7 @@ function CallProvider({ children }) {
     setIsAudioMuted(false);
     setIsVideoOff(false);
     setCallDuration(0);
+    setIsMinimized(false);
     pendingIceRef.current = [];
     callStartRef.current = null;
     incomingDataRef.current = null;
@@ -279,6 +281,11 @@ function CallProvider({ children }) {
     }
   }, []);
 
+  // ====== Toggle minimize ======
+  const toggleMinimize = useCallback(() => {
+    setIsMinimized((p) => !p);
+  }, []);
+
   // ====== WebSocket call message listener ======
   useEffect(() => {
     const unsub = onCallMessage((msg) => {
@@ -397,6 +404,7 @@ function CallProvider({ children }) {
     remoteStream,
     isAudioMuted,
     isVideoOff,
+    isMinimized,
     callDuration,
     startCall,
     acceptCall,
@@ -404,6 +412,7 @@ function CallProvider({ children }) {
     endCall,
     toggleAudio,
     toggleVideo,
+    toggleMinimize,
     CALL_STATE,
   };
 

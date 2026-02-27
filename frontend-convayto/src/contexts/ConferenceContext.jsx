@@ -33,6 +33,7 @@ function ConferenceProvider({ children }) {
   const [participants, setParticipants] = useState([]);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
 
   const pcsRef = useRef({}); // { peerId: RTCPeerConnection }
   const pendingIceRef = useRef({}); // { peerId: [candidate strings] }
@@ -65,6 +66,7 @@ function ConferenceProvider({ children }) {
     setConfRoomId(null);
     setIsAudioMuted(false);
     setIsVideoOff(false);
+    setIsMinimized(false);
   }, []);
 
   // ====== Create peer connection for a specific remote peer ======
@@ -149,22 +151,20 @@ function ConferenceProvider({ children }) {
             body: JSON.stringify({ roomId }),
           });
         } catch {
-          // Conference might already exist, try to get it
-          const rooms = await apiFetch(`/api/rooms/${encodeURIComponent(roomId)}`);
-          // Try joining any active conference
-          conference = { id: roomId + "-conf" };
+          // Conference might already exist — try to find active one for this room
+          conference = null;
         }
 
-        const cId = conference.id || conference.confId;
+        const cId = conference?.confId || conference?.id || `${roomId}-conf`;
         setConfId(cId);
 
-        // Join conference
+        // Join conference via REST
         try {
           await apiFetch(`/api/conference/${encodeURIComponent(cId)}/join`, {
             method: "POST",
           });
         } catch (e) {
-          console.warn("[Conf] Join REST failed, trying WS:", e);
+          console.warn("[Conf] Join REST failed, continuing with WS:", e);
         }
 
         // Send CONF_JOIN via WebSocket
@@ -173,6 +173,15 @@ function ConferenceProvider({ children }) {
           roomId: roomId,
           content: "",
           extra: { confId: cId },
+        });
+
+        // Notify group about conference start
+        sendWsMessage({
+          type: "CHAT",
+          roomId: roomId,
+          content: type === "audio"
+            ? "📞 Начат групповой аудиозвонок. Присоединяйтесь!"
+            : "📹 Начата видеоконференция. Присоединяйтесь!",
         });
 
         setConfState(CONF_STATE.ACTIVE);
@@ -225,6 +234,11 @@ function ConferenceProvider({ children }) {
       });
       setIsVideoOff((p) => !p);
     }
+  }, []);
+
+  // ====== Toggle minimize ======
+  const toggleMinimize = useCallback(() => {
+    setIsMinimized((p) => !p);
   }, []);
 
   // ====== WS conference message listener ======
@@ -388,10 +402,12 @@ function ConferenceProvider({ children }) {
     participants,
     isAudioMuted,
     isVideoOff,
+    isMinimized,
     startConference,
     leaveConference,
     toggleAudio,
     toggleVideo,
+    toggleMinimize,
     CONF_STATE,
   };
 

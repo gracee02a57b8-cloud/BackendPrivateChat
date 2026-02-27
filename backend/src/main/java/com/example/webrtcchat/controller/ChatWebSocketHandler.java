@@ -174,14 +174,13 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
-        // Handle WebRTC call signaling + E2E group key relay (relay to target user)
+        // Handle WebRTC call signaling (relay to target user)
         if (incoming.getType() == MessageType.CALL_OFFER
                 || incoming.getType() == MessageType.CALL_ANSWER
                 || incoming.getType() == MessageType.CALL_REJECT
                 || incoming.getType() == MessageType.CALL_END
                 || incoming.getType() == MessageType.CALL_BUSY
-                || incoming.getType() == MessageType.ICE_CANDIDATE
-                || incoming.getType() == MessageType.GROUP_KEY) {
+                || incoming.getType() == MessageType.ICE_CANDIDATE) {
             handleCallSignaling(username, incoming);
             return;
         }
@@ -213,14 +212,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         // Handle GROUP_INVITE - relay to target user
         if (incoming.getType() == MessageType.GROUP_INVITE) {
             handleGroupInvite(username, incoming);
-            return;
-        }
-
-        // Handle E2E encryption invitation signaling — broadcast to room members
-        if (incoming.getType() == MessageType.E2E_INVITE
-                || incoming.getType() == MessageType.E2E_ACCEPT
-                || incoming.getType() == MessageType.E2E_DECLINE) {
-            handleE2EInvite(username, incoming);
             return;
         }
 
@@ -263,6 +254,18 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 return;
             }
         }
+
+        // Strip E2E encryption fields — encryption is disabled
+        incoming.setEncrypted(false);
+        incoming.setGroupEncrypted(false);
+        incoming.setEncryptedContent(null);
+        incoming.setIv(null);
+        incoming.setRatchetKey(null);
+        incoming.setMessageNumber(null);
+        incoming.setPreviousChainLength(null);
+        incoming.setEphemeralKey(null);
+        incoming.setSenderIdentityKey(null);
+        incoming.setOneTimeKeyId(null);
 
         chatService.send(roomId, incoming);
         broadcastToRoom(roomId, incoming);

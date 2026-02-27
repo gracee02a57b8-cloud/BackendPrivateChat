@@ -14,6 +14,7 @@ import {
   RiPhoneLine,
   RiVideoChatLine,
   RiGroupLine,
+  RiTeamLine,
 } from "react-icons/ri";
 
 function MessageTopBar() {
@@ -57,6 +58,11 @@ function MessageTopBar() {
     startConference(roomId, "video");
   }
 
+  function handleGroupAudioConference() {
+    if (!roomId || confState !== CONF_STATE.IDLE) return;
+    startConference(roomId, "audio");
+  }
+
   return (
     <>
       <div className="z-10 flex min-h-20 select-none items-center gap-2 rounded-b-xl border-b border-l border-r border-transparent bg-bgPrimary p-2 shadow-lg dark:border-LightShade/20 dark:bg-bgPrimary-dark">
@@ -95,16 +101,34 @@ function MessageTopBar() {
               </>
             )}
 
-            {/* Group chat: conference button */}
+            {/* Group chat: audio, video, conference */}
             {isGroup && (
-              <button
-                onClick={handleConference}
-                disabled={confState !== CONF_STATE.IDLE}
-                className="flex h-10 w-10 items-center justify-center rounded-full text-xl text-textPrimary/70 transition hover:bg-LightShade/20 active:scale-95 disabled:opacity-40 dark:text-textPrimary-dark/70"
-                title="Конференция"
-              >
-                <RiGroupLine />
-              </button>
+              <>
+                <button
+                  onClick={handleGroupAudioConference}
+                  disabled={confState !== CONF_STATE.IDLE}
+                  className="flex h-10 w-10 items-center justify-center rounded-full text-xl text-textPrimary/70 transition hover:bg-LightShade/20 active:scale-95 disabled:opacity-40 dark:text-textPrimary-dark/70"
+                  title="Групповой аудиозвонок"
+                >
+                  <RiPhoneLine />
+                </button>
+                <button
+                  onClick={handleConference}
+                  disabled={confState !== CONF_STATE.IDLE}
+                  className="flex h-10 w-10 items-center justify-center rounded-full text-xl text-textPrimary/70 transition hover:bg-LightShade/20 active:scale-95 disabled:opacity-40 dark:text-textPrimary-dark/70"
+                  title="Видеоконференция"
+                >
+                  <RiVideoChatLine />
+                </button>
+                <button
+                  onClick={handleConference}
+                  disabled={confState !== CONF_STATE.IDLE}
+                  className="flex h-10 w-10 items-center justify-center rounded-full text-xl text-textPrimary/70 transition hover:bg-LightShade/20 active:scale-95 disabled:opacity-40 dark:text-textPrimary-dark/70"
+                  title="Конференция"
+                >
+                  <RiTeamLine />
+                </button>
+              </>
             )}
           </div>
         )}
