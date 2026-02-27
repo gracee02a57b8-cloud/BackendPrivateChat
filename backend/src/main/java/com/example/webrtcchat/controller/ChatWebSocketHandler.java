@@ -577,6 +577,14 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                     "call", null);
         }
 
+        // Reset call start time on CALL_ANSWER (accurate duration from answer, not offer)
+        if (incoming.getType() == MessageType.CALL_ANSWER) {
+            String callKey = findCallKey(username, target);
+            if (callKey != null && activeCallStartTimes.containsKey(callKey)) {
+                activeCallStartTimes.put(callKey, System.currentTimeMillis());
+            }
+        }
+
         // If CALL_OFFER and target is offline → send CALL_END back to caller + log
         if (incoming.getType() == MessageType.CALL_OFFER && (targetSession == null || !targetSession.isOpen())) {
             saveCallLog(username, target, extra.getOrDefault("callType", "audio"), "unavailable", 0);
@@ -621,6 +629,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             }
             String reason = extra.getOrDefault("reason", "");
             if ("hangup".equals(reason)) status = "completed";
+            if ("timeout".equals(reason)) status = "missed";
             saveCallLog(resolveCallCaller(callKey, username, target), resolveCallCallee(callKey, username, target), callType, status, duration);
             cleanupCallTracking(username, target);
         }
@@ -659,6 +668,48 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         activeCallStartTimes.remove(u2 + ":" + u1);
         activeCallTypes.remove(u1 + ":" + u2);
         activeCallTypes.remove(u2 + ":" + u1);
+    }
+
+    /**
+     * Clean up call tracking for a user who disconnected — prevents memory leaks.
+     * Also notifies the other party and logs the call.
+     */
+    private void cleanupCallTrackingForUser(String username) {
+        // Find any active call involving this user
+        List<String> keysToRemove = new ArrayList<>();
+        for (String key : activeCallStartTimes.keySet()) {
+            if (key.startsWith(username + ":") || key.endsWith(":" + username)) {
+                keysToRemove.add(key);
+            }
+        }
+
+        for (String key : keysToRemove) {
+            String[] parts = key.split(":");
+            String otherUser = parts[0].equals(username) ? parts[1] : parts[0];
+            Long startTime = activeCallStartTimes.get(key);
+            String callType = activeCallTypes.getOrDefault(key, "audio");
+            int duration = startTime != null ? (int) ((System.currentTimeMillis() - startTime) / 1000) : 0;
+            String status = duration > 3 ? "completed" : "missed";
+
+            saveCallLog(parts[0], parts[1], callType, status, duration);
+
+            // Notify the other party that the call ended
+            WebSocketSession otherSession = userSessions.get(otherUser);
+            if (otherSession != null && otherSession.isOpen()) {
+                MessageDto endMsg = new MessageDto();
+                endMsg.setType(MessageType.CALL_END);
+                endMsg.setSender(username);
+                endMsg.setTimestamp(now());
+                Map<String, String> endExtra = new HashMap<>();
+                endExtra.put("target", otherUser);
+                endExtra.put("reason", "disconnect");
+                endMsg.setExtra(endExtra);
+                sendSafe(otherSession, serialize(endMsg));
+            }
+
+            activeCallStartTimes.remove(key);
+            activeCallTypes.remove(key);
+        }
     }
 
     private void saveCallLog(String caller, String callee, String callType, String status, int duration) {
@@ -877,6 +928,9 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         if (username != null) {
             // Auto-leave any conference
             autoLeaveConference(username);
+
+            // Clean up any active call tracking for this user
+            cleanupCallTrackingForUser(username);
 
             // Only remove from userSessions if this IS the current session (I7)
             WebSocketSession current = userSessions.get(username);

@@ -37,6 +37,7 @@ function CallProvider({ children }) {
 
   const pcRef = useRef(null);
   const durationRef = useRef(null);
+  const callTimeoutRef = useRef(null);
   const pendingIceRef = useRef([]);
   const callStartRef = useRef(null);
   const localStreamRef = useRef(null);
@@ -61,6 +62,10 @@ function CallProvider({ children }) {
     if (durationRef.current) {
       clearInterval(durationRef.current);
       durationRef.current = null;
+    }
+    if (callTimeoutRef.current) {
+      clearTimeout(callTimeoutRef.current);
+      callTimeoutRef.current = null;
     }
     setLocalStream(null);
     setRemoteStream(null);
@@ -127,6 +132,19 @@ function CallProvider({ children }) {
             sdp: JSON.stringify(offer),
           },
         });
+
+        // 45s timeout: auto-end if no answer
+        callTimeoutRef.current = setTimeout(() => {
+          if (stateRef.current === CALL_STATE.CALLING) {
+            sendWsMessage({
+              type: "CALL_END",
+              roomId: room,
+              content: "",
+              extra: { target: targetUser, reason: "timeout" },
+            });
+            cleanup();
+          }
+        }, 45_000);
       } catch (e) {
         console.error("[Call] Failed to start call:", e);
         cleanup();
@@ -235,7 +253,7 @@ function CallProvider({ children }) {
       type: "CALL_END",
       roomId: roomId,
       content: "",
-      extra: { target: remoteUser, reason: "ended" },
+      extra: { target: remoteUser, reason: "hangup" },
     });
 
     cleanup();
@@ -298,6 +316,10 @@ function CallProvider({ children }) {
             return;
 
           setCallState(CALL_STATE.ACTIVE);
+          if (callTimeoutRef.current) {
+            clearTimeout(callTimeoutRef.current);
+            callTimeoutRef.current = null;
+          }
 
           (async () => {
             try {
@@ -350,6 +372,10 @@ function CallProvider({ children }) {
         case "CALL_END":
         case "CALL_REJECT":
         case "CALL_BUSY": {
+          if (callTimeoutRef.current) {
+            clearTimeout(callTimeoutRef.current);
+            callTimeoutRef.current = null;
+          }
           cleanup();
           break;
         }

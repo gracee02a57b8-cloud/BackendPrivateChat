@@ -35,6 +35,7 @@ function ConferenceProvider({ children }) {
   const [isVideoOff, setIsVideoOff] = useState(false);
 
   const pcsRef = useRef({}); // { peerId: RTCPeerConnection }
+  const pendingIceRef = useRef({}); // { peerId: [candidate strings] }
   const localStreamRef = useRef(null);
   const stateRef = useRef(CONF_STATE.IDLE);
   const confIdRef = useRef(null);
@@ -51,6 +52,7 @@ function ConferenceProvider({ children }) {
   const cleanup = useCallback(() => {
     Object.values(pcsRef.current).forEach((pc) => pc.close());
     pcsRef.current = {};
+    pendingIceRef.current = {};
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((t) => t.stop());
       localStreamRef.current = null;
@@ -233,8 +235,11 @@ function ConferenceProvider({ children }) {
 
       switch (msg.type) {
         case "CONF_PEERS": {
-          // Server sent list of current peers in the conference
-          const peers = extra.peers || [];
+          // Server sent list of current peers as comma-separated string
+          const raw = extra.peers || "";
+          const peers = typeof raw === "string"
+            ? raw.split(",").filter(Boolean)
+            : Array.isArray(raw) ? raw : [];
           setParticipants(peers);
 
           // Create offers to all existing peers
@@ -269,6 +274,13 @@ function ConferenceProvider({ children }) {
               const offer = JSON.parse(extra.sdp);
               await pc.setRemoteDescription(new RTCSessionDescription(offer));
 
+              // Flush pending ICE candidates for this peer
+              const pending = pendingIceRef.current[sender] || [];
+              for (const c of pending) {
+                try { await pc.addIceCandidate(new RTCIceCandidate(JSON.parse(c))); } catch {}
+              }
+              delete pendingIceRef.current[sender];
+
               const answer = await pc.createAnswer();
               await pc.setLocalDescription(answer);
 
@@ -298,6 +310,13 @@ function ConferenceProvider({ children }) {
             try {
               const answer = JSON.parse(extra.sdp);
               await pc.setRemoteDescription(new RTCSessionDescription(answer));
+
+              // Flush pending ICE candidates for this peer
+              const pending = pendingIceRef.current[sender] || [];
+              for (const c of pending) {
+                try { await pc.addIceCandidate(new RTCIceCandidate(JSON.parse(c))); } catch {}
+              }
+              delete pendingIceRef.current[sender];
             } catch (e) {
               console.error(
                 "[Conf] Failed to handle answer from",
@@ -311,13 +330,19 @@ function ConferenceProvider({ children }) {
 
         case "CONF_ICE": {
           const pc = pcsRef.current[sender];
-          if (!pc) return;
-
-          try {
-            pc.addIceCandidate(
-              new RTCIceCandidate(JSON.parse(extra.candidate)),
-            );
-          } catch {}
+          if (pc && pc.remoteDescription) {
+            try {
+              pc.addIceCandidate(
+                new RTCIceCandidate(JSON.parse(extra.candidate)),
+              );
+            } catch (e) {
+              console.warn("[Conf] ICE add error:", e);
+            }
+          } else {
+            // Queue until PeerConnection + remote description are ready
+            if (!pendingIceRef.current[sender]) pendingIceRef.current[sender] = [];
+            pendingIceRef.current[sender].push(extra.candidate);
+          }
           break;
         }
 
@@ -336,6 +361,7 @@ function ConferenceProvider({ children }) {
             pcsRef.current[sender].close();
             delete pcsRef.current[sender];
           }
+          delete pendingIceRef.current[sender];
           setPeerStreams((prev) => {
             const n = { ...prev };
             delete n[sender];
