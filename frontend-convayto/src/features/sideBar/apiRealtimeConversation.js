@@ -9,9 +9,6 @@ export function subscribeRealtimeConversation({ myUserId, callback }) {
     // Skip messages without a room
     if (!msg.roomId) return;
 
-    // Only handle private messages (room ID starts with pm_)
-    if (!msg.roomId.startsWith("pm_")) return;
-
     // Don't echo our own messages
     const myUsername = localStorage.getItem("username");
     if (msg.sender === myUsername) return;

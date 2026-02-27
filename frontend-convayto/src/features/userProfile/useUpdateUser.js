@@ -3,15 +3,15 @@ import { updateCurrentUser } from "./apiUserAccount";
 import toast from "react-hot-toast";
 
 export function useUpdateUser() {
-  const quryClient = useQueryClient();
+  const queryClient = useQueryClient();
 
   const { mutate: updateUser, isPending: isUpdating } = useMutation({
     mutationFn: updateCurrentUser,
     onMutate: () => {
-      toast.loading("Updating...");
+      toast.loading("Обновление...");
     },
     onSuccess: () => {
-      quryClient.invalidateQueries("user");
+      queryClient.invalidateQueries("user");
     },
     onError: (error) => {
       toast.dismiss();

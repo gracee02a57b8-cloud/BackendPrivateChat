@@ -1,5 +1,4 @@
 import {
-  RiInformationLine,
   RiMoonClearLine,
   RiBugLine,
   RiSettings2Line,
@@ -11,14 +10,11 @@ import { useUser } from "../features/authentication/useUser";
 import Loader from "./Loader";
 import ToggleableContent from "./ToggleableContent";
 import Menu from "./Menu";
-import { APP_NAME } from "../config";
 
 export default function DropdownMenu() {
   const { user } = useUser();
-  const {
-    email,
-    user_metadata: { fullname },
-  } = user;
+  const fullname = user?.user_metadata?.fullname || user?.id || "";
+  const email = user?.email || "";
   const {
     openAccountView,
     isDarkMode,
@@ -37,18 +33,18 @@ export default function DropdownMenu() {
       <Menu>
         <Menu.Header>
           <Menu.Header.Name>{fullname}</Menu.Header.Name>
-          <Menu.Header.Email>{email}</Menu.Header.Email>
+          {email && <Menu.Header.Email>{email}</Menu.Header.Email>}
         </Menu.Header>
 
         <Menu.List>
           <Menu.ButtonItem onClick={openAccountView}>
             <RiSettings2Line />
-            <div>My Account</div>
+            <div>Мой аккаунт</div>
           </Menu.ButtonItem>
 
           <Menu.TogglerItem isChecked={isDarkMode} toggler={toggleDarkMode}>
             <RiMoonClearLine />
-            <div>Dark Mode</div>
+            <div>Тёмная тема</div>
           </Menu.TogglerItem>
 
           <Menu.LinkItem
@@ -58,14 +54,9 @@ export default function DropdownMenu() {
             <div>Сообщить об ошибке</div>
           </Menu.LinkItem>
 
-          <Menu.RouteItem to={"/about"}>
-            <RiInformationLine />
-            <div>About</div>
-          </Menu.RouteItem>
-
           <Menu.ButtonItem onClick={signout}>
             {isPending ? <Loader /> : <RiLogoutCircleLine />}
-            <div>Sign out</div>
+            <div>Выход</div>
           </Menu.ButtonItem>
         </Menu.List>
         <Menu.Footer />

@@ -110,7 +110,7 @@ function ConferenceOverlay() {
           className={`flex h-14 w-14 items-center justify-center rounded-full text-2xl shadow-lg transition active:scale-95 ${
             isAudioMuted
               ? "bg-red-500/80 hover:bg-red-600"
-              : "bg-white/20 hover:bg-white-/30"
+              : "bg-white/20 hover:bg-white/30"
           }`}
           title={isAudioMuted ? "Включить микрофон" : "Выключить микрофон"}
         >

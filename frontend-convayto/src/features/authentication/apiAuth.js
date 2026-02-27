@@ -5,19 +5,20 @@ import { connectWebSocket, disconnectWebSocket } from "../../services/wsService"
 // BarsikChat Backend Auth API
 ///////////////////////////////////
 
-function buildSession(token, username, role, avatarUrl, tag) {
+function buildSession(token, username, role, avatarUrl, tag, email) {
   return {
     session: {
       access_token: token,
       user: {
-        id: username, // Use username as the user ID (matches backend model)
+        id: username,
+        email: email || "",
         role: "authenticated",
         user_metadata: {
           username: username,
           fullname: username,
           avatar_url: avatarUrl || "",
           tag: tag || "",
-          bio: `Привет! Я использую BarsikChat!`,
+          bio: "Привет! Я использую BarsikChat!",
         },
       },
     },
@@ -29,13 +30,6 @@ function buildSession(token, username, role, avatarUrl, tag) {
 ///////////////////
 
 export async function signin({ username, password }) {
-  const data = await apiFetch("/api/auth/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username: username.trim(), password }),
-  }).catch(() => null);
-
-  // Manual handling since apiFetch may throw for auth errors
   const res = await fetch("/api/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -58,12 +52,11 @@ export async function signin({ username, password }) {
   localStorage.setItem("username", loginData.username);
   localStorage.setItem("role", loginData.role || "USER");
   localStorage.setItem("avatarUrl", loginData.avatarUrl || "");
-  localStorage.setItem("tag", loginData.tag || "");
-
+  localStorage.setItem("tag", loginData.tag || "");  localStorage.setItem("email", loginData.email || "");
   // Connect WebSocket after login
   connectWebSocket();
 
-  return buildSession(loginData.token, loginData.username, loginData.role, loginData.avatarUrl, loginData.tag);
+  return buildSession(loginData.token, loginData.username, loginData.role, loginData.avatarUrl, loginData.tag, loginData.email);
 }
 
 ///////////////////
@@ -94,11 +87,12 @@ export async function signup({ username, password, tag }) {
   localStorage.setItem("role", data.role || "USER");
   localStorage.setItem("avatarUrl", data.avatarUrl || "");
   localStorage.setItem("tag", data.tag || "");
+  localStorage.setItem("email", data.email || "");
 
   // Connect WebSocket after registration
   connectWebSocket();
 
-  return buildSession(data.token, data.username, data.role, data.avatarUrl, data.tag);
+  return buildSession(data.token, data.username, data.role, data.avatarUrl, data.tag, data.email);
 }
 
 ///////////////////
@@ -112,6 +106,7 @@ export async function signout() {
   localStorage.removeItem("role");
   localStorage.removeItem("avatarUrl");
   localStorage.removeItem("tag");
+  localStorage.removeItem("email");
 }
 
 ///////////////////
@@ -135,6 +130,7 @@ export async function getCurrentUser() {
     localStorage.getItem("role"),
     localStorage.getItem("avatarUrl"),
     localStorage.getItem("tag"),
+    localStorage.getItem("email"),
   );
 }
 

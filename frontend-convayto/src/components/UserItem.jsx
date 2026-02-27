@@ -34,7 +34,7 @@ function UserItem({
       role="button"
       tabIndex={0}
     >
-      <span className="h-12 w-12  flex-shrink-0 overflow-hidden rounded-full">
+      <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-full">
         {avatar ? (
           <img
             src={avatar}
@@ -43,9 +43,7 @@ function UserItem({
           />
         ) : (
           <HiOutlineUserCircle
-            size={55}
-            viewBox="2 2 24 24"
-            opacity={0.5}
+            className="h-full w-full opacity-50"
             strokeWidth="1"
           />
         )}

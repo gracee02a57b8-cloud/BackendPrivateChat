@@ -18,7 +18,7 @@ function Profile({ onClick, userData }) {
       role="button"
       tabIndex={0}
     >
-      <div className="h-11 w-11 overflow-hidden rounded-full">
+      <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full">
         {avatar_url ? (
           <img
             src={avatar_url}
@@ -26,7 +26,7 @@ function Profile({ onClick, userData }) {
             className="pointer-events-none h-full w-full object-cover"
           />
         ) : (
-          <HiOutlineUserCircle size={45} opacity={0.5} strokeWidth="1" />
+          <HiOutlineUserCircle className="h-full w-full opacity-50" strokeWidth="1" />
         )}
       </div>
 

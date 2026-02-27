@@ -1,16 +1,17 @@
-import supabase from "../../services/supabase";
+import { apiFetch } from "../../services/apiHelper";
 
 export default async function apiCheckUsername(username) {
   if (!username) return;
 
-  const { data, error } = await supabase
-    .from("usernames")
-    .select("username")
-    .eq("username", username);
-
-  if (error) {
-    throw new Error(error.message);
+  try {
+    // Проверяем существование пользователя через профиль
+    const profile = await apiFetch(`/api/profile/${username}`);
+    if (profile?.username) {
+      return { username: profile.username };
+    }
+    return null;
+  } catch {
+    // 404 или ошибка — пользователь не существует
+    return null;
   }
-
-  return data[0];
 }

@@ -1,12 +1,14 @@
 import { useState } from "react";
 import UserList from "./UserList";
 import GroupList from "./GroupList";
-import { RiChat3Line, RiUserLine, RiGroupLine } from "react-icons/ri";
+import ContactList from "./ContactList";
+import { RiChat3Line, RiUserLine, RiGroupLine, RiContactsBookLine } from "react-icons/ri";
 
 const TABS = [
   { key: "all", label: "Все чаты", icon: RiChat3Line },
   { key: "private", label: "Личные", icon: RiUserLine },
   { key: "groups", label: "Группы", icon: RiGroupLine },
+  { key: "contacts", label: "Контакты", icon: RiContactsBookLine },
 ];
 
 function UsersView() {
@@ -22,7 +24,7 @@ function UsersView() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex flex-1 items-center justify-center gap-1.5 px-2 py-2.5 text-sm font-medium transition-colors ${
+              className={`flex flex-1 items-center justify-center gap-1 px-1.5 py-2.5 text-xs font-medium transition-colors ${
                 activeTab === tab.key
                   ? "border-b-2 border-bgAccent text-bgAccent dark:border-bgAccent-dark dark:text-bgAccent-dark"
                   : "text-textPrimary/60 hover:text-textPrimary dark:text-textPrimary-dark/60 dark:hover:text-textPrimary-dark"
@@ -40,6 +42,7 @@ function UsersView() {
         {activeTab === "all" && <UserList filter="all" />}
         {activeTab === "private" && <UserList filter="private" />}
         {activeTab === "groups" && <GroupList />}
+        {activeTab === "contacts" && <ContactList />}
       </div>
     </div>
   );

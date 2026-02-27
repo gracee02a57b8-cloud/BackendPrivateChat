@@ -22,7 +22,7 @@ function Avatar({ avatar }) {
   }
 
   return (
-    <div className="relative mx-auto mt-4 h-52 w-52  rounded-full border-2 border-bgAccent dark:border-bgAccent-dark">
+    <div className="relative mx-auto mt-4 flex h-52 w-52 items-center justify-center overflow-hidden rounded-full border-2 border-bgAccent dark:border-bgAccent-dark">
       {avatar_url ? (
         <img
           className="pointer-events-none h-full w-full rounded-full object-cover object-center"
@@ -37,7 +37,7 @@ function Avatar({ avatar }) {
       )}
       <span>
         <label
-          className="absolute bottom-0 right-0 m-2 flex h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-bgAccent p-1 text-xl text-textPrimary-dark shadow-lg hover:bg-bgAccentDim dark:bg-bgAccent-dark dark:hover:bg-bgAccentDim-dark"
+          className="absolute bottom-2 right-2 flex h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-bgAccent p-1 text-xl text-textPrimary-dark shadow-lg hover:bg-bgAccentDim dark:bg-bgAccent-dark dark:hover:bg-bgAccentDim-dark"
           htmlFor="uploadPhoto"
           role="button"
           tabIndex={0}

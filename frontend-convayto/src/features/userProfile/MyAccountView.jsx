@@ -17,12 +17,11 @@ import useCheckUsernameAvailability from "../authentication/useCheckUsernameAvai
 function MyAccountView() {
   const { isBusy, isChecking, isTaken, checkUsername, reset } =
     useCheckUsernameAvailability();
-  const {
-    user: {
-      email,
-      user_metadata: { fullname, username, bio, avatar_url },
-    },
-  } = useUser();
+  const { user } = useUser();
+  const fullname = user?.user_metadata?.fullname || "";
+  const username = user?.user_metadata?.username || "";
+  const bio = user?.user_metadata?.bio || "";
+  const avatar_url = user?.user_metadata?.avatar_url || "";
 
   const { closeAccountView } = useUi();
 
@@ -39,22 +38,22 @@ function MyAccountView() {
         <Avatar avatar={avatar_url} />
 
         <InfoField
-          label="Name"
+          label="Имя"
           oldValue={fullname}
           updateKey="fullname"
           maxLength={MAX_NAME_LENGTH}
           regex={NAME_REGEX}
-          patternMessage="Only letters, numbers, and single spaces are allowed."
+          patternMessage="Только буквы, цифры и одиночные пробелы."
         />
 
         <InfoField
-          label="Username"
+          label="Логин"
           oldValue={username}
           updateKey="username"
           minLength={MIN_USERNAME_LENGTH}
           maxLength={MAX_USERNAME_LENGTH}
           regex={USERNAME_REGEX}
-          patternMessage="Only lowercase letters, numbers, underscores, and dashes are allowed."
+          patternMessage="Только строчные буквы, цифры, _ и -."
           checkUsername={checkUsername}
           isChecking={isChecking}
           isTaken={isTaken}
@@ -63,13 +62,11 @@ function MyAccountView() {
         />
 
         <InfoField
-          label="Bio"
+          label="О себе"
           oldValue={bio}
           updateKey="bio"
           maxLength={MAX_BIO_LENGTH}
         />
-
-        <InfoField label="Email" oldValue={email} />
 
         <BtnRecoverPassword />
       </div>

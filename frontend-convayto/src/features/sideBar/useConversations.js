@@ -17,8 +17,8 @@ export function useConversations() {
     queryFn: () => getConversations({ myUserId }),
   });
 
-  // Realtime Subscription (отключено — бесшовное обновление)
-  // useConversationSubscription(myUserId);
+  // Realtime Subscription
+  useConversationSubscription(myUserId);
 
   /////////////
   // Prefetching
