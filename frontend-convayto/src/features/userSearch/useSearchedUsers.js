@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { searchPeople } from "./apiUserSearch";
+import { searchPeople, searchGroups } from "./apiUserSearch";
 import { MINIMUM_SEARCH_LENGTH } from "../../config";
 import { useUi } from "../../contexts/UiContext";
 import { useUser } from "../authentication/useUser";
@@ -13,6 +13,7 @@ export function useSearchedUsers() {
     user: { id },
   } = useUser();
   const [users, setUsers] = useState([]);
+  const [groups, setGroups] = useState([]);
   const [isShortQuery, setIsShortQuery] = useState(true);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -23,13 +24,17 @@ export function useSearchedUsers() {
       const controller = new AbortController();
       let timeoutId;
 
-      async function fetchUsers() {
+      async function fetchResults() {
         try {
           setIsLoading(true);
           setError("");
-          const data = await searchPeople(cleanSearchQuery);
+          const [usersData, groupsData] = await Promise.all([
+            searchPeople(cleanSearchQuery),
+            searchGroups(cleanSearchQuery),
+          ]);
 
-          setUsers(data);
+          setUsers(usersData);
+          setGroups(groupsData);
           setError("");
           setIsShortQuery(false);
         } catch (err) {
@@ -58,7 +63,7 @@ export function useSearchedUsers() {
 
       // Set a new timeout for 1 seconds
       timeoutId = setTimeout(() => {
-        fetchUsers();
+        fetchResults();
       }, 1000);
 
       return function () {
@@ -71,5 +76,5 @@ export function useSearchedUsers() {
   );
 
   const filteredUsers = users?.filter((user) => user.id !== id);
-  return { users: filteredUsers, isShortQuery, isLoading, error };
+  return { users: filteredUsers, groups, isShortQuery, isLoading, error };
 }

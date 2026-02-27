@@ -16,7 +16,7 @@ function SearchBox() {
   return (
     <div className="relative">
       <label htmlFor="searchPeople" className="sr-only">
-        Search people
+        Поиск людей и групп
       </label>
       <input
         id="searchPeople"
@@ -25,8 +25,8 @@ function SearchBox() {
         onChange={(e) => updateSearchQuery(e.target.value)}
         type="text"
         onClick={() => openSearchView()}
-        placeholder="Search people"
-        aria-label="Search people"
+        placeholder="Поиск людей и групп"
+        aria-label="Поиск людей и групп"
         ref={searchInputRef}
       />
 

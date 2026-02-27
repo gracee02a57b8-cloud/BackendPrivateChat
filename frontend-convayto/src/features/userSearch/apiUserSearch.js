@@ -22,3 +22,28 @@ export async function searchPeople(query) {
       online: u.online || false,
     }));
 }
+
+export async function searchGroups(query) {
+  if (!query || query.length < 2) return [];
+
+  const rooms = await apiFetch("/api/rooms");
+  if (!rooms || !Array.isArray(rooms)) return [];
+
+  const q = query.toLowerCase();
+
+  return rooms
+    .filter(
+      (r) =>
+        r.type === "ROOM" &&
+        (r.name?.toLowerCase().includes(q) ||
+          r.description?.toLowerCase().includes(q)),
+    )
+    .map((r) => ({
+      id: r.id,
+      name: r.name || "Группа",
+      description: r.description || "",
+      avatarUrl: r.avatarUrl || "",
+      members: r.members || [],
+      type: "group",
+    }));
+}

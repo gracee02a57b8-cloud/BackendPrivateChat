@@ -62,7 +62,7 @@ function MessageInputBar() {
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
           type="text"
-          placeholder="Message"
+          placeholder="Сообщение"
           id="inputMessage"
           autoComplete="off"
         />
