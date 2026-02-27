@@ -77,6 +77,12 @@ export function connectWebSocket() {
     connectionListeners.forEach((cb) => cb(false));
     ws = null;
 
+    // Code 4001 = replaced by new session from another tab — don't reconnect
+    if (event.code === 4001) {
+      console.log("[WS] Session replaced by another tab, not reconnecting");
+      return;
+    }
+
     // Auto-reconnect after 3 seconds if we have a token
     if (localStorage.getItem("token")) {
       reconnectTimer = setTimeout(() => {

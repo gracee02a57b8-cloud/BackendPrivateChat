@@ -43,9 +43,9 @@ upload:
 
 webrtc:
   stun:
-    url: ${STUN_URL:stun:109.196.102.241:3478}
+    url: ${STUN_URL:stun:85.239.44.28:3478}
   turn:
-    url: ${TURN_URL:turn:109.196.102.241:3478}
+    url: ${TURN_URL:turn:85.239.44.28:3478}
     secret: ${TURN_SECRET:}
 
 vapid:

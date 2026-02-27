@@ -1,7 +1,7 @@
 // ==========================================
 // CallOverlay — fullscreen + minimized UI for 1:1 voice/video calls
 // ==========================================
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { useCall, CALL_STATE } from "../contexts/CallContext";
 import { getRandomAvatar } from "../utils/avatarUtils";
 import {
@@ -15,6 +15,48 @@ import {
   RiArrowDownSLine,
 } from "react-icons/ri";
 import { HiPhoneXMark } from "react-icons/hi2";
+
+// ====== Ringtone using Web Audio API ======
+let ringtoneCtx = null;
+let ringtoneInterval = null;
+
+function startRingtone() {
+  stopRingtone();
+  try {
+    ringtoneCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const playTone = () => {
+      if (!ringtoneCtx) return;
+      // Two-tone ring: 440Hz then 480Hz
+      [440, 480].forEach((freq, i) => {
+        const osc = ringtoneCtx.createOscillator();
+        const gain = ringtoneCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.15, ringtoneCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ringtoneCtx.currentTime + 0.8);
+        osc.connect(gain);
+        gain.connect(ringtoneCtx.destination);
+        osc.start(ringtoneCtx.currentTime + i * 0.15);
+        osc.stop(ringtoneCtx.currentTime + 0.8 + i * 0.15);
+      });
+    };
+    playTone();
+    ringtoneInterval = setInterval(playTone, 2000);
+  } catch (e) {
+    console.warn("[Ringtone] Failed to play:", e);
+  }
+}
+
+function stopRingtone() {
+  if (ringtoneInterval) {
+    clearInterval(ringtoneInterval);
+    ringtoneInterval = null;
+  }
+  if (ringtoneCtx) {
+    ringtoneCtx.close().catch(() => {});
+    ringtoneCtx = null;
+  }
+}
 
 function formatDuration(seconds) {
   const m = Math.floor(seconds / 60)
@@ -73,6 +115,16 @@ function CallOverlay() {
       miniVideoRef.current.srcObject = remoteStream;
     }
   }, [remoteStream, isMinimized]);
+
+  // Play ringtone on incoming call (RINGING) or outgoing (CALLING)
+  useEffect(() => {
+    if (callState === CS.RINGING || callState === CS.CALLING) {
+      startRingtone();
+    } else {
+      stopRingtone();
+    }
+    return () => stopRingtone();
+  }, [callState, CS.RINGING, CS.CALLING]);
 
   // Drag handlers for minimized PIP
   useEffect(() => {
