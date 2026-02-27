@@ -13,10 +13,14 @@ import {
   USERNAME_REGEX,
 } from "../../config";
 import useCheckUsernameAvailability from "../authentication/useCheckUsernameAvailability";
+import { useSignout } from "../authentication/useSignout";
+import { RiLogoutCircleLine } from "react-icons/ri";
+import Loader from "../../components/Loader";
 
 function MyAccountView() {
   const { isBusy, isChecking, isTaken, checkUsername, reset } =
     useCheckUsernameAvailability();
+  const { signout, isPending: isSigningOut } = useSignout();
   const { user } = useUser();
   const fullname = user?.user_metadata?.fullname || "";
   const username = user?.user_metadata?.username || "";
@@ -69,6 +73,15 @@ function MyAccountView() {
         />
 
         <BtnRecoverPassword />
+
+        <button
+          onClick={signout}
+          disabled={isSigningOut}
+          className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl border border-red-300 bg-red-50 px-4 py-3 font-semibold text-red-600 transition hover:bg-red-100 active:scale-[0.98] dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
+        >
+          {isSigningOut ? <Loader /> : <RiLogoutCircleLine className="text-xl" />}
+          Выйти из аккаунта
+        </button>
       </div>
     </div>
   );

@@ -3,7 +3,6 @@ import { useUi } from "../../contexts/UiContext";
 import Profile from "../../components/Profile";
 import DropdownMenu from "../../components/DropdownMenu";
 import IconButton from "../../components/IconButton";
-import SignoutButton from "./SignoutButton";
 
 function Header() {
   const { user } = useUser();
@@ -39,8 +38,6 @@ function Header() {
       </div>
 
       <Profile userData={userData} onClick={openAccountView} />
-
-      <SignoutButton />
     </div>
   );
 }

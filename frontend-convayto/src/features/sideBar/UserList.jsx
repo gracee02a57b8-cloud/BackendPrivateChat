@@ -4,10 +4,12 @@ import { useUi } from "../../contexts/UiContext";
 import Loader from "../../components/Loader";
 import UserItem from "../../components/UserItem";
 import GroupItem from "./GroupItem";
+import { useOnlineUsers } from "../../hooks/useOnlineUsers";
 
 function UserList({ filter = "all" }) {
   const { conversations, isPending, error } = useConversations();
   const { closeSidebar } = useUi();
+  const onlineUsers = useOnlineUsers();
 
   if (isPending)
     return (
@@ -67,6 +69,8 @@ function UserList({ filter = "all" }) {
         name={fullname}
         subtext={lastMessage}
         handler={closeSidebar}
+        roomId={conv?.id}
+        online={onlineUsers.has(conv?.friendInfo?.username || id)}
       />
     );
   });

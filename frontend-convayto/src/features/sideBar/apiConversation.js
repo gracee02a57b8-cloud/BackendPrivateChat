@@ -1,4 +1,5 @@
 import { apiFetch } from "../../services/apiHelper";
+import { getPinnedChats } from "../../utils/pinnedChats";
 
 export async function getConversationEntries() {
   // Fetch all rooms the user belongs to
@@ -76,8 +77,14 @@ export async function getConversations({ myUserId }) {
     }),
   );
 
-  // Sort by last message time (newest first)
+  // Sort: pinned chats first, then by last message time
+  const pinned = getPinnedChats();
   conversations.sort((a, b) => {
+    const aPinned = pinned.includes(a.id);
+    const bPinned = pinned.includes(b.id);
+    if (aPinned && !bPinned) return -1;
+    if (!aPinned && bPinned) return 1;
+
     const timeA = a.last_message?.created_at || a.created_at || "";
     const timeB = b.last_message?.created_at || b.created_at || "";
     return timeB.localeCompare(timeA);

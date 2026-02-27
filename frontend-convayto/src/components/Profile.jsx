@@ -1,7 +1,7 @@
 import { useEnterKeyPress } from "../utils/useEnterKeyPress";
 import { getRandomAvatar } from "../utils/avatarUtils";
 
-function Profile({ onClick, userData }) {
+function Profile({ onClick, userData, online }) {
   const fullname = userData?.fullname;
   const username = userData?.username;
   const avatar_url = userData?.avatar_url || getRandomAvatar(username || fullname);
@@ -18,17 +18,26 @@ function Profile({ onClick, userData }) {
       role="button"
       tabIndex={0}
     >
-      <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full">
+      <div className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-full">
         <img
           src={avatar_url}
           alt={fullname}
           className="pointer-events-none h-full w-full rounded-full object-cover"
         />
+        {online && (
+          <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-bgPrimary bg-green-500 dark:border-bgPrimary-dark" />
+        )}
       </div>
 
       <div className="truncate text-left">
         <p className="truncate">{fullname}</p>
-        <p className="truncate text-sm opacity-70">@{username}</p>
+        <p className="truncate text-sm opacity-70">
+          {online ? (
+            <span className="text-green-500">в сети</span>
+          ) : (
+            <>@{username}</>
+          )}
+        </p>
       </div>
     </div>
   );

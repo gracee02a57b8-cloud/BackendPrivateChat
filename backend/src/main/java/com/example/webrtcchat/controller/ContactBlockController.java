@@ -6,6 +6,7 @@ import com.example.webrtcchat.entity.UserEntity;
 import com.example.webrtcchat.repository.BlockedUserRepository;
 import com.example.webrtcchat.repository.ContactRepository;
 import com.example.webrtcchat.repository.UserRepository;
+import com.example.webrtcchat.service.ChatService;
 import com.example.webrtcchat.service.JwtService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,15 +29,18 @@ public class ContactBlockController {
     private final BlockedUserRepository blockedUserRepository;
     private final UserRepository userRepository;
     private final JwtService jwtService;
+    private final ChatService chatService;
 
     public ContactBlockController(ContactRepository contactRepository,
                                   BlockedUserRepository blockedUserRepository,
                                   UserRepository userRepository,
-                                  JwtService jwtService) {
+                                  JwtService jwtService,
+                                  ChatService chatService) {
         this.contactRepository = contactRepository;
         this.blockedUserRepository = blockedUserRepository;
         this.userRepository = userRepository;
         this.jwtService = jwtService;
+        this.chatService = chatService;
     }
 
     // ════════════════════════════════════════════
@@ -60,6 +64,8 @@ public class ContactBlockController {
                 map.put("lastName", u.getLastName() != null ? u.getLastName() : "");
                 map.put("tag", u.getTag() != null ? u.getTag() : "");
             });
+            map.put("online", chatService.isUserOnline(c.getContact()));
+            map.put("lastSeen", chatService.getLastSeen(c.getContact()));
             return map;
         }).collect(Collectors.toList());
 

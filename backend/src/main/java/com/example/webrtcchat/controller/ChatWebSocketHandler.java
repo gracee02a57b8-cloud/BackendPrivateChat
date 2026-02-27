@@ -105,6 +105,9 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         chatService.addUser(username);
 
         log.info("User '{}' connected. Online: {}", username, chatService.getOnlineUsers().size());
+
+        // Broadcast presence: user came online
+        broadcastPresence(username, true);
     }
 
     @Override
@@ -472,6 +475,23 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                     if (s != null) sendSafe(s, json);
                 }
             });
+        }
+    }
+
+    /**
+     * Broadcast PRESENCE to all online users when a user goes online or offline.
+     */
+    private void broadcastPresence(String username, boolean online) {
+        try {
+            String json = objectMapper.writeValueAsString(java.util.Map.of(
+                    "type", "PRESENCE",
+                    "sender", username,
+                    "content", online ? "online" : "offline",
+                    "timestamp", now()
+            ));
+            userSessions.forEach((user, s) -> sendSafe(s, json));
+        } catch (Exception e) {
+            log.debug("Failed to broadcast presence for '{}'", username);
         }
     }
 
@@ -866,6 +886,9 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 chatService.updateLastSeen(username);
 
                 log.info("User '{}' disconnected. Online: {}", username, chatService.getOnlineUsers().size());
+
+                // Broadcast presence: user went offline
+                broadcastPresence(username, false);
             }
         }
     }

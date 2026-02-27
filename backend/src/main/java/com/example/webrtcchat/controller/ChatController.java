@@ -44,4 +44,9 @@ public class ChatController {
                 .toList();
         return ResponseEntity.ok(contacts);
     }
+
+    @GetMapping("/online")
+    public ResponseEntity<List<String>> getOnlineUsersList() {
+        return ResponseEntity.ok(chatService.getOnlineUsers());
+    }
 }

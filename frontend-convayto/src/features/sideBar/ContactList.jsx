@@ -3,10 +3,12 @@ import { useUi } from "../../contexts/UiContext";
 import Loader from "../../components/Loader";
 import UserItem from "../../components/UserItem";
 import ShortTextMessage from "../../components/ShortTextMessage";
+import { useOnlineUsers } from "../../hooks/useOnlineUsers";
 
 function ContactList() {
   const { contacts, isPending, error } = useContacts();
   const { closeSidebar } = useUi();
+  const onlineUsers = useOnlineUsers();
 
   if (isPending)
     return (
@@ -30,8 +32,13 @@ function ContactList() {
       id={contact.id}
       avatar={contact.avatar_url}
       name={contact.fullname}
-      subtext={contact.tag || `@${contact.username}`}
+      subtext={
+        onlineUsers.has(contact.username || contact.id)
+          ? "в сети"
+          : contact.tag || `@${contact.username}`
+      }
       handler={closeSidebar}
+      online={onlineUsers.has(contact.username || contact.id)}
     />
   ));
 }

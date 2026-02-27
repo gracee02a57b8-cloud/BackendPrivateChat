@@ -9,6 +9,7 @@ import { useEffect } from "react";
 import { APP_NAME } from "../../config";
 import { useCall } from "../../contexts/CallContext";
 import { useConference } from "../../contexts/ConferenceContext";
+import { useOnlineUsers } from "../../hooks/useOnlineUsers";
 import {
   RiPhoneLine,
   RiVideoChatLine,
@@ -20,10 +21,12 @@ function MessageTopBar() {
   const { openFriendSidebar, openSidebar } = useUi();
   const { startCall, callState, CALL_STATE } = useCall();
   const { startConference, confState, CONF_STATE } = useConference();
+  const onlineUsers = useOnlineUsers();
 
   const friend = convInfo?.friendInfo;
   const isGroup = convInfo?.isGroup;
   const roomId = convInfo?.id;
+  const isFriendOnline = !isGroup && friend && onlineUsers.has(friend.username || friend.id);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -64,7 +67,7 @@ function MessageTopBar() {
         {isPending ? (
           <Loader size="medium" />
         ) : (
-          <Profile onClick={openFriendSidebar} userData={friend} />
+          <Profile onClick={openFriendSidebar} userData={friend} online={isFriendOnline} />
         )}
 
         {/* Call buttons — right side */}

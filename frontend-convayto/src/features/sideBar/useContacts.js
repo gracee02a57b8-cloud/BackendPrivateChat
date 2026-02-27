@@ -13,6 +13,8 @@ async function getContacts() {
     username: c.contact,
     avatar_url: c.avatarUrl || "",
     tag: c.tag || "",
+    online: !!c.online,
+    lastSeen: c.lastSeen || null,
   }));
 }
 

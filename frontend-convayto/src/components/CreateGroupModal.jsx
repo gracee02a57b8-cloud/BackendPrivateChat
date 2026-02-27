@@ -8,6 +8,7 @@ import { useContacts } from "../features/sideBar/useContacts";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { getRandomAvatar } from "../utils/avatarUtils";
 
 function CreateGroupModal({ isOpen, onClose }) {
   const [name, setName] = useState("");
@@ -133,9 +134,13 @@ function CreateGroupModal({ isOpen, onClose }) {
                     className="h-4 w-4 rounded accent-bgAccent"
                   />
                   <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-purple-500 text-xs font-bold text-white">
-                      {contact.fullname?.[0]?.toUpperCase() || "?"}
-                    </div>
+                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-full">
+                      <img
+                        src={contact.avatar_url || getRandomAvatar(contact.username || contact.fullname)}
+                        alt={contact.fullname}
+                        className="h-full w-full object-cover"
+                      />
+                    </span>
                     <div>
                       <p className="text-sm font-medium">{contact.fullname}</p>
                       <p className="text-xs text-textPrimary/50 dark:text-textPrimary-dark/50">
