@@ -108,7 +108,20 @@ function CallProvider({ children }) {
         setRoomId(room);
 
         console.log("[Call] Requesting media...");
-        const stream = await getUserMediaStream(type);
+        let stream;
+        let actualType = type;
+        try {
+          stream = await getUserMediaStream(type);
+        } catch (mediaErr) {
+          if (type === "video") {
+            console.warn("[Call] Video failed, falling back to audio:", mediaErr.message);
+            actualType = "audio";
+            setCallType("audio");
+            stream = await getUserMediaStream("audio");
+          } else {
+            throw mediaErr;
+          }
+        }
         console.log("[Call] Got media stream, tracks:", stream.getTracks().length);
         localStreamRef.current = stream;
         setLocalStream(stream);
@@ -151,7 +164,7 @@ function CallProvider({ children }) {
           content: "",
           extra: {
             target: targetUser,
-            callType: type,
+            callType: actualType,
             sdp: JSON.stringify(offer),
           },
         });
@@ -210,7 +223,18 @@ function CallProvider({ children }) {
       const type = data.callType || "audio";
 
       console.log("[Call] Requesting media for accept...");
-      const stream = await getUserMediaStream(type);
+      let stream;
+      try {
+        stream = await getUserMediaStream(type);
+      } catch (mediaErr) {
+        if (type === "video") {
+          console.warn("[Call] Video failed on accept, falling back to audio:", mediaErr.message);
+          setCallType("audio");
+          stream = await getUserMediaStream("audio");
+        } else {
+          throw mediaErr;
+        }
+      }
       console.log("[Call] Got media stream for accept, tracks:", stream.getTracks().length);
       localStreamRef.current = stream;
       setLocalStream(stream);

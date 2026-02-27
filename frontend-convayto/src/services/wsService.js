@@ -12,7 +12,6 @@ let connectionListeners = [];
 let isConnecting = false;
 let callListeners = [];
 let confListeners = [];
-let replace4001Times = [];
 
 const CALL_TYPES = new Set([
   'CALL_OFFER', 'CALL_ANSWER', 'CALL_REJECT', 'CALL_END',
@@ -32,7 +31,7 @@ function getWsUrl() {
 }
 
 export function connectWebSocket() {
-  if (!REALTIME_ENABLED) return; // бесшовное обновление отключено
+  if (!REALTIME_ENABLED) return;
   if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
     return;
   }
@@ -41,38 +40,50 @@ export function connectWebSocket() {
   const url = getWsUrl();
   if (!url) return;
 
-  isConnecting = true;
-  ws = new WebSocket(url);
+  // Cancel any pending reconnect — we're connecting now
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
 
-  ws.onopen = () => {
+  isConnecting = true;
+  const thisWs = new WebSocket(url);
+  ws = thisWs;
+
+  thisWs.onopen = () => {
+    if (ws !== thisWs) return; // stale connection opened — ignore
     isConnecting = false;
     console.log("[WS] Connected");
     connectionListeners.forEach((cb) => cb(true));
-
-    // Clear any reconnect timer
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
     }
   };
 
-  ws.onmessage = (event) => {
+  thisWs.onmessage = (event) => {
     try {
       const msg = JSON.parse(event.data);
-      // Route to typed listeners
       if (CALL_TYPES.has(msg.type)) {
         callListeners.forEach((cb) => cb(msg));
       } else if (CONF_TYPES.has(msg.type)) {
         confListeners.forEach((cb) => cb(msg));
       }
-      // Always notify general listeners
       messageListeners.forEach((cb) => cb(msg));
     } catch (e) {
       console.warn("[WS] Failed to parse message:", event.data);
     }
   };
 
-  ws.onclose = (event) => {
+  thisWs.onclose = (event) => {
+    // If ws has already moved on to a newer connection, this is a stale
+    // onclose (e.g. old session got 4001-kicked after new one connected).
+    // Do NOT null ws, do NOT reconnect — the new connection is fine.
+    if (ws !== thisWs) {
+      console.debug("[WS] Stale connection closed (replaced), ignoring");
+      return;
+    }
+
     isConnecting = false;
     console.log("[WS] Disconnected", event.code, event.reason);
     connectionListeners.forEach((cb) => cb(false));
@@ -80,17 +91,6 @@ export function connectWebSocket() {
 
     // Auto-reconnect if we have a token
     if (localStorage.getItem("token")) {
-      // 4001 = session replaced by another tab/device
-      // Reconnect with longer delay; give up after 3 replacements in 30s
-      if (event.code === 4001) {
-        const now = Date.now();
-        replace4001Times = replace4001Times.filter((t) => now - t < 30000);
-        replace4001Times.push(now);
-        if (replace4001Times.length >= 3) {
-          console.warn("[WS] Session replaced 3 times in 30s — another tab/device is active, not reconnecting");
-          return;
-        }
-      }
       const delay = event.code === 4001 ? 5000 : 3000;
       reconnectTimer = setTimeout(() => {
         console.log("[WS] Reconnecting...");
@@ -99,7 +99,8 @@ export function connectWebSocket() {
     }
   };
 
-  ws.onerror = (error) => {
+  thisWs.onerror = (error) => {
+    if (ws !== thisWs) return; // stale
     isConnecting = false;
     console.error("[WS] Error:", error);
   };
@@ -111,8 +112,9 @@ export function disconnectWebSocket() {
     reconnectTimer = null;
   }
   if (ws) {
-    ws.close();
-    ws = null;
+    const closing = ws;
+    ws = null; // clear before close so stale onclose handler sees ws !== thisWs
+    closing.close();
   }
 }
 
