@@ -7,7 +7,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,10 +35,15 @@ public class ReadReceiptService {
     }
 
     @Transactional(readOnly = true)
-    public List<String> getReaders(String messageId) {
+    public List<Map<String, String>> getReaders(String messageId) {
         return readReceiptRepository.findByMessageId(messageId)
                 .stream()
-                .map(ReadReceiptEntity::getUsername)
+                .map(e -> {
+                    Map<String, String> m = new HashMap<>();
+                    m.put("username", e.getUsername());
+                    m.put("readAt", e.getReadAt());
+                    return m;
+                })
                 .collect(Collectors.toList());
     }
 

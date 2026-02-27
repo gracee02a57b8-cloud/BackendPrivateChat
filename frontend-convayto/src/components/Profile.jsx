@@ -18,14 +18,14 @@ function Profile({ onClick, userData, online }) {
       role="button"
       tabIndex={0}
     >
-      <div className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-full">
+      <div className="relative flex h-10 w-10 flex-shrink-0 items-center justify-center">
         <img
           src={avatar_url}
           alt={fullname}
           className="pointer-events-none h-full w-full rounded-full object-cover"
         />
         {online && (
-          <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-bgPrimary bg-green-500 dark:border-bgPrimary-dark" />
+          <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-bgPrimary bg-green-500 dark:border-bgPrimary-dark" />
         )}
       </div>
 

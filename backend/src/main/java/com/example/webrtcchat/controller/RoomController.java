@@ -330,7 +330,7 @@ public class RoomController {
         if (room.getType() != RoomType.GENERAL && !room.getMembers().contains(principal.getName())) {
             return ResponseEntity.status(403).build();
         }
-        List<String> readers = readReceiptService.getReaders(messageId);
+        List<Map<String, String>> readers = readReceiptService.getReaders(messageId);
         return ResponseEntity.ok(Map.of("readers", readers, "count", readers.size()));
     }
 

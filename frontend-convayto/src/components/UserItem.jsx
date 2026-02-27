@@ -80,14 +80,14 @@ function UserItem({
         role="button"
         tabIndex={0}
       >
-        <span className="relative flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-full">
+        <span className="relative flex h-12 w-12 flex-shrink-0 items-center justify-center">
           <img
             src={avatar || getRandomAvatar(name || id)}
             alt={name}
-            className="pointer-events-none h-full w-full object-cover"
+            className="pointer-events-none h-full w-full rounded-full object-cover"
           />
           {online && (
-            <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-bgPrimary bg-green-500 dark:border-bgPrimary-dark" />
+            <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-bgPrimary bg-green-500 dark:border-bgPrimary-dark" />
           )}
         </span>
 

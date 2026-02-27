@@ -5,6 +5,8 @@ import Loader from "../../components/Loader";
 import useIntersectionObserver from "./useIntersectionObserver";
 import useScrollBehavior from "./useScrollBehavior";
 import ShortTextMessage from "../../components/ShortTextMessage";
+import useConvInfo from "./useConvInfo";
+import { apiFetch } from "../../services/apiHelper";
 
 function Messages({
   selectionMode,
@@ -62,6 +64,30 @@ function Messages({
     isIntersectingTop,
     isIntersectingBtm,
   });
+
+  // Auto mark messages as read for group chats
+  const { convInfo } = useConvInfo();
+  const markedRef = useRef(new Set());
+
+  useEffect(() => {
+    const roomId = convInfo?.id;
+    const isGroup = convInfo?.isGroup;
+    if (!roomId || !isGroup || !pages) return;
+
+    const myUsername = localStorage.getItem("username");
+    const latestPage = pages[0];
+    if (!latestPage) return;
+
+    // Mark only messages from others that we haven't marked yet
+    latestPage.forEach((msg) => {
+      if (msg?.id && msg.sender_id !== myUsername && !markedRef.current.has(msg.id)) {
+        markedRef.current.add(msg.id);
+        apiFetch(`/api/rooms/${encodeURIComponent(roomId)}/messages/${encodeURIComponent(msg.id)}/read`, {
+          method: "POST",
+        }).catch(() => {});
+      }
+    });
+  }, [pages, convInfo]);
 
   if (error) return <ShortTextMessage>⚠️ {error.message}</ShortTextMessage>;
 
