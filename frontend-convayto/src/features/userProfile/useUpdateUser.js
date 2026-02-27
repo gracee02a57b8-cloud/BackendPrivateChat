@@ -10,8 +10,28 @@ export function useUpdateUser() {
     onMutate: () => {
       toast.loading("Обновление...");
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries("user");
+    onSuccess: (data) => {
+      // Optimistically update avatar in cache so it shows immediately
+      if (data?.user?.user_metadata?.avatar_url) {
+        queryClient.setQueryData(["user"], (old) => {
+          if (!old?.session?.user) return old;
+          return {
+            ...old,
+            session: {
+              ...old.session,
+              user: {
+                ...old.session.user,
+                user_metadata: {
+                  ...old.session.user.user_metadata,
+                  avatar_url: data.user.user_metadata.avatar_url,
+                },
+              },
+            },
+          };
+        });
+      }
+      // Also refetch from server to get fully fresh data
+      queryClient.invalidateQueries({ queryKey: ["user"] });
     },
     onError: (error) => {
       toast.dismiss();

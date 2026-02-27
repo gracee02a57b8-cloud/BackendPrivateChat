@@ -124,14 +124,45 @@ export async function getCurrentUser() {
   // Connect WebSocket if not already connected
   connectWebSocket();
 
-  return buildSession(
-    token,
-    username,
-    localStorage.getItem("role"),
-    localStorage.getItem("avatarUrl"),
-    localStorage.getItem("tag"),
-    localStorage.getItem("email"),
-  );
+  // Fetch fresh profile from server to get up-to-date avatar, fullname, bio
+  try {
+    const profile = await apiFetch(`/api/profile`);
+    const avatarUrl = profile.avatarUrl || localStorage.getItem("avatarUrl") || "";
+    const fullname = (profile.firstName && profile.lastName
+      ? `${profile.firstName} ${profile.lastName}`.trim()
+      : profile.firstName || profile.username || username);
+
+    // Keep localStorage in sync
+    if (profile.avatarUrl) localStorage.setItem("avatarUrl", profile.avatarUrl);
+
+    return {
+      session: {
+        access_token: token,
+        user: {
+          id: username,
+          email: profile.email || localStorage.getItem("email") || "",
+          role: "authenticated",
+          user_metadata: {
+            username: profile.username || username,
+            fullname,
+            avatar_url: avatarUrl,
+            tag: profile.tag || localStorage.getItem("tag") || "",
+            bio: profile.bio || "",
+          },
+        },
+      },
+    };
+  } catch {
+    // Fallback to localStorage if server unreachable
+    return buildSession(
+      token,
+      username,
+      localStorage.getItem("role"),
+      localStorage.getItem("avatarUrl"),
+      localStorage.getItem("tag"),
+      localStorage.getItem("email"),
+    );
+  }
 }
 
 ///////////////////
