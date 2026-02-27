@@ -12,6 +12,7 @@ let connectionListeners = [];
 let isConnecting = false;
 let callListeners = [];
 let confListeners = [];
+let replace4001Times = [];
 
 const CALL_TYPES = new Set([
   'CALL_OFFER', 'CALL_ANSWER', 'CALL_REJECT', 'CALL_END',
@@ -77,18 +78,24 @@ export function connectWebSocket() {
     connectionListeners.forEach((cb) => cb(false));
     ws = null;
 
-    // Code 4001 = replaced by new session from another tab — don't reconnect
-    if (event.code === 4001) {
-      console.log("[WS] Session replaced by another tab, not reconnecting");
-      return;
-    }
-
-    // Auto-reconnect after 3 seconds if we have a token
+    // Auto-reconnect if we have a token
     if (localStorage.getItem("token")) {
+      // 4001 = session replaced by another tab/device
+      // Reconnect with longer delay; give up after 3 replacements in 30s
+      if (event.code === 4001) {
+        const now = Date.now();
+        replace4001Times = replace4001Times.filter((t) => now - t < 30000);
+        replace4001Times.push(now);
+        if (replace4001Times.length >= 3) {
+          console.warn("[WS] Session replaced 3 times in 30s — another tab/device is active, not reconnecting");
+          return;
+        }
+      }
+      const delay = event.code === 4001 ? 5000 : 3000;
       reconnectTimer = setTimeout(() => {
         console.log("[WS] Reconnecting...");
         connectWebSocket();
-      }, 3000);
+      }, delay);
     }
   };
 

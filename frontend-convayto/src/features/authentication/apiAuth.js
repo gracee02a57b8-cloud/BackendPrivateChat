@@ -170,7 +170,7 @@ export async function getCurrentUser() {
 ///////////////////
 
 export async function getUserById(username) {
-  if (!username) return null;
+  if (!username || username === "undefined") return null;
 
   try {
     const profile = await apiFetch(`/api/profile/${username}`);

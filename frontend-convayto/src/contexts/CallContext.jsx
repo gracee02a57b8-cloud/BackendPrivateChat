@@ -9,7 +9,12 @@ import {
   useEffect,
   useCallback,
 } from "react";
-import { onCallMessage, sendWsMessage } from "../services/wsService";
+import {
+  onCallMessage,
+  sendWsMessage,
+  isWsConnected,
+  connectWebSocket,
+} from "../services/wsService";
 import {
   createPeerConnection,
   getUserMediaStream,
@@ -87,6 +92,13 @@ function CallProvider({ children }) {
   const startCall = useCallback(
     async (targetUser, room, type = "audio") => {
       if (stateRef.current !== CALL_STATE.IDLE) return;
+
+      if (!isWsConnected()) {
+        console.warn("[Call] Cannot start call — WebSocket not connected, reconnecting...");
+        connectWebSocket();
+        return;
+      }
+
       console.log("[Call] Starting call to", targetUser, "room=", room, "type=", type);
 
       try {
@@ -133,7 +145,7 @@ function CallProvider({ children }) {
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
 
-        sendWsMessage({
+        const offerSent = sendWsMessage({
           type: "CALL_OFFER",
           roomId: room,
           content: "",
@@ -143,6 +155,11 @@ function CallProvider({ children }) {
             sdp: JSON.stringify(offer),
           },
         });
+        if (!offerSent) {
+          console.error("[Call] Failed to send CALL_OFFER — WS disconnected");
+          cleanup();
+          return;
+        }
 
         // 45s timeout: auto-end if no answer
         callTimeoutRef.current = setTimeout(() => {
@@ -179,6 +196,13 @@ function CallProvider({ children }) {
 
     const data = incomingDataRef.current;
     if (!data) return;
+
+    if (!isWsConnected()) {
+      console.warn("[Call] Cannot accept call — WebSocket not connected");
+      cleanup();
+      return;
+    }
+
     console.log("[Call] Accepting call from", data.sender, "room=", data.roomId, "type=", data.callType);
 
     try {
@@ -240,12 +264,17 @@ function CallProvider({ children }) {
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
-      sendWsMessage({
+      const answerSent = sendWsMessage({
         type: "CALL_ANSWER",
         roomId: room,
         content: "",
         extra: { target: caller, sdp: JSON.stringify(answer) },
       });
+      if (!answerSent) {
+        console.error("[Call] Failed to send CALL_ANSWER — WS disconnected");
+        cleanup();
+        return;
+      }
       console.log("[Call] CALL_ANSWER sent to", caller);
 
       // Start duration timer
