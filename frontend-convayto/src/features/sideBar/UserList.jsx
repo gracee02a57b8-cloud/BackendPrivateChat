@@ -3,6 +3,7 @@ import { useConversations } from "./useConversations";
 import { useUi } from "../../contexts/UiContext";
 import Loader from "../../components/Loader";
 import UserItem from "../../components/UserItem";
+import GroupItem from "./GroupItem";
 
 function UserList() {
   const { conversations, isPending, error } = useConversations();
@@ -26,8 +27,25 @@ function UserList() {
 
   if (conversations)
     return conversations.map((conv) => {
-      const id = conv?.friendInfo?.id;
+      // Групповой чат
+      if (conv?.isGroup) {
+        return (
+          <GroupItem
+            key={conv.id}
+            group={{
+              id: conv.id,
+              name: conv.friendInfo?.fullname || "Группа",
+              description: conv.friendInfo?.bio || "",
+              avatarUrl: conv.friendInfo?.avatar_url || "",
+              members: conv.members || [],
+            }}
+            handler={closeSidebar}
+          />
+        );
+      }
 
+      // Приватный чат
+      const id = conv?.friendInfo?.id;
       if (!id) return null;
 
       const avatar_url = conv?.friendInfo?.avatar_url;

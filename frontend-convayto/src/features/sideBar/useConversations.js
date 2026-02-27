@@ -4,7 +4,7 @@ import { getMessages } from "../messageArea/apiMessage";
 import { useUser } from "../authentication/useUser";
 import { useEffect, useRef } from "react";
 import { MAX_PREFETCHED_CONVERSATIONS } from "../../config";
-import { getConvInfoById } from "../messageArea/apiConvInfo";
+import { getConvInfoById, getGroupConvInfo } from "../messageArea/apiConvInfo";
 import useConversationSubscription from "./useConversationSubscription";
 
 export function useConversations() {
@@ -17,13 +17,12 @@ export function useConversations() {
     queryFn: () => getConversations({ myUserId }),
   });
 
-  // Realtime Subscription
-  useConversationSubscription(myUserId);
+  // Realtime Subscription (отключено — бесшовное обновление)
+  // useConversationSubscription(myUserId);
 
   /////////////
   // Prefetching
   /////////////
-  // set true temporariliiy to avoid prefetching
   const hasPrefetched = useRef(false);
 
   useEffect(() => {
@@ -32,6 +31,7 @@ export function useConversations() {
     data?.slice(0, MAX_PREFETCHED_CONVERSATIONS).forEach((conv) => {
       const conversation_id = conv?.id;
       const friendUserId = conv?.friendInfo?.id;
+      const isGroup = conv?.isGroup;
 
       if (!conversation_id || !friendUserId) return;
 
@@ -42,16 +42,22 @@ export function useConversations() {
         pages: 1,
       });
 
-      // prefetch the convInfo
-      queryClient.prefetchQuery({
-        queryKey: ["convInfo", friendUserId],
-        queryFn: () => getConvInfoById({ myUserId, friendUserId }),
-      });
+      // prefetch the convInfo (разные ключи для групп и приватных)
+      if (isGroup) {
+        queryClient.prefetchQuery({
+          queryKey: ["convInfo", "room", conversation_id],
+          queryFn: () => getGroupConvInfo({ roomId: conversation_id }),
+        });
+      } else {
+        queryClient.prefetchQuery({
+          queryKey: ["convInfo", friendUserId],
+          queryFn: () => getConvInfoById({ myUserId, friendUserId }),
+        });
+      }
     });
 
     hasPrefetched.current = true;
   }, [data, queryClient, myUserId]);
-  // prefetch ends
 
   return { conversations: data, isPending, error };
 }

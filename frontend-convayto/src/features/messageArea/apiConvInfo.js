@@ -25,3 +25,27 @@ export async function getConvInfoById({ myUserId, friendUserId }) {
     created_at: room?.createdAt || null,
   };
 }
+
+// Получить информацию о групповой комнате
+export async function getGroupConvInfo({ roomId }) {
+  if (!roomId) return null;
+
+  const room = await apiFetch(`/api/rooms/${encodeURIComponent(roomId)}`);
+  if (!room) return null;
+
+  return {
+    id: room.id,
+    isGroup: true,
+    friendInfo: {
+      id: room.id,
+      fullname: room.name || "Группа",
+      username: room.name || room.id,
+      avatar_url: room.avatarUrl || "",
+      bio: room.description || "",
+    },
+    members: room.members || [],
+    createdBy: room.createdBy,
+    created_at: room.createdAt,
+    description: room.description,
+  };
+}

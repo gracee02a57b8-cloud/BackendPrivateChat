@@ -12,13 +12,18 @@ export async function getConversationEntries() {
 export async function getConversations({ myUserId }) {
   const rooms = await getConversationEntries();
 
-  // Filter to PRIVATE rooms and build conversation objects
-  const privateRooms = rooms.filter((room) => room.type === "PRIVATE");
+  // Включаем PRIVATE и ROOM (групповые) комнаты
+  const chatRooms = rooms.filter(
+    (room) => room.type === "PRIVATE" || room.type === "ROOM",
+  );
 
   // Fetch last message for each room in parallel (1 message per room)
   const conversations = await Promise.all(
-    privateRooms.map(async (room) => {
-      const friendUsername = room.members?.find((m) => m !== myUserId) || "";
+    chatRooms.map(async (room) => {
+      const isGroup = room.type === "ROOM";
+      const friendUsername = isGroup
+        ? null
+        : room.members?.find((m) => m !== myUserId) || "";
 
       // Get last message from room history (page 0, size 1)
       let lastMsg = null;
@@ -35,6 +40,23 @@ export async function getConversations({ myUserId }) {
         }
       } catch {
         // No messages yet
+      }
+
+      if (isGroup) {
+        return {
+          id: room.id,
+          isGroup: true,
+          last_message: lastMsg,
+          created_at: room.createdAt,
+          friendInfo: {
+            id: room.id,
+            fullname: room.name || "Группа",
+            username: room.name || room.id,
+            avatar_url: room.avatarUrl || "",
+            bio: room.description || "",
+          },
+          members: room.members,
+        };
       }
 
       return {

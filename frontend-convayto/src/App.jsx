@@ -65,6 +65,7 @@ function App() {
                   </ProtectedRoute>
                 }
               >
+                <Route path="/chat/room/:roomId" element={<MessageView />} />
                 <Route path="/chat/:userId" element={<MessageView />} />
               </Route>
 

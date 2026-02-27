@@ -8,14 +8,15 @@ import DefaultView from "./DefaultView";
 function LeftSideBar() {
   const { isSidebarOpen, isAccountViewOpen, closeSidebar, openSidebar } =
     useUi();
-  const { userId } = useParams();
+  const { userId, roomId } = useParams();
+  const hasActiveChat = !!(userId || roomId);
 
   useEffect(() => {
-    userId ? closeSidebar() : openSidebar();
-  }, [userId]);
+    hasActiveChat ? closeSidebar() : openSidebar();
+  }, [hasActiveChat]);
 
   function handleToggleSidebar() {
-    userId && closeSidebar();
+    hasActiveChat && closeSidebar();
   }
 
   return (

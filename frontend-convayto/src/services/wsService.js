@@ -2,6 +2,9 @@
 // WebSocket Service — singleton connection to BarsikChat backend
 // ==========================================
 
+// >>> Флаг: поставить true чтобы включить бесшовное обновление (realtime) <<<
+const REALTIME_ENABLED = false;
+
 let ws = null;
 let reconnectTimer = null;
 let messageListeners = [];
@@ -17,6 +20,7 @@ function getWsUrl() {
 }
 
 export function connectWebSocket() {
+  if (!REALTIME_ENABLED) return; // бесшовное обновление отключено
   if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
     return;
   }
