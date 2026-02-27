@@ -32,7 +32,7 @@ function MyAccountView() {
         <IconButton onClick={closeAccountView}>
           <IconButton.Back />
         </IconButton>
-        <p className="select-none font-bold tracking-wider">Profile</p>
+        <p className="select-none font-bold tracking-wider">Профиль</p>
       </div>
 
       <div tabIndex={-1} className="h-full overflow-scroll p-10">

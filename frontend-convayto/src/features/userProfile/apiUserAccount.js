@@ -1,5 +1,8 @@
-import { MAXIMUM_AVATAR_FILE_SIZE } from "../../config";
-import supabase, { supabaseUrl } from "../../services/supabase";
+import { apiFetch } from "../../services/apiHelper";
+
+// ==========================================
+// BarsikChat Backend — Профиль пользователя
+// ==========================================
 
 export async function updateCurrentUser({
   password,
@@ -9,67 +12,60 @@ export async function updateCurrentUser({
   avatar,
   previousAvatar,
 }) {
-  // 1. Update password OR fullname
-  let updateData;
+  // 1. Загрузка аватарки (если передан файл)
+  if (avatar) {
+    const formData = new FormData();
+    formData.append("file", avatar);
 
-  if (password) updateData = { password };
-  if (fullname) updateData = { data: { fullname } };
-  if (username) updateData = { data: { username } };
-  if (bio) updateData = { data: { bio } };
+    const result = await apiFetch("/api/profile/avatar", {
+      method: "POST",
+      body: formData,
+    });
 
-  const { data, error } = await supabase.auth.updateUser(updateData);
-
-  if (error) throw new Error(error.message);
-
-  if (!avatar) return data;
-
-  //2. Upload the avatar image
-  const fileName = `avatar-${data.user.id}-${Math.random()}`;
-  const { error: storageError } = await supabase.storage
-    .from("avatars")
-    .upload(fileName, avatar);
-
-  if (storageError) {
-    if (storageError.statusCode == 413) {
-      throw new Error(
-        `The file is too large. It should be less than ${MAXIMUM_AVATAR_FILE_SIZE}MB.`,
-      );
-    } else {
-      throw new Error(storageError.message);
+    // Обновить localStorage
+    if (result?.avatarUrl) {
+      localStorage.setItem("avatarUrl", result.avatarUrl);
     }
+
+    return { user: { user_metadata: { avatar_url: result?.avatarUrl || "" } } };
   }
 
-  //3. Update the avatar in the user
-  const { data: updatedUser, error: error2 } = await supabase.auth.updateUser({
-    data: {
-      avatar_url: `${supabaseUrl}/storage/v1/object/public/avatars/${fileName}`,
-    },
-  });
+  // 2. Обновление текстовых полей профиля
+  const body = {};
+  if (fullname !== undefined) body.firstName = fullname;
+  if (username !== undefined) body.username = username;
+  if (bio !== undefined) body.bio = bio;
 
-  if (error2) throw new Error(error2.message);
+  if (Object.keys(body).length > 0) {
+    const result = await apiFetch("/api/profile", {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
 
-  //4. Delete the previous avatar
-  if (previousAvatar) {
-    const fileName = previousAvatar.split("avatars/")[1];
+    // Обновить localStorage с новыми данными
+    if (result?.username) localStorage.setItem("username", result.username);
 
-    const { error: deleteError } = await supabase.storage
-      .from("avatars")
-      .remove([fileName]);
-    if (deleteError) throw new Error(deleteError.message);
+    return { user: { user_metadata: result } };
   }
 
-  return updatedUser;
+  // 3. Смена пароля
+  if (password) {
+    await apiFetch("/api/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({ newPassword: password }),
+    });
+    return { user: {} };
+  }
+
+  return null;
 }
 
 ///////////////////////
 
 export async function sendPasswordResetEmail({ email, redirectTo }) {
-  // Send the password reset email
-  let { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo,
+  await apiFetch("/api/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify({ email }),
   });
-
-  if (error) throw new Error(error.message);
-
   return null;
 }

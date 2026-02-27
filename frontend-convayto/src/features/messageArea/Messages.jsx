@@ -67,7 +67,7 @@ function Messages() {
   if (isLoading)
     return (
       <ShortTextMessage opacity={100}>
-        <Loader size="medium" text="Loading messages" />
+        <Loader size="medium" text="Загрузка сообщений" />
       </ShortTextMessage>
     );
 
@@ -78,7 +78,7 @@ function Messages() {
         className="mx-auto flex w-full max-w-3xl flex-col px-4"
       >
         {pages && !pages[0] && (
-          <ShortTextMessage>No messages yet</ShortTextMessage>
+          <ShortTextMessage>Нет сообщений</ShortTextMessage>
         )}
 
         {pages && pages[0] && (

@@ -15,7 +15,7 @@ function Avatar({ avatar }) {
       {
         onSuccess: () => {
           toast.dismiss();
-          toast.success("Updated profile picture successfully!");
+          toast.success("Аватар обновлён!");
         },
       },
     );
