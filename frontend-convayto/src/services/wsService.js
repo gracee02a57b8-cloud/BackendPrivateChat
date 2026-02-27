@@ -2,14 +2,25 @@
 // WebSocket Service — singleton connection to BarsikChat backend
 // ==========================================
 
-// >>> Флаг: поставить true чтобы включить бесшовное обновление (realtime) <<<
-const REALTIME_ENABLED = false;
+// >>> WebSocket включён (нужен для звонков и сообщений) <<<
+const REALTIME_ENABLED = true;
 
 let ws = null;
 let reconnectTimer = null;
 let messageListeners = [];
 let connectionListeners = [];
 let isConnecting = false;
+let callListeners = [];
+let confListeners = [];
+
+const CALL_TYPES = new Set([
+  'CALL_OFFER', 'CALL_ANSWER', 'CALL_REJECT', 'CALL_END',
+  'CALL_BUSY', 'ICE_CANDIDATE', 'CALL_LOG',
+]);
+const CONF_TYPES = new Set([
+  'CONF_JOIN', 'CONF_LEAVE', 'CONF_PEERS',
+  'CONF_OFFER', 'CONF_ANSWER', 'CONF_ICE',
+]);
 
 function getWsUrl() {
   const token = localStorage.getItem("token");
@@ -47,6 +58,13 @@ export function connectWebSocket() {
   ws.onmessage = (event) => {
     try {
       const msg = JSON.parse(event.data);
+      // Route to typed listeners
+      if (CALL_TYPES.has(msg.type)) {
+        callListeners.forEach((cb) => cb(msg));
+      } else if (CONF_TYPES.has(msg.type)) {
+        confListeners.forEach((cb) => cb(msg));
+      }
+      // Always notify general listeners
       messageListeners.forEach((cb) => cb(msg));
     } catch (e) {
       console.warn("[WS] Failed to parse message:", event.data);
@@ -110,4 +128,18 @@ export function onWsConnection(callback) {
 
 export function isWsConnected() {
   return ws && ws.readyState === WebSocket.OPEN;
+}
+
+export function onCallMessage(callback) {
+  callListeners.push(callback);
+  return () => {
+    callListeners = callListeners.filter((cb) => cb !== callback);
+  };
+}
+
+export function onConferenceMessage(callback) {
+  confListeners.push(callback);
+  return () => {
+    confListeners = confListeners.filter((cb) => cb !== callback);
+  };
 }

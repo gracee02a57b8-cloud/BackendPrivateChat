@@ -8,6 +8,10 @@ import Signin from "./features/authentication/Signin";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import MessageView from "./features/messageArea/MessageView";
 import { UiProvider } from "./contexts/UiContext";
+import { CallProvider } from "./contexts/CallContext";
+import { ConferenceProvider } from "./contexts/ConferenceContext";
+import CallOverlay from "./components/CallOverlay";
+import ConferenceOverlay from "./components/ConferenceOverlay";
 import NewPasswordPage from "./features/authentication/NewPasswordPage";
 import ResetPasswordPage from "./features/authentication/ResetPasswordPage";
 import NotFound from "./components/NotFound";
@@ -41,19 +45,25 @@ function App() {
   return (
     <UiProvider>
       <QueryClientProvider client={queryClient}>
-        <Toaster
-          position="top-center"
-          toastOptions={{
-            error: {
-              duration: 5000,
-            },
-            style: {
-              maxWidth: "500px",
-            },
-          }}
-        />
+        <CallProvider>
+          <ConferenceProvider>
+            <Toaster
+              position="top-center"
+              toastOptions={{
+                error: {
+                  duration: 5000,
+                },
+                style: {
+                  maxWidth: "500px",
+                },
+              }}
+            />
 
-        <BrowserRouter>
+            {/* Global call & conference overlays */}
+            <CallOverlay />
+            <ConferenceOverlay />
+
+            <BrowserRouter>
           <AllRoutesWrapper>
             <Routes>
               <Route path="/" element={<Navigate to="/chat" replace />} />
@@ -83,7 +93,9 @@ function App() {
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AllRoutesWrapper>
-        </BrowserRouter>
+            </BrowserRouter>
+          </ConferenceProvider>
+        </CallProvider>
       </QueryClientProvider>
     </UiProvider>
   );

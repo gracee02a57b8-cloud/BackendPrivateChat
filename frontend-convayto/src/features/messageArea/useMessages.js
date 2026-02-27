@@ -57,8 +57,8 @@ export function useMessages() {
     enabled: !!friendUserId,
   });
 
-  // Realtime subscription //
-  useMessageSubscription({ conversation_id, friendUserId });
+  // Realtime subscription (отключено — бесшовное обновление) //
+  // useMessageSubscription({ conversation_id, friendUserId });
 
   const isLoading = isPendingConvInfo || isLoadingMessages;
 
