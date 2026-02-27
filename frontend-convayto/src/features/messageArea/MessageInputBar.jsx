@@ -1,13 +1,14 @@
-import { RiSendPlaneFill, RiAttachmentLine, RiMicLine, RiStopFill, RiVideoChatLine, RiCloseLine, RiReplyLine } from "react-icons/ri";
+import { RiSendPlaneFill, RiAttachmentLine, RiMicLine, RiStopFill, RiVideoChatLine, RiCloseLine, RiReplyLine, RiBarChartBoxLine } from "react-icons/ri";
 import { useUser } from "../authentication/useUser";
 import { useRef, useState, useCallback } from "react";
 import { useSendNewMessage } from "./useSendNewMessage";
 import { v4 as uuid } from "uuid";
 import Loader from "../../components/Loader";
 import useConvInfo from "./useConvInfo";
-import { sendFileMessage, sendVoiceMessage, sendVideoCircle } from "./apiMessage";
+import { sendFileMessage, sendVoiceMessage, sendVideoCircle, createPoll } from "./apiMessage";
 import { useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
+import PollCreationModal from "../../components/PollCreationModal";
 
 function MessageInputBar({ replyTo, setReplyTo }) {
   const {
@@ -46,6 +47,20 @@ function MessageInputBar({ replyTo, setReplyTo }) {
 
   // Uploading state
   const [isUploading, setIsUploading] = useState(false);
+
+  // Poll state
+  const [showPollModal, setShowPollModal] = useState(false);
+
+  async function handleCreatePoll({ question, options, multiChoice, anonymous }) {
+    if (!conversationId) return;
+    try {
+      await createPoll(conversationId, { question, options, multiChoice, anonymous });
+      toast.success("Опрос создан");
+    } catch (err) {
+      toast.error(err.message || "Ошибка создания опроса");
+      throw err;
+    }
+  }
 
   function addOptimisticMessage(msg) {
     queryClient.setQueryData(["friend", friendUserId], (old) => {
@@ -374,7 +389,7 @@ function MessageInputBar({ replyTo, setReplyTo }) {
           </button>
         </div>
       )}
-      <form className="mx-auto grid max-w-3xl grid-cols-[auto_1fr_auto_auto_auto] items-center gap-1 overflow-hidden rounded-full border border-transparent bg-bgPrimary shadow-lg dark:border-LightShade/20 dark:bg-LightShade/20">
+      <form className="mx-auto grid max-w-3xl grid-cols-[auto_auto_1fr_auto_auto_auto] items-center gap-1 overflow-hidden rounded-full border border-transparent bg-bgPrimary shadow-lg dark:border-LightShade/20 dark:bg-LightShade/20">
         {/* File attachment */}
         <label
           htmlFor="fileAttach"
@@ -391,6 +406,17 @@ function MessageInputBar({ replyTo, setReplyTo }) {
           onChange={handleFileSelect}
           disabled={isPendingConvInfo || isUploading}
         />
+
+        {/* Poll button */}
+        <button
+          type="button"
+          onClick={() => setShowPollModal(true)}
+          disabled={isPendingConvInfo || isUploading}
+          className="flex h-10 w-10 items-center justify-center rounded-full text-xl text-textPrimary/60 transition hover:bg-LightShade/20 active:scale-95 disabled:opacity-40 dark:text-textPrimary-dark/60"
+          title="Создать опрос"
+        >
+          <RiBarChartBoxLine />
+        </button>
 
         <label htmlFor="inputMessage" className="sr-only" />
         <input
@@ -441,6 +467,11 @@ function MessageInputBar({ replyTo, setReplyTo }) {
           )}
         </button>
       </form>
+      <PollCreationModal
+        isOpen={showPollModal}
+        onClose={() => setShowPollModal(false)}
+        onSubmit={handleCreatePoll}
+      />
     </div>
   );
 }

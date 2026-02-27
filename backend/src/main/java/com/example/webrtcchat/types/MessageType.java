@@ -58,5 +58,17 @@ public enum MessageType {
     PIN,            // client → server: pin a message
     UNPIN,          // client → server: unpin a message
 
+    // Reactions
+    REACTION,           // add reaction to a message
+    REACTION_REMOVE,    // remove reaction from a message
+
+    // Polls
+    POLL,               // create poll / poll data broadcast
+    POLL_VOTE,          // vote on a poll
+    POLL_CLOSE,         // close a poll
+
+    // Disappearing messages
+    DISAPPEARING_SET,   // set disappearing timer for a room
+
     ERROR           // server → client error notification
 }

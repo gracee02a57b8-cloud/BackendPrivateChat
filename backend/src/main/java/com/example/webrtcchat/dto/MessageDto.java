@@ -21,6 +21,9 @@ public class MessageDto {
     private String scheduledAt;
     private Map<String, String> extra;
 
+    // Poll data (enriched for POLL type messages)
+    private Map<String, Object> pollData;
+
     // Reply fields
     private String replyToId;
     private String replyToSender;
@@ -159,4 +162,7 @@ public class MessageDto {
 
     public String getPinnedBy() { return pinnedBy; }
     public void setPinnedBy(String pinnedBy) { this.pinnedBy = pinnedBy; }
+
+    public Map<String, Object> getPollData() { return pollData; }
+    public void setPollData(Map<String, Object> pollData) { this.pollData = pollData; }
 }

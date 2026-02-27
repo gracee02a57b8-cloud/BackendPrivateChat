@@ -5,6 +5,7 @@ import ForwardMessageModal from "../../components/ForwardMessageModal";
 import { useState, useCallback, useEffect } from "react";
 import { RiShareForwardLine, RiCloseLine, RiDeleteBinLine, RiPushpinFill, RiCloseFill } from "react-icons/ri";
 import { sendWsMessage } from "../../services/wsService";
+import { apiFetch } from "../../services/apiHelper";
 import { useQueryClient } from "@tanstack/react-query";
 import useConvInfo from "./useConvInfo";
 import toast from "react-hot-toast";
@@ -17,6 +18,7 @@ function MessageView() {
   const [forwardMessages, setForwardMessages] = useState([]);
   const [showForward, setShowForward] = useState(false);
   const [pinnedMessages, setPinnedMessages] = useState([]);
+  const [readersModal, setReadersModal] = useState(null); // { messageId, readers }
   const { convInfo } = useConvInfo();
   const queryClient = useQueryClient();
   const friendUserId = convInfo?.friendInfo?.id;
@@ -180,6 +182,113 @@ function MessageView() {
 
   const lastPinned = pinnedMessages.length > 0 ? pinnedMessages[pinnedMessages.length - 1] : null;
 
+  // ── Reactions via WebSocket ──
+  const handleReaction = useCallback(
+    (message, emoji) => {
+      const roomId = convInfo?.id;
+      if (!roomId || !message?.id) return;
+      const myUsername = localStorage.getItem("username");
+
+      // Check if already reacted with this emoji → toggle
+      const existingReaction = message?.reactions?.find(
+        (r) => r.emoji === emoji && r.users?.includes(myUsername)
+      );
+      const type = existingReaction ? "REACTION_REMOVE" : "REACTION";
+
+      sendWsMessage({
+        type,
+        roomId,
+        id: message.id,
+        extra: { emoji },
+      });
+
+      // Optimistic update
+      queryClient.setQueryData(["friend", friendUserId], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page) =>
+            page.map((m) => {
+              if (m.id !== message.id) return m;
+              let reactions = [...(m.reactions || [])];
+              if (type === "REACTION") {
+                const idx = reactions.findIndex((r) => r.emoji === emoji);
+                if (idx >= 0) {
+                  reactions[idx] = {
+                    ...reactions[idx],
+                    users: [...(reactions[idx].users || []), myUsername],
+                    count: (reactions[idx].count || 0) + 1,
+                  };
+                } else {
+                  reactions.push({ emoji, users: [myUsername], count: 1 });
+                }
+              } else {
+                const idx = reactions.findIndex((r) => r.emoji === emoji);
+                if (idx >= 0) {
+                  const newUsers = (reactions[idx].users || []).filter((u) => u !== myUsername);
+                  if (newUsers.length === 0) {
+                    reactions.splice(idx, 1);
+                  } else {
+                    reactions[idx] = { ...reactions[idx], users: newUsers, count: newUsers.length };
+                  }
+                }
+              }
+              return { ...m, reactions };
+            })
+          ),
+        };
+      });
+    },
+    [convInfo, queryClient, friendUserId]
+  );
+
+  // ── Poll vote via REST ──
+  const handleVotePoll = useCallback(
+    async (pollId, optionId) => {
+      try {
+        const result = await apiFetch(`/api/polls/${pollId}/vote`, {
+          method: "POST",
+          body: JSON.stringify({ optionId }),
+        });
+        if (result) {
+          // Update poll data in cache
+          queryClient.setQueryData(["friend", friendUserId], (old) => {
+            if (!old) return old;
+            return {
+              ...old,
+              pages: old.pages.map((page) =>
+                page.map((m) => {
+                  if (m.pollData?.pollId === pollId) {
+                    return { ...m, pollData: result };
+                  }
+                  return m;
+                })
+              ),
+            };
+          });
+        }
+      } catch (err) {
+        toast.error(err.message || "Ошибка голосования");
+      }
+    },
+    [queryClient, friendUserId]
+  );
+
+  // ── Read receipts (group messages) ──
+  const handleShowReaders = useCallback(
+    async (message) => {
+      const roomId = convInfo?.id;
+      if (!roomId || !message?.id) return;
+      try {
+        const data = await apiFetch(`/api/rooms/${encodeURIComponent(roomId)}/messages/${encodeURIComponent(message.id)}/readers`);
+        setReadersModal({ messageId: message.id, readers: data?.readers || [], count: data?.count || 0 });
+      } catch {
+        toast.error("Не удалось загрузить");
+      }
+    },
+    [convInfo]
+  );
+
   return (
     <div className={`relative col-span-2 grid h-screen-safe w-full grid-cols-1 overflow-hidden md:col-span-1 ${lastPinned ? 'grid-rows-[auto_auto_1fr_auto]' : 'grid-rows-[auto_1fr_auto]'}`}>
       <MessageTopBar />
@@ -217,6 +326,9 @@ function MessageView() {
         onUnpin={handleUnpin}
         onDeleteLocal={handleDeleteLocal}
         onDeleteForAll={handleDeleteForAll}
+        onReaction={handleReaction}
+        onVotePoll={handleVotePoll}
+        onShowReaders={handleShowReaders}
       />
 
       {selectionMode ? (
@@ -260,6 +372,47 @@ function MessageView() {
         onClose={handleCloseForward}
         messages={forwardMessages}
       />
+
+      {/* Readers modal */}
+      {readersModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setReadersModal(null)}>
+          <div
+            className="mx-4 w-full max-w-xs rounded-2xl bg-bgPrimary p-5 shadow-2xl dark:bg-bgPrimary-dark"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-base font-semibold">
+                Прочитали ({readersModal.count})
+              </h3>
+              <button
+                onClick={() => setReadersModal(null)}
+                className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-LightShade/20"
+              >
+                <RiCloseLine className="text-lg" />
+              </button>
+            </div>
+            {readersModal.readers.length === 0 ? (
+              <p className="text-sm opacity-60">Никто ещё не прочитал</p>
+            ) : (
+              <ul className="max-h-60 space-y-2 overflow-y-auto">
+                {readersModal.readers.map((r) => (
+                  <li key={r.username} className="flex items-center gap-2 text-sm">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-bgAccent/20 text-xs font-bold uppercase">
+                      {r.username?.charAt(0)}
+                    </div>
+                    <span className="font-medium">{r.username}</span>
+                    {r.readAt && (
+                      <span className="ml-auto text-xs opacity-50">
+                        {new Date(r.readAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   RiReplyLine,
   RiFileCopyLine,
@@ -8,7 +8,10 @@ import {
   RiCheckboxMultipleLine,
   RiDeleteBinLine,
   RiDeleteBin2Line,
+  RiEmotionLine,
 } from "react-icons/ri";
+
+const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
 
 function MessageContextMenu({
   x,
@@ -22,6 +25,7 @@ function MessageContextMenu({
   onSelect,
   onDelete,
   onDeleteForAll,
+  onReaction,
   onClose,
 }) {
   const menuRef = useRef(null);
@@ -78,30 +82,47 @@ function MessageContextMenu({
   return (
     <div
       ref={menuRef}
-      className="fixed z-[9999] min-w-[210px] animate-in fade-in rounded-xl bg-bgPrimary py-1.5 shadow-2xl ring-1 ring-LightShade/20 backdrop-blur-sm dark:bg-bgPrimary-dark dark:ring-LightShade/30"
+      className="fixed z-[9999] min-w-[210px] animate-in fade-in rounded-xl bg-bgPrimary shadow-2xl ring-1 ring-LightShade/20 backdrop-blur-sm dark:bg-bgPrimary-dark dark:ring-LightShade/30"
       style={{ left: x, top: y }}
     >
-      {items.map((item, i) =>
-        item.divider ? (
-          <div key={i} className="my-1 border-t border-LightShade/15" />
-        ) : (
-          <button
-            key={i}
-            onClick={() => {
-              item.action?.();
-              onClose();
-            }}
-            className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm transition hover:bg-LightShade/10 active:bg-LightShade/20 ${
-              item.danger
-                ? "text-red-400 hover:text-red-300"
-                : "text-textPrimary dark:text-textPrimary-dark"
-            }`}
-          >
-            <item.icon className="text-base flex-shrink-0" />
-            {item.label}
-          </button>
-        ),
+      {/* Quick reaction bar */}
+      {onReaction && (
+        <div className="flex items-center gap-1 px-3 py-2 border-b border-LightShade/15">
+          {QUICK_REACTIONS.map((emoji) => (
+            <button
+              key={emoji}
+              onClick={() => { onReaction(emoji); onClose(); }}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-lg transition hover:bg-LightShade/20 hover:scale-125 active:scale-95"
+            >
+              {emoji}
+            </button>
+          ))}
+        </div>
       )}
+
+      <div className="py-1.5">
+        {items.map((item, i) =>
+          item.divider ? (
+            <div key={i} className="my-1 border-t border-LightShade/15" />
+          ) : (
+            <button
+              key={i}
+              onClick={() => {
+                item.action?.();
+                onClose();
+              }}
+              className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm transition hover:bg-LightShade/10 active:bg-LightShade/20 ${
+                item.danger
+                  ? "text-red-400 hover:text-red-300"
+                  : "text-textPrimary dark:text-textPrimary-dark"
+              }`}
+            >
+              <item.icon className="text-base flex-shrink-0" />
+              {item.label}
+            </button>
+          ),
+        )}
+      </div>
     </div>
   );
 }

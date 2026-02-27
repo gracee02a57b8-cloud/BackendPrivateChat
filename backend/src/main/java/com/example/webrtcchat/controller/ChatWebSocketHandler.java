@@ -9,6 +9,7 @@ import com.example.webrtcchat.repository.CallLogRepository;
 import com.example.webrtcchat.service.ChatService;
 import com.example.webrtcchat.service.ConferenceService;
 import com.example.webrtcchat.service.JwtService;
+import com.example.webrtcchat.service.ReactionService;
 import com.example.webrtcchat.service.RoomService;
 import com.example.webrtcchat.service.SchedulerService;
 import com.example.webrtcchat.service.StoryService;
@@ -53,6 +54,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final WebPushService webPushService;
     private final BlockedUserRepository blockedUserRepository;
     private final StoryService storyService;
+    private final ReactionService reactionService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // Track active call start times: "caller:callee" → epoch millis
@@ -64,7 +66,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                                 SchedulerService schedulerService, TaskService taskService,
                                 ConferenceService conferenceService, CallLogRepository callLogRepository,
                                 WebPushService webPushService, BlockedUserRepository blockedUserRepository,
-                                StoryService storyService) {
+                                StoryService storyService, ReactionService reactionService) {
         this.chatService = chatService;
         this.jwtService = jwtService;
         this.roomService = roomService;
@@ -75,6 +77,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         this.webPushService = webPushService;
         this.blockedUserRepository = blockedUserRepository;
         this.storyService = storyService;
+        this.reactionService = reactionService;
     }
 
     @Override
@@ -200,6 +203,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         // Handle PIN / UNPIN
         if (incoming.getType() == MessageType.PIN || incoming.getType() == MessageType.UNPIN) {
             handlePin(username, incoming);
+            return;
+        }
+
+        // Handle REACTION / REACTION_REMOVE
+        if (incoming.getType() == MessageType.REACTION || incoming.getType() == MessageType.REACTION_REMOVE) {
+            handleReaction(username, incoming);
             return;
         }
 
@@ -382,6 +391,35 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             broadcast.setContent(original.getContent());
         }
 
+        broadcastToRoom(roomId, broadcast);
+    }
+
+    private void handleReaction(String username, MessageDto incoming) {
+        String roomId = incoming.getRoomId();
+        String msgId = incoming.getId();
+        Map<String, String> extra = incoming.getExtra();
+        if (roomId == null || msgId == null || extra == null) return;
+        if (!isUserInRoom(username, roomId)) return;
+
+        String emoji = extra.get("emoji");
+        if (emoji == null || emoji.isEmpty()) return;
+
+        if (incoming.getType() == MessageType.REACTION) {
+            reactionService.addReaction(msgId, roomId, username, emoji);
+        } else {
+            reactionService.removeReaction(msgId, username, emoji);
+        }
+
+        // Broadcast to room
+        MessageDto broadcast = new MessageDto();
+        broadcast.setType(incoming.getType());
+        broadcast.setId(msgId);
+        broadcast.setRoomId(roomId);
+        broadcast.setSender(username);
+        broadcast.setTimestamp(now());
+        Map<String, String> broadcastExtra = new HashMap<>();
+        broadcastExtra.put("emoji", emoji);
+        broadcast.setExtra(broadcastExtra);
         broadcastToRoom(roomId, broadcast);
     }
 

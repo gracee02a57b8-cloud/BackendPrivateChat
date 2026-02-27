@@ -146,6 +146,7 @@ public class RoomService {
         dto.setCreatedAt(entity.getCreatedAt());
         dto.setDescription(entity.getDescription());
         dto.setAvatarUrl(entity.getAvatarUrl());
+        dto.setDisappearingSeconds(entity.getDisappearingSeconds());
         dto.setMembers(new CopyOnWriteArraySet<>(entity.getMembers()));
         return dto;
     }

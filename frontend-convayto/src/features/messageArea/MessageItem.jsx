@@ -2,7 +2,7 @@ import { useUser } from "../authentication/useUser";
 import { formatTime } from "../../utils/common";
 import useConvInfo from "./useConvInfo";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { RiPlayFill, RiPauseFill, RiDownloadLine, RiCheckboxCircleLine, RiCheckboxBlankCircleLine, RiPushpinFill } from "react-icons/ri";
+import { RiPlayFill, RiPauseFill, RiDownloadLine, RiCheckboxCircleLine, RiCheckboxBlankCircleLine, RiPushpinFill, RiTimerLine, RiBarChartBoxLine, RiEyeLine } from "react-icons/ri";
 import MessageContextMenu from "../../components/MessageContextMenu";
 import toast from "react-hot-toast";
 
@@ -136,6 +136,97 @@ function FileAttachment({ fileUrl, fileName, fileType }) {
   );
 }
 
+// ---------- Reaction bar under message ----------
+
+function ReactionBar({ reactions, onReaction, myUsername }) {
+  if (!reactions || reactions.length === 0) return null;
+  return (
+    <div className="mt-1 flex flex-wrap gap-1">
+      {reactions.map((r) => {
+        const isMine = r.users?.includes(myUsername);
+        return (
+          <button
+            key={r.emoji}
+            onClick={() => onReaction?.(r.emoji)}
+            className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs transition active:scale-95 ${
+              isMine
+                ? "bg-bgAccent/30 ring-1 ring-bgAccent/50 dark:bg-bgAccent-dark/30 dark:ring-bgAccent-dark/50"
+                : "bg-LightShade/15 hover:bg-LightShade/25"
+            }`}
+          >
+            <span>{r.emoji}</span>
+            <span className="font-medium">{r.count}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ---------- Link preview ----------
+
+function LinkPreviewCard({ url, preview }) {
+  if (!preview || (!preview.title && !preview.description)) return null;
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer"
+      className="mt-1 block rounded-lg border border-LightShade/20 bg-white/5 p-2 transition hover:bg-white/10"
+    >
+      {preview.image && (
+        <img src={preview.image} alt="" className="mb-1 max-h-32 w-full rounded object-cover" />
+      )}
+      {preview.title && <p className="text-xs font-semibold line-clamp-2">{preview.title}</p>}
+      {preview.description && <p className="text-[11px] opacity-60 line-clamp-2">{preview.description}</p>}
+      <p className="text-[10px] opacity-40 truncate">{url}</p>
+    </a>
+  );
+}
+
+// ---------- Poll display ----------
+
+function PollDisplay({ message, onVote }) {
+  const pollData = message?.pollData;
+  if (!pollData) return null;
+  const myUsername = localStorage.getItem("username");
+  const totalVotes = pollData.totalVotes || 0;
+
+  return (
+    <div className="min-w-[220px]">
+      <p className="mb-2 font-semibold text-sm">{pollData.question}</p>
+      <div className="flex flex-col gap-1.5">
+        {pollData.options?.map((opt) => {
+          const pct = totalVotes > 0 ? Math.round((opt.votes / totalVotes) * 100) : 0;
+          const voted = opt.voters?.includes(myUsername);
+          return (
+            <button
+              key={opt.id}
+              onClick={() => !pollData.closed && onVote?.(pollData.pollId, opt.id)}
+              disabled={pollData.closed}
+              className={`relative overflow-hidden rounded-lg border px-3 py-2 text-left text-xs transition ${
+                voted
+                  ? "border-bgAccent/50 dark:border-bgAccent-dark/50"
+                  : "border-LightShade/20 hover:border-LightShade/40"
+              } ${pollData.closed ? "opacity-70 cursor-default" : "cursor-pointer active:scale-[0.98]"}`}
+            >
+              <div
+                className="absolute inset-0 bg-bgAccent/15 dark:bg-bgAccent-dark/15 transition-all"
+                style={{ width: `${pct}%` }}
+              />
+              <span className="relative z-10 flex items-center justify-between">
+                <span>{opt.text}</span>
+                <span className="font-mono font-bold">{pct}%</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-1.5 text-[10px] opacity-50">
+        {totalVotes} голос{totalVotes === 1 ? "" : totalVotes < 5 ? "а" : "ов"}
+        {pollData.closed && " · Опрос закрыт"}
+      </p>
+    </div>
+  );
+}
+
 // ---------- Bubble wrapper with context menu + selection ----------
 
 function BubbleWrapper({
@@ -153,6 +244,7 @@ function BubbleWrapper({
   onUnpin,
   onDeleteLocal,
   onDeleteForAll,
+  onReaction,
   bubbleClass,
   noBubble = false,
 }) {
@@ -193,6 +285,7 @@ function BubbleWrapper({
 
   return (
     <div
+      id={`msg-${message?.id || ""}`}
       className={`flex items-end gap-1.5 ${isOwn ? "flex-row-reverse" : ""} ${
         selectionMode ? "cursor-pointer" : ""
       } ${isSelected ? "bg-bgAccent/10 dark:bg-bgAccent-dark/10 -mx-2 px-2 rounded-lg" : ""}`}
@@ -241,6 +334,7 @@ function BubbleWrapper({
           onSelect={handleSelect}
           onDelete={() => onDeleteLocal?.(message)}
           onDeleteForAll={() => onDeleteForAll?.(message)}
+          onReaction={(emoji) => onReaction?.(message, emoji)}
           onClose={() => setContextMenu(null)}
         />
       )}
@@ -262,6 +356,9 @@ function MessageItem({
   onUnpin,
   onDeleteLocal,
   onDeleteForAll,
+  onReaction,
+  onVotePoll,
+  onShowReaders,
 }) {
   const { user } = useUser();
   const { convInfo } = useConvInfo();
@@ -282,7 +379,18 @@ function MessageItem({
     onUnpin,
     onDeleteLocal,
     onDeleteForAll,
+    onReaction,
   };
+
+  // Disappearing message system notification
+  if (message?.type === "DISAPPEARING_SET") {
+    return (
+      <div className="my-2 flex items-center justify-center gap-2 text-xs text-textPrimary/50 dark:text-textPrimary-dark/50">
+        <RiTimerLine />
+        <span>{message.content}</span>
+      </div>
+    );
+  }
 
   // Call log messages
   if (message?.type === "CALL_LOG") {
@@ -327,6 +435,20 @@ function MessageItem({
   // Determine if message has a file attachment
   const hasFile = message?.fileUrl && message?.type !== "VOICE" && message?.type !== "VIDEO_CIRCLE";
 
+  // Poll message
+  if (message?.type === "POLL" && message?.pollData) {
+    return (
+      <BubbleWrapper {...commonProps}>
+        {isGroup && !isOwn && message?.sender_id && (
+          <p className="mb-0.5 text-xs font-bold text-bgAccent dark:text-bgAccent-dark">{message.sender_id}</p>
+        )}
+        <PollDisplay message={message} onVote={onVotePoll} />
+        <span className="block select-none text-right text-xs opacity-70 mt-1">{formatTime(message?.created_at)}</span>
+        <ReactionBar reactions={message?.reactions} onReaction={(emoji) => onReaction?.(message, emoji)} myUsername={user.id} />
+      </BubbleWrapper>
+    );
+  }
+
   return (
     <BubbleWrapper {...commonProps}>
       {isGroup && !isOwn && message?.sender_id && (
@@ -354,6 +476,11 @@ function MessageItem({
         </div>
       )}
 
+      {/* Link preview */}
+      {message?.linkPreview && (
+        <LinkPreviewCard url={message.linkPreview.url} preview={message.linkPreview} />
+      )}
+
       {/* Text content */}
       {message?.content && !message.content.startsWith("📎 ") && (
         <p>
@@ -361,6 +488,11 @@ function MessageItem({
           <span className="float-right ml-2 mt-2 select-none text-xs opacity-70">
             {message?.pinned && <RiPushpinFill className="mr-1 inline-block text-[11px]" title="Закреплено" />}
             {message?.edited && <span className="mr-1 italic">ред.</span>}
+            {isGroup && isOwn && onShowReaders && (
+              <button onClick={(e) => { e.stopPropagation(); onShowReaders(message); }} className="mr-1 inline-block hover:opacity-100 opacity-50" title="Кто прочитал">
+                <RiEyeLine className="inline-block text-[11px]" />
+              </button>
+            )}
             {formatTime(message?.created_at)}
           </span>
         </p>
@@ -372,6 +504,9 @@ function MessageItem({
           {formatTime(message?.created_at)}
         </span>
       )}
+
+      {/* Reactions */}
+      <ReactionBar reactions={message?.reactions} onReaction={(emoji) => onReaction?.(message, emoji)} myUsername={user.id} />
     </BubbleWrapper>
   );
 }

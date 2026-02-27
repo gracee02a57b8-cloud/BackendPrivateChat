@@ -2,10 +2,77 @@ import { useUi } from "../../contexts/UiContext";
 import { HiOutlineUserCircle } from "react-icons/hi2";
 import ToggleableContent from "../../components/ToggleableContent";
 import IconButton from "../../components/IconButton";
+import { useState, useEffect } from "react";
+import { apiFetch } from "../../services/apiHelper";
+import useConvInfo from "../messageArea/useConvInfo";
+import toast from "react-hot-toast";
+import { RiVolumeMuteLine, RiVolumeUpLine, RiTimerLine } from "react-icons/ri";
+
+const DISAPPEAR_OPTIONS = [
+  { label: "Выкл", value: 0 },
+  { label: "30 сек", value: 30 },
+  { label: "5 мин", value: 300 },
+  { label: "1 час", value: 3600 },
+  { label: "24 часа", value: 86400 },
+  { label: "7 дней", value: 604800 },
+];
 
 function ProfileSideBar({ friend }) {
   const { avatar_url, fullname, username, bio } = friend ?? {};
   const { closeFriendSidebar, isFriendsSidebarOpen } = useUi();
+  const { convInfo } = useConvInfo();
+  const roomId = convInfo?.id;
+
+  const [muted, setMuted] = useState(false);
+  const [disappearing, setDisappearing] = useState(0);
+
+  // Fetch mute & disappearing status
+  useEffect(() => {
+    if (!roomId || !isFriendsSidebarOpen) return;
+    apiFetch(`/api/rooms/${encodeURIComponent(roomId)}/mute`)
+      .then((d) => setMuted(!!d?.muted))
+      .catch(() => {});
+    // Get room info for disappearing
+    if (convInfo?.disappearingSeconds !== undefined) {
+      setDisappearing(convInfo.disappearingSeconds);
+    }
+  }, [roomId, isFriendsSidebarOpen, convInfo?.disappearingSeconds]);
+
+  async function toggleMute() {
+    if (!roomId) return;
+    try {
+      if (muted) {
+        await apiFetch(`/api/rooms/${encodeURIComponent(roomId)}/mute`, { method: "DELETE" });
+        setMuted(false);
+        toast.success("Уведомления включены");
+      } else {
+        await apiFetch(`/api/rooms/${encodeURIComponent(roomId)}/mute`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        });
+        setMuted(true);
+        toast.success("Чат замьючен");
+      }
+    } catch {
+      toast.error("Ошибка");
+    }
+  }
+
+  async function handleDisappearing(seconds) {
+    if (!roomId) return;
+    try {
+      await apiFetch(`/api/rooms/${encodeURIComponent(roomId)}/disappearing`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seconds }),
+      });
+      setDisappearing(seconds);
+      toast.success(seconds === 0 ? "Исчезающие выключены" : "Таймер установлен");
+    } catch {
+      toast.error("Ошибка");
+    }
+  }
 
   function handleCloseBar() {
     isFriendsSidebarOpen && closeFriendSidebar();
@@ -63,6 +130,46 @@ function ProfileSideBar({ friend }) {
                 Bio
               </p>
               <p className="break-all text-base">{bio}</p>
+            </div>
+          )}
+
+          {/* Mute toggle */}
+          {roomId && (
+            <div className="mt-6 space-y-3 border-t border-LightShade/20 pt-4">
+              <button
+                onClick={toggleMute}
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition hover:bg-LightShade/10"
+              >
+                {muted ? (
+                  <RiVolumeMuteLine className="text-lg text-red-400" />
+                ) : (
+                  <RiVolumeUpLine className="text-lg" />
+                )}
+                <span>{muted ? "Включить уведомления" : "Замьютить чат"}</span>
+              </button>
+
+              {/* Disappearing messages */}
+              <div className="rounded-xl bg-LightShade/5 p-3">
+                <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                  <RiTimerLine className="text-lg" />
+                  Исчезающие сообщения
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {DISAPPEAR_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => handleDisappearing(opt.value)}
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium transition ${
+                        disappearing === opt.value
+                          ? "bg-bgAccent text-textPrimary-dark dark:bg-bgAccent-dark"
+                          : "bg-LightShade/15 hover:bg-LightShade/25"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </div>

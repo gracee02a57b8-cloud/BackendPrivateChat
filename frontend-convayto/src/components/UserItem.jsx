@@ -4,7 +4,7 @@ import { getRandomAvatar } from "../utils/avatarUtils";
 import { isPinned, togglePinChat } from "../utils/pinnedChats";
 import { useState, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { RiPushpinLine, RiUnpinLine } from "react-icons/ri";
+import { RiPushpinLine, RiUnpinLine, RiVolumeMuteLine } from "react-icons/ri";
 
 function UserItem({
   id,
@@ -15,6 +15,7 @@ function UserItem({
   shouldReplace = false,
   roomId,
   online,
+  muted,
 }) {
   const { userId: currentFriendId } = useParams();
   const isActiveUser = currentFriendId === id;
@@ -94,6 +95,7 @@ function UserItem({
           <span className="flex items-center gap-1 truncate font-bold">
             {pinned && <RiPushpinLine className="flex-shrink-0 text-xs text-bgAccent dark:text-bgAccent-dark" />}
             {name}
+            {muted && <RiVolumeMuteLine className="flex-shrink-0 text-xs opacity-40" title="Замьючен" />}
           </span>
 
           <span className="truncate text-sm opacity-70">{subtext}</span>

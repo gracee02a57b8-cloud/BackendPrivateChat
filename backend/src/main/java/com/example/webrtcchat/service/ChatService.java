@@ -18,13 +18,15 @@ public class ChatService {
 
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
+    private final PollService pollService;
 
     // Online users — runtime state, backed by ConcurrentHashMap.newKeySet() (R3)
     private final Set<String> onlineUsers = ConcurrentHashMap.newKeySet();
 
-    public ChatService(MessageRepository messageRepository, UserRepository userRepository) {
+    public ChatService(MessageRepository messageRepository, UserRepository userRepository, PollService pollService) {
         this.messageRepository = messageRepository;
         this.userRepository = userRepository;
+        this.pollService = pollService;
     }
 
     @Transactional
@@ -295,6 +297,13 @@ public class ChatService {
         // Pin fields
         dto.setPinned(e.isPinned());
         dto.setPinnedBy(e.getPinnedBy());
+        // Enrich poll messages
+        if (e.getType() == MessageType.POLL) {
+            try {
+                Map<String, Object> pd = pollService.getPollByMessageId(e.getId());
+                if (pd != null) dto.setPollData(pd);
+            } catch (Exception ignored) {}
+        }
         return dto;
     }
 }

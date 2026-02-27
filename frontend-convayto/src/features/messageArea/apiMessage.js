@@ -52,7 +52,27 @@ export async function getMessages({ conversation_id, pageParam = 0 }) {
     replyToId: msg.replyToId || null,
     replyToSender: msg.replyToSender || null,
     replyToContent: msg.replyToContent || null,
+    pollData: msg.pollData || null,
   }));
+
+  // Batch-fetch reactions for all messages
+  try {
+    const ids = transformed.map((m) => m.id).filter(Boolean);
+    if (ids.length > 0) {
+      const reactionsMap = await apiFetch(`/api/reactions/batch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messageIds: ids }),
+      });
+      if (reactionsMap && typeof reactionsMap === "object") {
+        transformed.forEach((m) => {
+          if (reactionsMap[m.id]) m.reactions = reactionsMap[m.id];
+        });
+      }
+    }
+  } catch {
+    // Reactions are optional; don't fail the message load
+  }
 
   // Backend returns newest-first; reverse so oldest is first
   return transformed.reverse();
@@ -251,4 +271,169 @@ export async function sendVideoCircle({ id, conversation_id, friendUserId, blob,
     fileName: wsMessage.fileName,
     duration: wsMessage.duration,
   };
+}
+
+////////////////////
+// Поиск сообщений
+////////////////////
+
+export async function searchMessages(roomId, query, page = 0, size = 50) {
+  if (!roomId || !query) return [];
+  const data = await apiFetch(
+    `/api/rooms/${encodeURIComponent(roomId)}/search?q=${encodeURIComponent(query)}&page=${page}&size=${size}`
+  );
+  return data?.content || data || [];
+}
+
+export async function searchMessagesGlobal(query, page = 0, size = 50) {
+  if (!query) return [];
+  const data = await apiFetch(
+    `/api/rooms/search/global?q=${encodeURIComponent(query)}&page=${page}&size=${size}`
+  );
+  return data?.content || data || [];
+}
+
+////////////////////
+// Реакции
+////////////////////
+
+export async function getReactions(messageId) {
+  return apiFetch(`/api/reactions/${encodeURIComponent(messageId)}`);
+}
+
+export async function getReactionsBatch(messageIds) {
+  return apiFetch(`/api/reactions/batch`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messageIds }),
+  });
+}
+
+////////////////////
+// Опросы
+////////////////////
+
+export async function createPoll(roomId, { question, options, multiChoice = false, anonymous = false }) {
+  return apiFetch(`/api/polls`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ roomId, question, options, multiChoice, anonymous }),
+  });
+}
+
+export async function votePoll(pollId, optionId) {
+  return apiFetch(`/api/polls/${pollId}/vote`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ optionId }),
+  });
+}
+
+export async function closePoll(pollId) {
+  return apiFetch(`/api/polls/${pollId}/close`, { method: "POST" });
+}
+
+export async function getPollData(pollId) {
+  return apiFetch(`/api/polls/${pollId}`);
+}
+
+////////////////////
+// Папки
+////////////////////
+
+export async function getFolders() {
+  return apiFetch(`/api/folders`);
+}
+
+export async function createFolder(name, emoji) {
+  return apiFetch(`/api/folders`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, emoji }),
+  });
+}
+
+export async function updateFolder(folderId, name, emoji) {
+  return apiFetch(`/api/folders/${folderId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, emoji }),
+  });
+}
+
+export async function deleteFolder(folderId) {
+  return apiFetch(`/api/folders/${folderId}`, { method: "DELETE" });
+}
+
+export async function addRoomToFolder(folderId, roomId) {
+  return apiFetch(`/api/folders/${folderId}/rooms/${encodeURIComponent(roomId)}`, { method: "POST" });
+}
+
+export async function removeRoomFromFolder(folderId, roomId) {
+  return apiFetch(`/api/folders/${folderId}/rooms/${encodeURIComponent(roomId)}`, { method: "DELETE" });
+}
+
+////////////////////
+// Мьют
+////////////////////
+
+export async function muteRoom(roomId, mutedUntil) {
+  return apiFetch(`/api/rooms/${encodeURIComponent(roomId)}/mute`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ mutedUntil: mutedUntil || null }),
+  });
+}
+
+export async function unmuteRoom(roomId) {
+  return apiFetch(`/api/rooms/${encodeURIComponent(roomId)}/mute`, { method: "DELETE" });
+}
+
+export async function getMuteStatus(roomId) {
+  return apiFetch(`/api/rooms/${encodeURIComponent(roomId)}/mute`);
+}
+
+////////////////////
+// Исчезающие сообщения
+////////////////////
+
+export async function setDisappearing(roomId, seconds) {
+  return apiFetch(`/api/rooms/${encodeURIComponent(roomId)}/disappearing`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ seconds }),
+  });
+}
+
+////////////////////
+// Прочтение
+////////////////////
+
+export async function getMessageReaders(roomId, messageId) {
+  return apiFetch(
+    `/api/rooms/${encodeURIComponent(roomId)}/messages/${encodeURIComponent(messageId)}/readers`
+  );
+}
+
+export async function markMessageRead(roomId, messageId) {
+  return apiFetch(
+    `/api/rooms/${encodeURIComponent(roomId)}/messages/${encodeURIComponent(messageId)}/read`,
+    { method: "POST" }
+  );
+}
+
+////////////////////
+// Link preview
+////////////////////
+
+export async function fetchLinkPreview(url) {
+  return apiFetch(`/api/rooms/link-preview?url=${encodeURIComponent(url)}`);
+}
+
+////////////////////
+// Saved Messages
+////////////////////
+
+export async function getOrCreateSavedMessages() {
+  return apiFetch(`/api/rooms/saved`, { method: "POST" });
 }

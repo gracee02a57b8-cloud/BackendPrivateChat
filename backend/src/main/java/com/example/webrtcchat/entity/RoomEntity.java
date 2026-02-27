@@ -32,6 +32,9 @@ public class RoomEntity {
     @Column(length = 500)
     private String avatarUrl;
 
+    @Column(name = "disappearing_seconds")
+    private int disappearingSeconds;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "room_members", joinColumns = @JoinColumn(name = "room_id"))
     @Column(name = "username", length = 50)
@@ -70,4 +73,7 @@ public class RoomEntity {
 
     public Set<String> getMembers() { return members; }
     public void setMembers(Set<String> members) { this.members = members; }
+
+    public int getDisappearingSeconds() { return disappearingSeconds; }
+    public void setDisappearingSeconds(int disappearingSeconds) { this.disappearingSeconds = disappearingSeconds; }
 }

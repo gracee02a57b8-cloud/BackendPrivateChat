@@ -67,6 +67,52 @@ export function subscribeRealtimeMessage({ conversation_id, callback }) {
         content: msg.content,
       });
     }
+
+    // Handle REACTION / REACTION_REMOVE
+    if (msg.roomId === conversation_id && (msg.type === "REACTION" || msg.type === "REACTION_REMOVE")) {
+      callback({
+        id: msg.id,
+        conversation_id: msg.roomId,
+        type: msg.type,
+        sender_id: msg.sender,
+        emoji: msg.extra?.emoji || msg.emoji,
+      });
+    }
+
+    // Handle POLL (new poll created)
+    if (msg.roomId === conversation_id && msg.type === "POLL") {
+      callback({
+        id: msg.id,
+        conversation_id: msg.roomId,
+        content: msg.content || "",
+        sender_id: msg.sender,
+        created_at: msg.timestamp,
+        type: "POLL",
+        pollData: msg.pollData || msg.extra,
+      });
+    }
+
+    // Handle POLL_VOTE / POLL_CLOSE (poll state updates)
+    if (msg.roomId === conversation_id && (msg.type === "POLL_VOTE" || msg.type === "POLL_CLOSE")) {
+      callback({
+        id: msg.id,
+        conversation_id: msg.roomId,
+        type: msg.type,
+        pollData: msg.pollData || msg.extra,
+      });
+    }
+
+    // Handle DISAPPEARING_SET
+    if (msg.roomId === conversation_id && msg.type === "DISAPPEARING_SET") {
+      callback({
+        id: msg.id,
+        conversation_id: msg.roomId,
+        content: msg.content || "",
+        sender_id: msg.sender,
+        created_at: msg.timestamp,
+        type: "DISAPPEARING_SET",
+      });
+    }
   });
 
   return { unsubscribe };

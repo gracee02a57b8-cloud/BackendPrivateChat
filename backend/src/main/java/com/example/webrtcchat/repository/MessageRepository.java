@@ -45,4 +45,12 @@ public interface MessageRepository extends JpaRepository<MessageEntity, String> 
 
     @Query("SELECT COUNT(m) FROM MessageEntity m WHERE m.roomId = :roomId AND m.content LIKE '%http%'")
     long countLinksByRoomId(@Param("roomId") String roomId);
+
+    // ── Message search ──
+
+    @Query("SELECT m FROM MessageEntity m WHERE m.roomId = :roomId AND LOWER(m.content) LIKE LOWER(CONCAT('%', :query, '%')) ORDER BY m.timestamp DESC")
+    List<MessageEntity> searchMessages(@Param("roomId") String roomId, @Param("query") String query, Pageable pageable);
+
+    @Query("SELECT m FROM MessageEntity m WHERE m.roomId IN :roomIds AND LOWER(m.content) LIKE LOWER(CONCAT('%', :query, '%')) ORDER BY m.timestamp DESC")
+    List<MessageEntity> searchMessagesGlobal(@Param("roomIds") java.util.Collection<String> roomIds, @Param("query") String query, Pageable pageable);
 }

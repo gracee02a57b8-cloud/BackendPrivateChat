@@ -17,6 +17,9 @@ function Messages({
   onUnpin,
   onDeleteLocal,
   onDeleteForAll,
+  onReaction,
+  onVotePoll,
+  onShowReaders,
 }) {
   const {
     pages,
@@ -102,6 +105,9 @@ function Messages({
                       onUnpin={onUnpin}
                       onDeleteLocal={onDeleteLocal}
                       onDeleteForAll={onDeleteForAll}
+                      onReaction={onReaction}
+                      onVotePoll={onVotePoll}
+                      onShowReaders={onShowReaders}
                     />
                   ))}
                   {index === 0 && <span ref={lastPageBtm}></span>}

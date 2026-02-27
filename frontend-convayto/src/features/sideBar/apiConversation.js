@@ -49,6 +49,7 @@ export async function getConversations({ myUserId }) {
           isGroup: true,
           last_message: lastMsg,
           created_at: room.createdAt,
+          muted: !!room.muted,
           friendInfo: {
             id: room.id,
             fullname: room.name || "Группа",
@@ -66,6 +67,7 @@ export async function getConversations({ myUserId }) {
         user2_id: friendUsername,
         last_message: lastMsg,
         created_at: room.createdAt,
+        muted: !!room.muted,
         friendInfo: {
           id: friendUsername,
           fullname: friendUsername,

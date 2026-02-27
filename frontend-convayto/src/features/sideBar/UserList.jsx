@@ -5,11 +5,26 @@ import Loader from "../../components/Loader";
 import UserItem from "../../components/UserItem";
 import GroupItem from "./GroupItem";
 import { useOnlineUsers } from "../../hooks/useOnlineUsers";
+import { useState, useEffect } from "react";
+import { apiFetch } from "../../services/apiHelper";
+import { RiVolumeMuteLine } from "react-icons/ri";
 
-function UserList({ filter = "all" }) {
+function UserList({ filter = "all", folderId = null }) {
   const { conversations, isPending, error } = useConversations();
   const { closeSidebar } = useUi();
   const onlineUsers = useOnlineUsers();
+  const [folderRoomIds, setFolderRoomIds] = useState(null);
+
+  // Load folder rooms when folderId changes
+  useEffect(() => {
+    if (!folderId) { setFolderRoomIds(null); return; }
+    apiFetch(`/api/folders`).then((folders) => {
+      if (Array.isArray(folders)) {
+        const folder = folders.find((f) => f.id === folderId);
+        setFolderRoomIds(folder?.roomIds || []);
+      }
+    }).catch(() => setFolderRoomIds([]));
+  }, [folderId]);
 
   if (isPending)
     return (
@@ -21,10 +36,15 @@ function UserList({ filter = "all" }) {
   if (error) return <ShortTextMessage>⚠️ {error.message}</ShortTextMessage>;
 
   // Apply filter: "all" = everything, "private" = only 1-1 chats
-  const filtered = conversations?.filter((conv) => {
+  let filtered = conversations?.filter((conv) => {
     if (filter === "private") return !conv.isGroup;
     return true; // "all" — show everything
   });
+
+  // Filter by folder if active
+  if (folderId && folderRoomIds) {
+    filtered = filtered?.filter((conv) => folderRoomIds.includes(conv.id));
+  }
 
   if (!filtered?.length)
     return (
@@ -71,6 +91,7 @@ function UserList({ filter = "all" }) {
         handler={closeSidebar}
         roomId={conv?.id}
         online={onlineUsers.has(conv?.friendInfo?.username || id)}
+        muted={!!conv?.muted}
       />
     );
   });

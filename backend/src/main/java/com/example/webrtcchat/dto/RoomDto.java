@@ -15,6 +15,8 @@ public class RoomDto {
     private String createdAt;
     private String description;
     private String avatarUrl;
+    private int disappearingSeconds;
+    private boolean muted;
 
     public RoomDto() {}
 
@@ -49,4 +51,10 @@ public class RoomDto {
 
     public String getAvatarUrl() { return avatarUrl; }
     public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
+
+    public int getDisappearingSeconds() { return disappearingSeconds; }
+    public void setDisappearingSeconds(int disappearingSeconds) { this.disappearingSeconds = disappearingSeconds; }
+
+    public boolean isMuted() { return muted; }
+    public void setMuted(boolean muted) { this.muted = muted; }
 }
