@@ -1,18 +1,27 @@
-import supabase from "../../services/supabase";
+import { apiFetch } from "../../services/apiHelper";
 import { getUserById } from "../authentication/apiAuth";
 
 export async function getConvInfoById({ myUserId, friendUserId }) {
-  // get user by id first
+  if (!friendUserId) return null;
+
+  // Get friend profile
   const friend = await getUserById(friendUserId);
 
-  // Check for previous conversation
-  const { data: convInfo, error: convInfoError } = await supabase
-    .from("conversations")
-    .select("*")
-    .in("user1_id", [myUserId, friendUserId])
-    .in("user2_id", [myUserId, friendUserId]);
+  // Create or get private room for this friend
+  let room = null;
+  try {
+    room = await apiFetch(`/api/rooms/private/${encodeURIComponent(friendUserId)}`, {
+      method: "POST",
+    });
+  } catch {
+    // Room may not exist yet — that's okay
+  }
 
-  if (convInfoError) throw new Error(convInfoError.message);
-
-  return { ...convInfo[0], friendInfo: friend };
+  return {
+    id: room?.id || null, // Room ID (e.g. "pm_alice_bob") — null if not created yet
+    user1_id: myUserId,
+    user2_id: friendUserId,
+    friendInfo: friend,
+    created_at: room?.createdAt || null,
+  };
 }

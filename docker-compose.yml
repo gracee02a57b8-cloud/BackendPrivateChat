@@ -15,7 +15,7 @@ services:
       MAX_FILE_SIZE: ${MAX_FILE_SIZE:-100MB}
       MAX_REQUEST_SIZE: ${MAX_REQUEST_SIZE:-100MB}
       UPLOAD_DIR: /app/uploads
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:*,http://barsik-frontend:*}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:*,https://barsikchat.duckdns.org}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       APP_LOG_LEVEL: ${APP_LOG_LEVEL:-INFO}
       DB_HOST: ${DB_HOST:-85.239.44.28}
@@ -49,6 +49,9 @@ services:
     restart: unless-stopped
     ports:
       - "80:8080"
+      - "443:8443"
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - backend
     networks:

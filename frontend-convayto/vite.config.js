@@ -10,12 +10,14 @@ export default defineConfig({
     open: false,
     proxy: {
       "/api": {
-        target: "http://46.149.71.106",
+        target: "https://barsikchat.duckdns.org",
         changeOrigin: true,
+        secure: false,
       },
       "/ws": {
-        target: "ws://46.149.71.106",
+        target: "wss://barsikchat.duckdns.org",
         ws: true,
+        secure: false,
       },
     },
   },

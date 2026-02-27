@@ -1,4 +1,5 @@
-import supabase from "../../services/supabase";
+import { apiFetch } from "../../services/apiHelper";
+import { connectWebSocket, disconnectWebSocket } from "../../services/wsService";
 
 ///////////////////////////////////
 // BarsikChat Backend Auth API
@@ -9,8 +10,7 @@ function buildSession(token, username, role, avatarUrl, tag) {
     session: {
       access_token: token,
       user: {
-        // Keep "user-me-001" for mock data compatibility until backend is fully connected
-        id: "user-me-001",
+        id: username, // Use username as the user ID (matches backend model)
         role: "authenticated",
         user_metadata: {
           username: username,
@@ -29,6 +29,13 @@ function buildSession(token, username, role, avatarUrl, tag) {
 ///////////////////
 
 export async function signin({ username, password }) {
+  const data = await apiFetch("/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username: username.trim(), password }),
+  }).catch(() => null);
+
+  // Manual handling since apiFetch may throw for auth errors
   const res = await fetch("/api/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -44,16 +51,19 @@ export async function signin({ username, password }) {
     throw new Error(errMsg);
   }
 
-  const data = await res.json();
+  const loginData = await res.json();
 
   // Persist auth data
-  localStorage.setItem("token", data.token);
-  localStorage.setItem("username", data.username);
-  localStorage.setItem("role", data.role || "USER");
-  localStorage.setItem("avatarUrl", data.avatarUrl || "");
-  localStorage.setItem("tag", data.tag || "");
+  localStorage.setItem("token", loginData.token);
+  localStorage.setItem("username", loginData.username);
+  localStorage.setItem("role", loginData.role || "USER");
+  localStorage.setItem("avatarUrl", loginData.avatarUrl || "");
+  localStorage.setItem("tag", loginData.tag || "");
 
-  return buildSession(data.token, data.username, data.role, data.avatarUrl, data.tag);
+  // Connect WebSocket after login
+  connectWebSocket();
+
+  return buildSession(loginData.token, loginData.username, loginData.role, loginData.avatarUrl, loginData.tag);
 }
 
 ///////////////////
@@ -85,6 +95,9 @@ export async function signup({ username, password, tag }) {
   localStorage.setItem("avatarUrl", data.avatarUrl || "");
   localStorage.setItem("tag", data.tag || "");
 
+  // Connect WebSocket after registration
+  connectWebSocket();
+
   return buildSession(data.token, data.username, data.role, data.avatarUrl, data.tag);
 }
 
@@ -93,6 +106,7 @@ export async function signup({ username, password, tag }) {
 ///////////////////
 
 export async function signout() {
+  disconnectWebSocket();
   localStorage.removeItem("token");
   localStorage.removeItem("username");
   localStorage.removeItem("role");
@@ -112,6 +126,9 @@ export async function getCurrentUser() {
     return { session: null };
   }
 
+  // Connect WebSocket if not already connected
+  connectWebSocket();
+
   return buildSession(
     token,
     username,
@@ -122,24 +139,35 @@ export async function getCurrentUser() {
 }
 
 ///////////////////
-// Get user by ID (still uses mock supabase for now)
+// Get user profile by username
 ///////////////////
 
-export async function getUserById(friendUserId) {
-  if (!friendUserId) return;
+export async function getUserById(username) {
+  if (!username) return null;
 
-  const { data, error } = await supabase
-    .from("users")
-    .select("*")
-    .eq("id", friendUserId);
-
-  if (error) {
-    if (error.code == "22P02") {
-      throw new Error("User doesn't exist!");
-    } else {
-      throw new Error(error.message);
-    }
+  try {
+    const profile = await apiFetch(`/api/profile/${username}`);
+    return {
+      id: profile.username,
+      fullname: profile.firstName && profile.lastName
+        ? `${profile.firstName} ${profile.lastName}`.trim()
+        : profile.username,
+      username: profile.username,
+      avatar_url: profile.avatarUrl || "",
+      bio: profile.bio || "",
+      tag: profile.tag || "",
+      online: false, // Will be updated via contacts endpoint
+      lastSeen: profile.lastSeen || null,
+    };
+  } catch {
+    // Fallback — return minimal info
+    return {
+      id: username,
+      fullname: username,
+      username: username,
+      avatar_url: "",
+      bio: "",
+      tag: "",
+    };
   }
-
-  return data[0];
 }

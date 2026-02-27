@@ -1,58 +1,51 @@
 import { MAX_MESSAGES_PER_PAGE } from "../../config";
-import supabase from "../../services/supabase";
+import { apiFetch } from "../../services/apiHelper";
+import { sendWsMessage } from "../../services/wsService";
 
 export async function getMessages({ conversation_id, pageParam = 0 }) {
-  const limit = MAX_MESSAGES_PER_PAGE;
-  const from = pageParam * limit;
-  const to = from + limit - 1;
+  if (!conversation_id) return [];
 
-  if (!conversation_id) return;
+  const size = MAX_MESSAGES_PER_PAGE;
+  const page = pageParam;
 
-  const query = supabase
-    .from("messages")
-    .select("*")
-    .eq("conversation_id", conversation_id)
-    .order("created_at", { ascending: false })
-    .range(from, to);
+  const messages = await apiFetch(
+    `/api/rooms/${encodeURIComponent(conversation_id)}/history?page=${page}&size=${size}`,
+  );
 
-  const { data: messages, error } = await query;
+  if (!messages || !Array.isArray(messages)) return [];
 
-  if (error) {
-    throw new Error(error.message);
-  }
+  // Transform backend MessageDto → frontend message format
+  // Backend returns newest first, we need oldest first for display
+  const transformed = messages.map((msg) => ({
+    id: msg.id,
+    conversation_id: conversation_id,
+    content: msg.content || "",
+    sender_id: msg.sender,
+    created_at: msg.timestamp,
+    type: msg.type || "CHAT",
+    fileUrl: msg.fileUrl,
+    fileName: msg.fileName,
+    edited: msg.edited || false,
+  }));
 
-  const messagesReversed = messages.reverse();
-
-  return messagesReversed;
+  // Backend returns newest-first; reverse so oldest is first
+  return transformed.reverse();
 }
 
 ////////////////
 export async function getMessageById(messageId) {
-  if (!messageId) return null;
-
-  const { data, error } = await supabase
-    .from("messages")
-    .select("*")
-    .eq("id", messageId);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return data[0];
+  // Not directly supported by backend — return null
+  return null;
 }
 
 //////////////////
 
-export async function openConversation(friendUserId) {
-  const { data, error } = await supabase
-    .from("conversations")
-    .insert([{ user2_id: friendUserId }])
-    .select();
-
-  if (error) throw new Error(error.message);
-  const conversationId = data[0].id;
-  return conversationId;
+export async function openConversation(friendUsername) {
+  // Create or get private room via REST
+  const room = await apiFetch(`/api/rooms/private/${encodeURIComponent(friendUsername)}`, {
+    method: "POST",
+  });
+  return room?.id;
 }
 
 ////////////////////
@@ -63,26 +56,33 @@ export async function sendMessage({
   content,
   friendUserId,
 }) {
-  let convId = conversation_id;
+  let roomId = conversation_id;
 
-  if (!convId) {
-    const newConvId = await openConversation(friendUserId);
-    convId = newConvId;
+  // If no conversation exists yet, create it
+  if (!roomId) {
+    roomId = await openConversation(friendUserId);
   }
 
-  const { data, error } = await supabase
-    .from("messages")
-    .insert([{ id, conversation_id: convId, content }])
-    .select();
+  // Send message via WebSocket
+  const wsMessage = {
+    type: "CHAT",
+    roomId: roomId,
+    content: content,
+    id: id,
+  };
 
-  if (error) throw new Error(error.message);
+  const sent = sendWsMessage(wsMessage);
+  if (!sent) {
+    throw new Error("Не удалось отправить сообщение. Проверьте подключение.");
+  }
 
-  const { error: conversationError } = await supabase
-    .from("conversations")
-    .update({ last_message: data[0] })
-    .eq("id", convId);
-
-  if (conversationError) throw new Error(conversationError.message);
-
-  return data[0];
+  // Return the optimistic message shape
+  return {
+    id: id,
+    conversation_id: roomId,
+    content: content,
+    sender_id: localStorage.getItem("username"),
+    created_at: new Date().toISOString(),
+    type: "CHAT",
+  };
 }

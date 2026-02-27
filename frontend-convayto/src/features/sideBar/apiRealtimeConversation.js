@@ -1,63 +1,36 @@
-import supabase from "../../services/supabase";
-import { getUserById } from "../authentication/apiAuth";
-
-async function getUpdatedPayload({ payload, myUserId }) {
-  if (payload.eventType === "INSERT") {
-    const friendId =
-      payload.new.user1_id === myUserId
-        ? payload.new.user2_id
-        : payload.new.user1_id;
-
-    const friendInfo = await getUserById(friendId);
-
-    const updatedPaylod = {
-      ...payload,
-      new: { friendInfo, ...payload.new },
-    };
-
-    return updatedPaylod;
-  } else if (payload.eventType === "UPDATE") {
-    const updatedPaylod = {
-      ...payload,
-      new: { ...payload.new },
-    };
-
-    return updatedPaylod;
-  }
-}
+import { onWsMessage } from "../../services/wsService";
 
 export function subscribeRealtimeConversation({ myUserId, callback }) {
-  const roomName = myUserId;
-  const subscription = supabase
-    .channel(roomName)
-    .on(
-      "postgres_changes",
-      {
-        event: "*",
-        schema: "public",
-        table: "conversations",
-        filter: `user1_id=eq.${myUserId}`,
-      },
-      async (payload) => {
-        const updatedPayload = await getUpdatedPayload({ payload, myUserId });
-        callback(updatedPayload);
-      },
-    )
-    .on(
-      "postgres_changes",
-      {
-        event: "*",
-        schema: "public",
-        table: "conversations",
-        filter: `user2_id=eq.${myUserId}`,
-      },
-      async (payload) => {
-        const updatedPayload = await getUpdatedPayload({ payload, myUserId });
-        callback(updatedPayload);
-      },
-    )
-    .subscribe();
+  // Listen for all incoming WebSocket messages to update the conversation list
+  const unsubscribe = onWsMessage((msg) => {
+    // Only handle CHAT messages (new messages that update conversation list)
+    if (msg.type !== "CHAT" && msg.type !== "VOICE" && msg.type !== "VIDEO_CIRCLE") return;
 
-  // console.log("subscribed conversations", myUserId);
-  return subscription;
+    // Skip messages without a room
+    if (!msg.roomId) return;
+
+    // Only handle private messages (room ID starts with pm_)
+    if (!msg.roomId.startsWith("pm_")) return;
+
+    // Don't echo our own messages
+    const myUsername = localStorage.getItem("username");
+    if (msg.sender === myUsername) return;
+
+    // Build an UPDATE payload that the conversation subscription handler expects
+    const updatedPayload = {
+      eventType: "UPDATE",
+      new: {
+        id: msg.roomId,
+        last_message: {
+          content: msg.content || "",
+          created_at: msg.timestamp,
+          sender_id: msg.sender,
+        },
+      },
+    };
+
+    callback(updatedPayload);
+  });
+
+  return { unsubscribe };
 }

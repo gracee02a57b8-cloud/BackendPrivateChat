@@ -20,7 +20,7 @@ function UserList() {
   if (!conversations?.length)
     return (
       <ShortTextMessage>
-        No chats yet. Start a new conversation!
+        Нет чатов. Найди собеседника через поиск!
       </ShortTextMessage>
     );
 
