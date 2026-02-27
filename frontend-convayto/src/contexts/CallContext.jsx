@@ -87,6 +87,7 @@ function CallProvider({ children }) {
   const startCall = useCallback(
     async (targetUser, room, type = "audio") => {
       if (stateRef.current !== CALL_STATE.IDLE) return;
+      console.log("[Call] Starting call to", targetUser, "room=", room, "type=", type);
 
       try {
         setCallState(CALL_STATE.CALLING);
@@ -94,7 +95,9 @@ function CallProvider({ children }) {
         setRemoteUser(targetUser);
         setRoomId(room);
 
+        console.log("[Call] Requesting media...");
         const stream = await getUserMediaStream(type);
+        console.log("[Call] Got media stream, tracks:", stream.getTracks().length);
         localStreamRef.current = stream;
         setLocalStream(stream);
 
@@ -176,12 +179,15 @@ function CallProvider({ children }) {
 
     const data = incomingDataRef.current;
     if (!data) return;
+    console.log("[Call] Accepting call from", data.sender, "room=", data.roomId, "type=", data.callType);
 
     try {
       setCallState(CALL_STATE.ACTIVE);
       const type = data.callType || "audio";
 
+      console.log("[Call] Requesting media for accept...");
       const stream = await getUserMediaStream(type);
+      console.log("[Call] Got media stream for accept, tracks:", stream.getTracks().length);
       localStreamRef.current = stream;
       setLocalStream(stream);
 
@@ -220,6 +226,7 @@ function CallProvider({ children }) {
       // Set remote offer
       const offer = JSON.parse(data.sdp);
       await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      console.log("[Call] Remote offer set, flushing", pendingIceRef.current.length, "pending ICE candidates");
 
       // Flush pending ICE candidates
       for (const c of pendingIceRef.current) {
@@ -239,6 +246,7 @@ function CallProvider({ children }) {
         content: "",
         extra: { target: caller, sdp: JSON.stringify(answer) },
       });
+      console.log("[Call] CALL_ANSWER sent to", caller);
 
       // Start duration timer
       callStartRef.current = Date.now();
@@ -321,6 +329,7 @@ function CallProvider({ children }) {
     const unsub = onCallMessage((msg) => {
       const extra = msg.extra || {};
       const sender = msg.sender;
+      console.log("[Call] WS received:", msg.type, "from", sender, "state=", stateRef.current);
 
       switch (msg.type) {
         case "CALL_OFFER": {
@@ -349,8 +358,11 @@ function CallProvider({ children }) {
         }
 
         case "CALL_ANSWER": {
-          if (stateRef.current !== CALL_STATE.CALLING || !pcRef.current)
+          if (stateRef.current !== CALL_STATE.CALLING || !pcRef.current) {
+            console.warn("[Call] Got CALL_ANSWER but state=", stateRef.current, "pc=", !!pcRef.current);
             return;
+          }
+          console.log("[Call] Got CALL_ANSWER, setting ACTIVE");
 
           setCallState(CALL_STATE.ACTIVE);
           if (callTimeoutRef.current) {
@@ -364,6 +376,7 @@ function CallProvider({ children }) {
               await pcRef.current.setRemoteDescription(
                 new RTCSessionDescription(answer),
               );
+              console.log("[Call] Remote answer set, flushing", pendingIceRef.current.length, "pending ICE");
 
               // Flush pending ICE candidates
               for (const c of pendingIceRef.current) {
@@ -409,6 +422,7 @@ function CallProvider({ children }) {
         case "CALL_END":
         case "CALL_REJECT":
         case "CALL_BUSY": {
+          console.log("[Call] Received", msg.type, "from", sender, "reason=", extra.reason, "state=", stateRef.current);
           if (callTimeoutRef.current) {
             clearTimeout(callTimeoutRef.current);
             callTimeoutRef.current = null;

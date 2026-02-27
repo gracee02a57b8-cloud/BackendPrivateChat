@@ -93,6 +93,15 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
         // Session cleanup (I7): close existing session for same user
         WebSocketSession oldSession = userSessions.get(username);
+
+        // IMPORTANT: Register new session FIRST, before closing old one.
+        // oldSession.close() synchronously triggers afterConnectionClosed,
+        // which checks userSessions to decide if cleanup is needed.
+        // If userSessions still points to the OLD session, it would kill active calls.
+        sessions.put(session.getId(), session);
+        userSessions.put(username, session);
+        chatService.addUser(username);
+
         if (oldSession != null && oldSession.isOpen() && !oldSession.getId().equals(session.getId())) {
             try {
                 // Use custom code 4001 so client knows not to reconnect
@@ -102,10 +111,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             }
             sessions.remove(oldSession.getId());
         }
-
-        sessions.put(session.getId(), session);
-        userSessions.put(username, session);
-        chatService.addUser(username);
 
         log.info("User '{}' connected. Online: {}", username, chatService.getOnlineUsers().size());
 
@@ -581,6 +586,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         if (extra == null) return;
         String target = extra.get("target");
         if (target == null || target.isEmpty()) return;
+
+        log.info("[Call] {} -> {} type={}", username, target, incoming.getType());
 
         // Block check: if either user blocked the other, reject calls
         if (incoming.getType() == MessageType.CALL_OFFER && isBlocked(username, target)) {
