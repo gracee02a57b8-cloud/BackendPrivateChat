@@ -112,7 +112,13 @@ function CallProvider({ children }) {
           },
           onTrack: (remoteStr) => setRemoteStream(remoteStr),
           onConnectionStateChange: (state) => {
-            if (state === "disconnected" || state === "failed") {
+            if (state === "failed") {
+              sendWsMessage({
+                type: "CALL_END",
+                roomId: room,
+                content: "",
+                extra: { target: targetUser, reason: "ice_failed" },
+              });
               cleanup();
             }
           },
@@ -149,6 +155,15 @@ function CallProvider({ children }) {
         }, 45_000);
       } catch (e) {
         console.error("[Call] Failed to start call:", e);
+        // If offer was already sent, notify callee we're ending
+        if (pcRef.current) {
+          sendWsMessage({
+            type: "CALL_END",
+            roomId: room,
+            content: "",
+            extra: { target: targetUser, reason: "error" },
+          });
+        }
         cleanup();
       }
     },
@@ -187,7 +202,13 @@ function CallProvider({ children }) {
         },
         onTrack: (remoteStr) => setRemoteStream(remoteStr),
         onConnectionStateChange: (state) => {
-          if (state === "disconnected" || state === "failed") {
+          if (state === "failed") {
+            sendWsMessage({
+              type: "CALL_END",
+              roomId: room,
+              content: "",
+              extra: { target: caller, reason: "ice_failed" },
+            });
             cleanup();
           }
         },
@@ -228,6 +249,15 @@ function CallProvider({ children }) {
       }, 1000);
     } catch (e) {
       console.error("[Call] Failed to accept call:", e);
+      // Notify caller that we failed to accept
+      if (data) {
+        sendWsMessage({
+          type: "CALL_REJECT",
+          roomId: data.roomId,
+          content: "",
+          extra: { target: data.sender },
+        });
+      }
       cleanup();
     }
   }, [cleanup]);

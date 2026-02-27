@@ -967,15 +967,16 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         sessions.remove(session.getId());
 
         if (username != null) {
-            // Auto-leave any conference
-            autoLeaveConference(username);
-
-            // Clean up any active call tracking for this user
-            cleanupCallTrackingForUser(username);
-
-            // Only remove from userSessions if this IS the current session (I7)
+            // Only clean up if this IS the current session (user truly disconnected,
+            // not just a session replacement from another tab/reconnect)
             WebSocketSession current = userSessions.get(username);
             if (current != null && current.getId().equals(session.getId())) {
+                // Auto-leave any conference
+                autoLeaveConference(username);
+
+                // Clean up any active call tracking for this user
+                cleanupCallTrackingForUser(username);
+
                 userSessions.remove(username);
                 chatService.removeUser(username);
                 chatService.updateLastSeen(username);
@@ -984,6 +985,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
                 // Broadcast presence: user went offline
                 broadcastPresence(username, false);
+            } else {
+                log.debug("Old session closed for '{}' (replaced by newer session), skipping cleanup", username);
             }
         }
     }
