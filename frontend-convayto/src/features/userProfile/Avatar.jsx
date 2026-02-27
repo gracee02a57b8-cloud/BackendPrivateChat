@@ -1,9 +1,9 @@
-import { HiOutlineUserCircle } from "react-icons/hi2";
 import { LuImagePlus } from "react-icons/lu";
 import { useUpdateUser } from "./useUpdateUser";
 import Loader from "../../components/Loader";
 import toast from "react-hot-toast";
 import { ACCEPTED_AVATAR_FILE_TYPES } from "../../config";
+import { getRandomAvatar } from "../../utils/avatarUtils";
 
 function Avatar({ avatar }) {
   const avatar_url = avatar;
@@ -25,18 +25,11 @@ function Avatar({ avatar }) {
     <div className="relative mx-auto mt-4 h-52 w-52">
       {/* Circular image container (clips content) */}
       <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full border-2 border-bgAccent dark:border-bgAccent-dark">
-        {avatar_url ? (
-          <img
-            className="h-full w-full object-cover object-center"
-            src={avatar_url}
-            alt="avatar"
-          />
-        ) : (
-          <HiOutlineUserCircle
-            className="h-full w-full opacity-50"
-            strokeWidth="1"
-          />
-        )}
+        <img
+          className="h-full w-full object-cover object-center"
+          src={avatar_url || getRandomAvatar(localStorage.getItem("username"))}
+          alt="avatar"
+        />
       </div>
       {/* Upload button — positioned outside circular clip */}
       <label

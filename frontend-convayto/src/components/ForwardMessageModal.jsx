@@ -7,6 +7,7 @@ import { apiFetch } from "../services/apiHelper";
 import { sendWsMessage } from "../services/wsService";
 import { v4 as uuid } from "uuid";
 import toast from "react-hot-toast";
+import { getRandomAvatar } from "../utils/avatarUtils";
 
 function ForwardMessageModal({ isOpen, onClose, messages = [] }) {
   const [rooms, setRooms] = useState([]);
@@ -152,8 +153,8 @@ function ForwardMessageModal({ isOpen, onClose, messages = [] }) {
                       isSelected ? "bg-bgAccent/10 dark:bg-bgAccent-dark/10" : ""
                     }`}
                   >
-                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-purple-500 text-sm font-bold text-white">
-                      {room.type === "ROOM" ? "G" : room.name?.[0]?.toUpperCase() || "?"}
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-full">
+                      <img src={getRandomAvatar(room.name || room.id)} alt={room.name} className="h-full w-full object-cover" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{room.name}</p>

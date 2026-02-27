@@ -16,6 +16,8 @@ test-proxy.ps1
 # Frontend
 frontend/node_modules/
 frontend/dist/
+frontend-convayto/node_modules/
+frontend-convayto/android/
 
 # Uploads
 backend/uploads/

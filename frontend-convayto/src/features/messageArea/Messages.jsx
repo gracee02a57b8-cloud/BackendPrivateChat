@@ -13,6 +13,8 @@ function Messages({
   enterSelectionMode,
   onReply,
   onForward,
+  onPin,
+  onUnpin,
   onDeleteLocal,
   onDeleteForAll,
 }) {
@@ -96,6 +98,8 @@ function Messages({
                       enterSelectionMode={enterSelectionMode}
                       onReply={onReply}
                       onForward={onForward}
+                      onPin={onPin}
+                      onUnpin={onUnpin}
                       onDeleteLocal={onDeleteLocal}
                       onDeleteForAll={onDeleteForAll}
                     />

@@ -195,6 +195,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
+        // Handle PIN / UNPIN
+        if (incoming.getType() == MessageType.PIN || incoming.getType() == MessageType.UNPIN) {
+            handlePin(username, incoming);
+            return;
+        }
+
         // Handle SCHEDULED
         if (incoming.getType() == MessageType.SCHEDULED) {
             handleScheduled(username, incoming);
@@ -338,6 +344,38 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         broadcast.setId(msgId);
         broadcast.setRoomId(roomId);
         broadcast.setSender(username);
+        broadcastToRoom(roomId, broadcast);
+    }
+
+    private void handlePin(String username, MessageDto incoming) {
+        String roomId = incoming.getRoomId();
+        String msgId = incoming.getId();
+        if (roomId == null || msgId == null) return;
+        if (!isUserInRoom(username, roomId)) return;
+
+        boolean isPin = incoming.getType() == MessageType.PIN;
+        boolean ok;
+        if (isPin) {
+            ok = chatService.pinMessage(roomId, msgId, username);
+        } else {
+            ok = chatService.unpinMessage(roomId, msgId);
+        }
+        if (!ok) return;
+
+        MessageDto broadcast = new MessageDto();
+        broadcast.setType(incoming.getType()); // PIN or UNPIN
+        broadcast.setId(msgId);
+        broadcast.setRoomId(roomId);
+        broadcast.setSender(username);
+        broadcast.setPinned(isPin);
+        broadcast.setPinnedBy(isPin ? username : null);
+
+        // Include original message content for the pinned bar
+        MessageDto original = chatService.findMessage(roomId, msgId);
+        if (original != null) {
+            broadcast.setContent(original.getContent());
+        }
+
         broadcastToRoom(roomId, broadcast);
     }
 
@@ -936,6 +974,14 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         } catch (Exception e) {
             log.warn("Failed to parse mentions for message {}: {}", message.getId(), e.getMessage());
         }
+    }
+
+    /**
+     * Broadcast a message to all online members of a room.
+     * Used from REST controllers for offline-sent messages.
+     */
+    public void broadcastMessageToRoom(String roomId, MessageDto message) {
+        broadcastToRoom(roomId, message);
     }
 
     private void broadcastToRoom(String roomId, MessageDto message) {

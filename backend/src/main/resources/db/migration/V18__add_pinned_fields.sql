@@ -1,0 +1,3 @@
+-- Add pinned message fields
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS pinned BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS pinned_by VARCHAR(50);

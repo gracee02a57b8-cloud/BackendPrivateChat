@@ -99,6 +99,12 @@ public class MessageEntity {
     @Column(name = "seq_id", insertable = false, updatable = false)
     private Long seqId;
 
+    @Column(nullable = false)
+    private boolean pinned;
+
+    @Column(name = "pinned_by", length = 50)
+    private String pinnedBy;
+
     public MessageEntity() {}
 
     // Getters and Setters
@@ -193,4 +199,10 @@ public class MessageEntity {
 
     public String getThumbnailUrl() { return thumbnailUrl; }
     public void setThumbnailUrl(String thumbnailUrl) { this.thumbnailUrl = thumbnailUrl; }
+
+    public boolean isPinned() { return pinned; }
+    public void setPinned(boolean pinned) { this.pinned = pinned; }
+
+    public String getPinnedBy() { return pinnedBy; }
+    public void setPinnedBy(String pinnedBy) { this.pinnedBy = pinnedBy; }
 }

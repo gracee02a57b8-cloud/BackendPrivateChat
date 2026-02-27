@@ -2,7 +2,7 @@ import { useUser } from "../authentication/useUser";
 import { formatTime } from "../../utils/common";
 import useConvInfo from "./useConvInfo";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { RiPlayFill, RiPauseFill, RiDownloadLine, RiCheckboxCircleLine, RiCheckboxBlankCircleLine } from "react-icons/ri";
+import { RiPlayFill, RiPauseFill, RiDownloadLine, RiCheckboxCircleLine, RiCheckboxBlankCircleLine, RiPushpinFill } from "react-icons/ri";
 import MessageContextMenu from "../../components/MessageContextMenu";
 import toast from "react-hot-toast";
 
@@ -149,6 +149,8 @@ function BubbleWrapper({
   enterSelectionMode,
   onReply,
   onForward,
+  onPin,
+  onUnpin,
   onDeleteLocal,
   onDeleteForAll,
   bubbleClass,
@@ -178,8 +180,12 @@ function BubbleWrapper({
   }, [message]);
 
   const handlePin = useCallback(() => {
-    toast("Закрепление — в разработке", { icon: "📌" });
-  }, []);
+    if (message?.pinned) {
+      onUnpin?.(message);
+    } else {
+      onPin?.(message);
+    }
+  }, [message, onPin, onUnpin]);
 
   const handleSelect = useCallback(() => {
     enterSelectionMode?.(message);
@@ -227,6 +233,7 @@ function BubbleWrapper({
           x={contextMenu.x}
           y={contextMenu.y}
           isOwn={isOwn}
+          isPinned={!!message?.pinned}
           onReply={() => onReply?.(message)}
           onCopy={handleCopy}
           onForward={() => onForward?.(message)}
@@ -251,6 +258,8 @@ function MessageItem({
   enterSelectionMode,
   onReply,
   onForward,
+  onPin,
+  onUnpin,
   onDeleteLocal,
   onDeleteForAll,
 }) {
@@ -269,6 +278,8 @@ function MessageItem({
     enterSelectionMode,
     onReply,
     onForward,
+    onPin,
+    onUnpin,
     onDeleteLocal,
     onDeleteForAll,
   };
@@ -348,6 +359,7 @@ function MessageItem({
         <p>
           {message.content}
           <span className="float-right ml-2 mt-2 select-none text-xs opacity-70">
+            {message?.pinned && <RiPushpinFill className="mr-1 inline-block text-[11px]" title="Закреплено" />}
             {message?.edited && <span className="mr-1 italic">ред.</span>}
             {formatTime(message?.created_at)}
           </span>

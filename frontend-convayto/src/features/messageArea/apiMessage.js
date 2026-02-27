@@ -1,6 +1,23 @@
 import { MAX_MESSAGES_PER_PAGE } from "../../config";
 import { apiFetch } from "../../services/apiHelper";
-import { sendWsMessage } from "../../services/wsService";
+import { sendWsMessage, isWsConnected } from "../../services/wsService";
+
+/**
+ * Send a message via WS if connected, otherwise fall back to REST POST.
+ * Returns true on success.
+ */
+async function sendViaWsOrRest(wsMsg) {
+  const sent = sendWsMessage(wsMsg);
+  if (sent) return true;
+
+  // REST fallback — POST /api/rooms/{roomId}/messages
+  await apiFetch(`/api/rooms/${encodeURIComponent(wsMsg.roomId)}/messages`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(wsMsg),
+  });
+  return true;
+}
 
 export async function getMessages({ conversation_id, pageParam = 0 }) {
   if (!conversation_id) return [];
@@ -30,6 +47,11 @@ export async function getMessages({ conversation_id, pageParam = 0 }) {
     waveform: msg.waveform || null,
     thumbnailUrl: msg.thumbnailUrl || null,
     edited: msg.edited || false,
+    pinned: msg.pinned || false,
+    pinnedBy: msg.pinnedBy || null,
+    replyToId: msg.replyToId || null,
+    replyToSender: msg.replyToSender || null,
+    replyToContent: msg.replyToContent || null,
   }));
 
   // Backend returns newest-first; reverse so oldest is first
@@ -39,6 +61,22 @@ export async function getMessages({ conversation_id, pageParam = 0 }) {
 ////////////////
 export async function getMessageById(messageId) {
   return null;
+}
+
+export async function getPinnedMessages(roomId) {
+  if (!roomId) return [];
+  const msgs = await apiFetch(`/api/rooms/${encodeURIComponent(roomId)}/pinned`);
+  if (!Array.isArray(msgs)) return [];
+  return msgs.map((msg) => ({
+    id: msg.id,
+    conversation_id: roomId,
+    content: msg.content || "",
+    sender_id: msg.sender,
+    created_at: msg.timestamp,
+    type: msg.type || "CHAT",
+    pinned: true,
+    pinnedBy: msg.pinnedBy,
+  }));
 }
 
 //////////////////
@@ -71,10 +109,7 @@ export async function sendMessage({
     id: id,
   };
 
-  const sent = sendWsMessage(wsMessage);
-  if (!sent) {
-    throw new Error("Не удалось отправить сообщение. Проверьте подключение.");
-  }
+  await sendViaWsOrRest(wsMessage);
 
   return {
     id: id,
@@ -122,10 +157,7 @@ export async function sendFileMessage({ id, conversation_id, friendUserId, file 
     fileType: uploaded.contentType || file.type,
   };
 
-  const sent = sendWsMessage(wsMessage);
-  if (!sent) {
-    throw new Error("Не удалось отправить файл. Проверьте подключение.");
-  }
+  await sendViaWsOrRest(wsMessage);
 
   return {
     id,
@@ -166,10 +198,7 @@ export async function sendVoiceMessage({ id, conversation_id, friendUserId, blob
     duration: Math.round(duration),
   };
 
-  const sent = sendWsMessage(wsMessage);
-  if (!sent) {
-    throw new Error("Не удалось отправить голосовое. Проверьте подключение.");
-  }
+  await sendViaWsOrRest(wsMessage);
 
   return {
     id,
@@ -209,10 +238,7 @@ export async function sendVideoCircle({ id, conversation_id, friendUserId, blob,
     duration: Math.round(duration),
   };
 
-  const sent = sendWsMessage(wsMessage);
-  if (!sent) {
-    throw new Error("Не удалось отправить видеокружок. Проверьте подключение.");
-  }
+  await sendViaWsOrRest(wsMessage);
 
   return {
     id,

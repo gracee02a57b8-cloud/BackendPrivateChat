@@ -1,6 +1,6 @@
-import { HiOutlineUserCircle } from "react-icons/hi2";
 import { useNavigate, useParams } from "react-router-dom";
 import { useEnterKeyPress } from "../utils/useEnterKeyPress";
+import { getRandomAvatar } from "../utils/avatarUtils";
 
 function UserItem({
   id,
@@ -35,18 +35,11 @@ function UserItem({
       tabIndex={0}
     >
       <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-full">
-        {avatar ? (
-          <img
-            src={avatar}
-            alt={name}
-            className="pointer-events-none h-full w-full object-cover"
-          />
-        ) : (
-          <HiOutlineUserCircle
-            className="h-full w-full opacity-50"
-            strokeWidth="1"
-          />
-        )}
+        <img
+          src={avatar || getRandomAvatar(name || id)}
+          alt={name}
+          className="pointer-events-none h-full w-full object-cover"
+        />
       </span>
 
       <span className="flex flex-col overflow-hidden ">

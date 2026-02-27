@@ -2,12 +2,13 @@ import Messages from "./Messages";
 import MessageTopBar from "./MessageTopBar";
 import MessageInputBar from "./MessageInputBar";
 import ForwardMessageModal from "../../components/ForwardMessageModal";
-import { useState, useCallback } from "react";
-import { RiShareForwardLine, RiCloseLine, RiDeleteBinLine } from "react-icons/ri";
+import { useState, useCallback, useEffect } from "react";
+import { RiShareForwardLine, RiCloseLine, RiDeleteBinLine, RiPushpinFill, RiCloseFill } from "react-icons/ri";
 import { sendWsMessage } from "../../services/wsService";
 import { useQueryClient } from "@tanstack/react-query";
 import useConvInfo from "./useConvInfo";
 import toast from "react-hot-toast";
+import { getPinnedMessages } from "./apiMessage";
 
 function MessageView() {
   const [selectionMode, setSelectionMode] = useState(false);
@@ -15,6 +16,7 @@ function MessageView() {
   const [replyTo, setReplyTo] = useState(null);
   const [forwardMessages, setForwardMessages] = useState([]);
   const [showForward, setShowForward] = useState(false);
+  const [pinnedMessages, setPinnedMessages] = useState([]);
   const { convInfo } = useConvInfo();
   const queryClient = useQueryClient();
   const friendUserId = convInfo?.friendInfo?.id;
@@ -100,9 +102,81 @@ function MessageView() {
     exitSelectionMode();
   }, [selectedMessages, handleDeleteLocal, exitSelectionMode]);
 
+  // Fetch pinned messages when room changes
+  useEffect(() => {
+    const roomId = convInfo?.id;
+    if (!roomId) { setPinnedMessages([]); return; }
+    getPinnedMessages(roomId)
+      .then((msgs) => setPinnedMessages(msgs || []))
+      .catch(() => setPinnedMessages([]));
+  }, [convInfo?.id]);
+
+  // Listen for pin/unpin realtime updates in cache and sync pinned bar
+  useEffect(() => {
+    const roomId = convInfo?.id;
+    if (!roomId) return;
+    // Subscribe to cache changes to detect pin/unpin
+    const unsub = queryClient.getQueryCache().subscribe((event) => {
+      if (event?.query?.queryKey?.[0] !== "friend" || event?.query?.queryKey?.[1] !== friendUserId) return;
+      // Rebuild pinned list from cache
+      const data = queryClient.getQueryData(["friend", friendUserId]);
+      if (!data?.pages) return;
+      const allPinned = [];
+      for (const page of data.pages) {
+        for (const m of page) {
+          if (m.pinned) allPinned.push(m);
+        }
+      }
+      setPinnedMessages(allPinned);
+    });
+    return () => unsub?.();
+  }, [convInfo?.id, friendUserId, queryClient]);
+
+  const handlePin = useCallback(
+    (message) => {
+      const roomId = convInfo?.id;
+      if (!roomId) return;
+      sendWsMessage({ type: "PIN", roomId, id: message.id });
+    },
+    [convInfo],
+  );
+
+  const handleUnpin = useCallback(
+    (message) => {
+      const roomId = convInfo?.id;
+      if (!roomId) return;
+      sendWsMessage({ type: "UNPIN", roomId, id: message.id });
+    },
+    [convInfo],
+  );
+
+  const lastPinned = pinnedMessages.length > 0 ? pinnedMessages[pinnedMessages.length - 1] : null;
+
   return (
     <div className="relative col-span-2 grid h-screen-safe w-full grid-cols-1 grid-rows-[auto_1fr_auto] overflow-hidden md:col-span-1">
       <MessageTopBar />
+
+      {/* Pinned message bar */}
+      {lastPinned && (
+        <div className="flex items-center gap-2 border-b border-LightShade/20 bg-bgPrimary/80 px-4 py-2 backdrop-blur-sm dark:bg-bgPrimary-dark/80">
+          <RiPushpinFill className="flex-shrink-0 text-base text-bgAccent dark:text-bgAccent-dark" />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-bgAccent dark:text-bgAccent-dark">
+              Закреплённое сообщение
+            </p>
+            <p className="truncate text-sm text-textPrimary dark:text-textPrimary-dark">
+              {lastPinned.content || "📎 Вложение"}
+            </p>
+          </div>
+          <button
+            onClick={() => handleUnpin(lastPinned)}
+            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full transition hover:bg-LightShade/20"
+            title="Открепить"
+          >
+            <RiCloseFill className="text-base opacity-60" />
+          </button>
+        </div>
+      )}
 
       <Messages
         selectionMode={selectionMode}
@@ -111,6 +185,8 @@ function MessageView() {
         enterSelectionMode={enterSelectionMode}
         onReply={setReplyTo}
         onForward={handleForwardSingle}
+        onPin={handlePin}
+        onUnpin={handleUnpin}
         onDeleteLocal={handleDeleteLocal}
         onDeleteForAll={handleDeleteForAll}
       />

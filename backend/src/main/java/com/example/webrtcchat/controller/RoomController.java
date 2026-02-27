@@ -5,26 +5,35 @@ import com.example.webrtcchat.dto.RoomDto;
 import com.example.webrtcchat.repository.MessageRepository;
 import com.example.webrtcchat.service.ChatService;
 import com.example.webrtcchat.service.RoomService;
+import com.example.webrtcchat.types.MessageType;
 import com.example.webrtcchat.types.RoomType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/rooms")
 public class RoomController {
 
+    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
     private final RoomService roomService;
     private final ChatService chatService;
     private final MessageRepository messageRepository;
+    private final ChatWebSocketHandler wsHandler;
 
-    public RoomController(RoomService roomService, ChatService chatService, MessageRepository messageRepository) {
+    public RoomController(RoomService roomService, ChatService chatService,
+                          MessageRepository messageRepository, ChatWebSocketHandler wsHandler) {
         this.roomService = roomService;
         this.chatService = chatService;
         this.messageRepository = messageRepository;
+        this.wsHandler = wsHandler;
     }
 
     @GetMapping
@@ -130,5 +139,51 @@ public class RoomController {
                 "links", messageRepository.countLinksByRoomId(roomId)
         );
         return ResponseEntity.ok(stats);
+    }
+
+    // ── Pinned messages ──
+
+    @GetMapping("/{roomId}/pinned")
+    public ResponseEntity<List<MessageDto>> getPinnedMessages(@PathVariable String roomId, Principal principal) {
+        RoomDto room = roomService.getRoomById(roomId);
+        if (room == null) return ResponseEntity.notFound().build();
+        if (room.getType() != RoomType.GENERAL && !room.getMembers().contains(principal.getName())) {
+            return ResponseEntity.status(403).build();
+        }
+        return ResponseEntity.ok(chatService.getPinnedMessages(roomId));
+    }
+
+    // ── Send message via REST (offline fallback) ──
+
+    @PostMapping("/{roomId}/messages")
+    public ResponseEntity<MessageDto> sendMessage(@PathVariable String roomId,
+                                                  @RequestBody MessageDto body,
+                                                  Principal principal) {
+        RoomDto room = roomService.getRoomById(roomId);
+        if (room == null) return ResponseEntity.notFound().build();
+
+        String username = principal.getName();
+        if (room.getType() != RoomType.GENERAL && !room.getMembers().contains(username)) {
+            return ResponseEntity.status(403).build();
+        }
+
+        body.setSender(username);
+        body.setTimestamp(LocalDateTime.now().format(FORMATTER));
+        if (body.getType() == null ||
+            (body.getType() != MessageType.VOICE && body.getType() != MessageType.VIDEO_CIRCLE)) {
+            body.setType(MessageType.CHAT);
+        }
+        if (body.getId() == null || body.getId().isEmpty()) {
+            body.setId(UUID.randomUUID().toString());
+        }
+        body.setRoomId(roomId);
+        body.setStatus("SENT");
+
+        chatService.send(roomId, body);
+
+        // Broadcast to online room members via WS
+        wsHandler.broadcastMessageToRoom(roomId, body);
+
+        return ResponseEntity.ok(body);
     }
 }

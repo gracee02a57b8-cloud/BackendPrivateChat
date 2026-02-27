@@ -3,6 +3,7 @@
 // ==========================================
 import { useRef, useEffect } from "react";
 import { useCall, CALL_STATE } from "../contexts/CallContext";
+import { getRandomAvatar } from "../utils/avatarUtils";
 import {
   RiPhoneFill,
   RiMicLine,
@@ -79,9 +80,9 @@ function CallOverlay() {
 
       {/* Top info bar */}
       <div className="relative z-10 flex flex-col items-center pt-12">
-        {/* Avatar placeholder */}
-        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-4xl font-bold uppercase shadow-lg">
-          {remoteUser?.[0] || "?"}
+        {/* Avatar */}
+        <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full shadow-lg">
+          <img src={getRandomAvatar(remoteUser)} alt={remoteUser} className="h-full w-full object-cover" />
         </div>
         <p className="mt-4 text-2xl font-semibold">{remoteUser}</p>
         <p className="mt-1 text-sm text-gray-300">

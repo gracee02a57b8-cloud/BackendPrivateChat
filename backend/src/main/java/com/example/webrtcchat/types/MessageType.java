@@ -54,5 +54,9 @@ public enum MessageType {
     // Stories
     STORY_POSTED,   // server → all: new story uploaded
 
+    // Pin / Unpin messages
+    PIN,            // client → server: pin a message
+    UNPIN,          // client → server: unpin a message
+
     ERROR           // server → client error notification
 }

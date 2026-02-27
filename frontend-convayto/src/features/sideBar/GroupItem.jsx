@@ -1,6 +1,6 @@
-import { HiOutlineUserGroup } from "react-icons/hi2";
 import { useNavigate, useParams } from "react-router-dom";
 import { useEnterKeyPress } from "../../utils/useEnterKeyPress";
+import { getRandomAvatar } from "../../utils/avatarUtils";
 
 function GroupItem({ group, handler }) {
   const { roomId: currentRoomId } = useParams();
@@ -35,16 +35,12 @@ function GroupItem({ group, handler }) {
       role="button"
       tabIndex={0}
     >
-      <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-bgAccent/20 dark:bg-bgAccent-dark/20">
-        {group.avatarUrl ? (
-          <img
-            src={group.avatarUrl}
-            alt={group.name}
-            className="pointer-events-none h-full w-full object-cover"
-          />
-        ) : (
-          <HiOutlineUserGroup size={28} opacity={0.6} />
-        )}
+      <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-full">
+        <img
+          src={group.avatarUrl || getRandomAvatar(group.name || group.id)}
+          alt={group.name}
+          className="pointer-events-none h-full w-full object-cover"
+        />
       </span>
 
       <span className="flex flex-col overflow-hidden">

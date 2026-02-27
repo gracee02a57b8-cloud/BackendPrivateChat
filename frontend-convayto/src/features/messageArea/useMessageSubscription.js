@@ -14,6 +14,32 @@ function useMessageSubscription({ conversation_id, friendUserId }) {
 
       function callback(newData) {
         queryClient.setQueryData(["friend", friendUserId], (prevData) => {
+          if (!prevData) return prevData;
+
+          // Handle DELETE — remove message
+          if (newData.type === "DELETE" && newData.deleted) {
+            return {
+              ...prevData,
+              pages: prevData.pages.map((page) =>
+                page.filter((m) => m.id !== newData.id),
+              ),
+            };
+          }
+
+          // Handle PIN / UNPIN — update pinned field on existing message
+          if (newData.type === "PIN" || newData.type === "UNPIN") {
+            return {
+              ...prevData,
+              pages: prevData.pages.map((page) =>
+                page.map((m) =>
+                  m.id === newData.id
+                    ? { ...m, pinned: newData.pinned, pinnedBy: newData.pinnedBy }
+                    : m,
+                ),
+              ),
+            };
+          }
+
           const existingOptimisticMessage = prevData?.pages[0]?.find(
             (message) => message?.id === newData.id,
           );

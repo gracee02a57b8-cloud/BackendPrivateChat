@@ -1,10 +1,10 @@
-import { HiOutlineUserCircle } from "react-icons/hi2";
 import { useEnterKeyPress } from "../utils/useEnterKeyPress";
+import { getRandomAvatar } from "../utils/avatarUtils";
 
 function Profile({ onClick, userData }) {
   const fullname = userData?.fullname;
   const username = userData?.username;
-  const avatar_url = userData?.avatar_url;
+  const avatar_url = userData?.avatar_url || getRandomAvatar(username || fullname);
 
   const handleKeyDown = useEnterKeyPress(onClick);
 
@@ -19,15 +19,11 @@ function Profile({ onClick, userData }) {
       tabIndex={0}
     >
       <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full">
-        {avatar_url ? (
-          <img
-            src={avatar_url}
-            alt={fullname}
-            className="pointer-events-none h-full w-full object-cover"
-          />
-        ) : (
-          <HiOutlineUserCircle className="h-full w-full opacity-50" strokeWidth="1" />
-        )}
+        <img
+          src={avatar_url}
+          alt={fullname}
+          className="pointer-events-none h-full w-full object-cover"
+        />
       </div>
 
       <div className="truncate text-left">

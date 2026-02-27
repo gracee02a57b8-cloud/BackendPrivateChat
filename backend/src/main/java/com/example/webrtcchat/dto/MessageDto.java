@@ -48,6 +48,10 @@ public class MessageDto {
     private String senderIdentityKey;
     private Integer oneTimeKeyId;
 
+    // Pin fields
+    private boolean pinned;
+    private String pinnedBy;
+
     public MessageDto() {}
 
     public MessageDto(String sender, String content, String timestamp, MessageType type) {
@@ -149,4 +153,10 @@ public class MessageDto {
 
     public String getThumbnailUrl() { return thumbnailUrl; }
     public void setThumbnailUrl(String thumbnailUrl) { this.thumbnailUrl = thumbnailUrl; }
+
+    public boolean isPinned() { return pinned; }
+    public void setPinned(boolean pinned) { this.pinned = pinned; }
+
+    public String getPinnedBy() { return pinnedBy; }
+    public void setPinnedBy(String pinnedBy) { this.pinnedBy = pinnedBy; }
 }

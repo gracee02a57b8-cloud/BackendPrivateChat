@@ -53,6 +53,18 @@ export function subscribeRealtimeMessage({ conversation_id, callback }) {
         type: "DELETE",
       });
     }
+
+    // Handle PIN / UNPIN
+    if (msg.roomId === conversation_id && (msg.type === "PIN" || msg.type === "UNPIN")) {
+      callback({
+        id: msg.id,
+        conversation_id: msg.roomId,
+        type: msg.type,
+        pinned: msg.type === "PIN",
+        pinnedBy: msg.pinnedBy || msg.sender || null,
+        content: msg.content,
+      });
+    }
   });
 
   return { unsubscribe };

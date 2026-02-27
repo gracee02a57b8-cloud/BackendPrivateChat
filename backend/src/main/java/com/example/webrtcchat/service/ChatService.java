@@ -89,6 +89,36 @@ public class ChatService {
         messageRepository.deleteByRoomId(roomId);
     }
 
+    // ── Pin / Unpin ──
+
+    @Transactional
+    public boolean pinMessage(String roomId, String msgId, String pinnedBy) {
+        Optional<MessageEntity> opt = messageRepository.findById(msgId);
+        if (opt.isEmpty() || !roomId.equals(opt.get().getRoomId())) return false;
+        MessageEntity entity = opt.get();
+        entity.setPinned(true);
+        entity.setPinnedBy(pinnedBy);
+        messageRepository.save(entity);
+        return true;
+    }
+
+    @Transactional
+    public boolean unpinMessage(String roomId, String msgId) {
+        Optional<MessageEntity> opt = messageRepository.findById(msgId);
+        if (opt.isEmpty() || !roomId.equals(opt.get().getRoomId())) return false;
+        MessageEntity entity = opt.get();
+        entity.setPinned(false);
+        entity.setPinnedBy(null);
+        messageRepository.save(entity);
+        return true;
+    }
+
+    @Transactional(readOnly = true)
+    public List<MessageDto> getPinnedMessages(String roomId) {
+        return messageRepository.findByRoomIdAndPinnedTrue(roomId)
+                .stream().map(this::toDto).toList();
+    }
+
     /**
      * Mark all unread messages from other senders as READ.
      * Returns map of sender -> list of message IDs that were marked.
@@ -220,6 +250,9 @@ public class ChatService {
         e.setWaveform(dto.getWaveform());
         // Video circle fields
         e.setThumbnailUrl(dto.getThumbnailUrl());
+        // Pin fields
+        e.setPinned(dto.isPinned());
+        e.setPinnedBy(dto.getPinnedBy());
         return e;
     }
 
@@ -259,6 +292,9 @@ public class ChatService {
         dto.setWaveform(e.getWaveform());
         // Video circle fields
         dto.setThumbnailUrl(e.getThumbnailUrl());
+        // Pin fields
+        dto.setPinned(e.isPinned());
+        dto.setPinnedBy(e.getPinnedBy());
         return dto;
     }
 }

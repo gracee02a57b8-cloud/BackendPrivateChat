@@ -28,6 +28,10 @@ public interface MessageRepository extends JpaRepository<MessageEntity, String> 
     @Transactional
     void deleteByRoomId(String roomId);
 
+    // ── Pinned messages ──
+
+    List<MessageEntity> findByRoomIdAndPinnedTrue(String roomId);
+
     // ── Media stats queries ──
 
     @Query("SELECT COUNT(m) FROM MessageEntity m WHERE m.roomId = :roomId AND m.fileUrl IS NOT NULL AND m.fileType LIKE 'image/%'")
