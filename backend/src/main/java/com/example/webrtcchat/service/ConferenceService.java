@@ -37,12 +37,12 @@ public class ConferenceService {
      * @param creator the username of the creator
      * @return conference ID
      */
-    public String createConference(String creator) {
+    public String createConference(String creator, String roomId) {
         // If user is already in a conference, leave it first
         leaveConference(creator);
 
         String confId = UUID.randomUUID().toString();
-        ConferenceRoom room = new ConferenceRoom(confId, creator);
+        ConferenceRoom room = new ConferenceRoom(confId, creator, roomId);
         room.addParticipant(creator);
         conferences.put(confId, room);
         userConference.put(creator, confId);
