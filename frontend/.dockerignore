@@ -1,9 +1,0 @@
-node_modules/
-dist/
-.vscode/
-.git/
-.gitignore
-.env*
-uploads/
-README.md
-*.log
