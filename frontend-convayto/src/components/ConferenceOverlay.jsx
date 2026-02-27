@@ -10,8 +10,10 @@ import {
   RiCameraOffLine,
   RiFullscreenLine,
   RiArrowDownSLine,
+  RiLinkM,
 } from "react-icons/ri";
 import { HiPhoneXMark } from "react-icons/hi2";
+import toast from "react-hot-toast";
 
 /** Mounts a MediaStream on a <video> element */
 function VideoTile({ stream, muted = false, label }) {
@@ -59,8 +61,18 @@ function ConferenceOverlay() {
     toggleAudio,
     toggleVideo,
     toggleMinimize,
+    getInviteLink,
     CONF_STATE: CS,
   } = useConference();
+
+  const handleCopyLink = () => {
+    const link = getInviteLink();
+    if (link) {
+      navigator.clipboard.writeText(link).then(() => {
+        toast.success("Ссылка скопирована!");
+      });
+    }
+  };
 
   // Dragging state for minimized widget
   const [dragPos, setDragPos] = useState({ x: 16, y: 80 });
@@ -200,11 +212,21 @@ function ConferenceOverlay() {
               ? "а"
               : "ов"}
         </h2>
-        {confState === CS.JOINING && (
-          <span className="animate-pulse text-sm text-gray-400">
-            Подключение...
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleCopyLink}
+            className="flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-1.5 text-sm transition hover:bg-white/20 active:scale-95"
+            title="Копировать ссылку-приглашение"
+          >
+            <RiLinkM className="text-base" />
+            Пригласить
+          </button>
+          {confState === CS.JOINING && (
+            <span className="animate-pulse text-sm text-gray-400">
+              Подключение...
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Video grid */}

@@ -21,11 +21,14 @@ public class ConferenceController {
     }
 
     /**
-     * Create a new conference. Returns { confId, ... }.
+     * Create a new conference. Returns { confId, roomId, ... }.
      */
     @PostMapping
-    public ResponseEntity<Map<String, Object>> createConference(Principal principal) {
-        String confId = conferenceService.createConference(principal.getName());
+    public ResponseEntity<Map<String, Object>> createConference(
+            Principal principal,
+            @RequestBody(required = false) Map<String, String> body) {
+        String roomId = (body != null) ? body.get("roomId") : null;
+        String confId = conferenceService.createConference(principal.getName(), roomId);
         Map<String, Object> info = conferenceService.getConferenceInfo(confId);
         return ResponseEntity.ok(info);
     }

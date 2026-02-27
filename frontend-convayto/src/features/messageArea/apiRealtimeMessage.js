@@ -7,9 +7,11 @@ export function subscribeRealtimeMessage({ conversation_id, callback }) {
   const unsubscribe = onWsMessage((msg) => {
     // Process CHAT/VOICE/VIDEO_CIRCLE messages for this room
     if (msg.roomId === conversation_id && (msg.type === "CHAT" || msg.type === "VOICE" || msg.type === "VIDEO_CIRCLE")) {
-      // Don't echo back our own messages (already added optimistically)
+      // Don't echo back our own messages (already added optimistically),
+      // BUT allow forwarded messages through since they have no optimistic update
       const myUsername = localStorage.getItem("username");
-      if (msg.sender === myUsername) return;
+      const isForwarded = msg.content?.startsWith("↪ Переслано от");
+      if (msg.sender === myUsername && !isForwarded) return;
 
       callback({
         id: msg.id,

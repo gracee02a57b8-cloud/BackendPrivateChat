@@ -19,6 +19,7 @@ import AboutPage from "./components/AboutPage";
 import LandingPage from "./components/LandingPage";
 import PrivacyPolicy from "./components/PrivacyPolicy";
 import TermsOfService from "./components/TermsOfService";
+import JoinConferencePage from "./components/JoinConferencePage";
 
 const queryClient = new QueryClient();
 
@@ -78,6 +79,14 @@ function App() {
 
               <Route path="signup" element={<Signup />} />
               <Route path="signin" element={<Signin />} />
+              <Route
+                path="conference/:confId"
+                element={
+                  <ProtectedRoute>
+                    <JoinConferencePage />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="about" element={<AboutPage />} />
               <Route path="privacy" element={<PrivacyPolicy />} />
               <Route path="terms" element={<TermsOfService />} />

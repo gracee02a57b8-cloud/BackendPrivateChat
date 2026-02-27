@@ -125,6 +125,7 @@ public class ConferenceService {
         if (room == null) return null;
         Map<String, Object> info = new LinkedHashMap<>();
         info.put("confId", confId);
+        info.put("roomId", room.getRoomId());
         info.put("creator", room.getCreator());
         info.put("participants", new ArrayList<>(room.getParticipants()));
         info.put("count", room.getParticipants().size());
@@ -154,17 +155,20 @@ public class ConferenceService {
     static class ConferenceRoom {
         private final String id;
         private final String creator;
+        private final String roomId;
         private final Set<String> participants = ConcurrentHashMap.newKeySet();
         private final String createdAt;
 
-        ConferenceRoom(String id, String creator) {
+        ConferenceRoom(String id, String creator, String roomId) {
             this.id = id;
             this.creator = creator;
+            this.roomId = roomId;
             this.createdAt = LocalDateTime.now().format(FORMATTER);
         }
 
         String getId() { return id; }
         String getCreator() { return creator; }
+        String getRoomId() { return roomId; }
         Set<String> getParticipants() { return participants; }
         String getCreatedAt() { return createdAt; }
 

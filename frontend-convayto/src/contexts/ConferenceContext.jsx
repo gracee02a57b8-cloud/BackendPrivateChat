@@ -241,6 +241,64 @@ function ConferenceProvider({ children }) {
     setIsMinimized((p) => !p);
   }, []);
 
+  // ====== Join existing conference by confId (invite link) ======
+  const joinConferenceById = useCallback(
+    async (targetConfId, type = "video") => {
+      if (stateRef.current !== CONF_STATE.IDLE) return null;
+
+      try {
+        setConfState(CONF_STATE.JOINING);
+
+        // Fetch conference info via REST
+        const info = await apiFetch(
+          `/api/conference/${encodeURIComponent(targetConfId)}`,
+        );
+        if (!info) throw new Error("Конференция не найдена");
+
+        const roomId = info.roomId || null;
+        setConfRoomId(roomId);
+        setConfId(targetConfId);
+
+        // Get user media
+        const stream = await getUserMediaStream(type);
+        localStreamRef.current = stream;
+        setLocalStream(stream);
+
+        // Join via REST
+        try {
+          await apiFetch(
+            `/api/conference/${encodeURIComponent(targetConfId)}/join`,
+            { method: "POST" },
+          );
+        } catch (e) {
+          console.warn("[Conf] Join REST failed:", e);
+        }
+
+        // Send CONF_JOIN via WS
+        sendWsMessage({
+          type: "CONF_JOIN",
+          roomId: roomId || "",
+          content: "",
+          extra: { confId: targetConfId },
+        });
+
+        setConfState(CONF_STATE.ACTIVE);
+        return roomId;
+      } catch (e) {
+        console.error("[Conf] Failed to join conference by id:", e);
+        cleanup();
+        throw e;
+      }
+    },
+    [cleanup],
+  );
+
+  // ====== Get invite link for current conference ======
+  const getInviteLink = useCallback(() => {
+    if (!confIdRef.current) return null;
+    return `${window.location.origin}/conference/${confIdRef.current}`;
+  }, []);
+
   // ====== WS conference message listener ======
   useEffect(() => {
     const unsub = onConferenceMessage((msg) => {
@@ -404,6 +462,8 @@ function ConferenceProvider({ children }) {
     isVideoOff,
     isMinimized,
     startConference,
+    joinConferenceById,
+    getInviteLink,
     leaveConference,
     toggleAudio,
     toggleVideo,
