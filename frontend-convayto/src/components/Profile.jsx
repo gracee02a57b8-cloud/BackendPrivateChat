@@ -18,11 +18,11 @@ function Profile({ onClick, userData }) {
       role="button"
       tabIndex={0}
     >
-      <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full">
+      <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full">
         <img
           src={avatar_url}
           alt={fullname}
-          className="pointer-events-none h-full w-full object-cover"
+          className="pointer-events-none h-full w-full rounded-full object-cover"
         />
       </div>
 

@@ -137,8 +137,22 @@ function MessageView() {
       const roomId = convInfo?.id;
       if (!roomId) return;
       sendWsMessage({ type: "PIN", roomId, id: message.id });
+      // Optimistic update
+      queryClient.setQueryData(["friend", friendUserId], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page) =>
+            page.map((m) =>
+              m.id === message.id ? { ...m, pinned: true, pinnedBy: localStorage.getItem("username") } : m,
+            ),
+          ),
+        };
+      });
+      setPinnedMessages((prev) => [...prev.filter((m) => m.id !== message.id), { ...message, pinned: true }]);
+      toast.success("Сообщение закреплено");
     },
-    [convInfo],
+    [convInfo, queryClient, friendUserId],
   );
 
   const handleUnpin = useCallback(
@@ -146,14 +160,28 @@ function MessageView() {
       const roomId = convInfo?.id;
       if (!roomId) return;
       sendWsMessage({ type: "UNPIN", roomId, id: message.id });
+      // Optimistic update
+      queryClient.setQueryData(["friend", friendUserId], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page) =>
+            page.map((m) =>
+              m.id === message.id ? { ...m, pinned: false, pinnedBy: null } : m,
+            ),
+          ),
+        };
+      });
+      setPinnedMessages((prev) => prev.filter((m) => m.id !== message.id));
+      toast.success("Сообщение откреплено");
     },
-    [convInfo],
+    [convInfo, queryClient, friendUserId],
   );
 
   const lastPinned = pinnedMessages.length > 0 ? pinnedMessages[pinnedMessages.length - 1] : null;
 
   return (
-    <div className="relative col-span-2 grid h-screen-safe w-full grid-cols-1 grid-rows-[auto_1fr_auto] overflow-hidden md:col-span-1">
+    <div className={`relative col-span-2 grid h-screen-safe w-full grid-cols-1 overflow-hidden md:col-span-1 ${lastPinned ? 'grid-rows-[auto_auto_1fr_auto]' : 'grid-rows-[auto_1fr_auto]'}`}>
       <MessageTopBar />
 
       {/* Pinned message bar */}

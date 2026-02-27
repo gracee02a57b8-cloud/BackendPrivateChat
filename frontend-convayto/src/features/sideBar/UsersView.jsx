@@ -2,17 +2,16 @@ import { useState } from "react";
 import UserList from "./UserList";
 import GroupList from "./GroupList";
 import ContactList from "./ContactList";
-import { RiChat3Line, RiUserLine, RiGroupLine, RiContactsBookLine } from "react-icons/ri";
+import { RiUserLine, RiGroupLine, RiContactsBookLine } from "react-icons/ri";
 
 const TABS = [
-  { key: "all", label: "Все чаты", icon: RiChat3Line },
   { key: "private", label: "Личные", icon: RiUserLine },
   { key: "groups", label: "Группы", icon: RiGroupLine },
   { key: "contacts", label: "Контакты", icon: RiContactsBookLine },
 ];
 
 function UsersView() {
-  const [activeTab, setActiveTab] = useState("all");
+  const [activeTab, setActiveTab] = useState("private");
 
   return (
     <div className="grid h-full grid-rows-[auto_1fr]">
@@ -39,7 +38,6 @@ function UsersView() {
 
       {/* Tab content */}
       <div tabIndex={-1} className="h-full overflow-auto p-2">
-        {activeTab === "all" && <UserList filter="all" />}
         {activeTab === "private" && <UserList filter="private" />}
         {activeTab === "groups" && <GroupList />}
         {activeTab === "contacts" && <ContactList />}
