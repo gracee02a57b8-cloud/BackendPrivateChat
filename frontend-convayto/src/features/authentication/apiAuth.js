@@ -126,6 +126,30 @@ export async function signout() {
 }
 
 ///////////////////
+// Silent auto-login with saved credentials
+///////////////////
+
+async function tryAutoLogin() {
+  const savedRemember = localStorage.getItem("rememberMe");
+  const savedUser = localStorage.getItem("savedUsername");
+  const savedPass = localStorage.getItem("savedPassword");
+
+  if (savedRemember === "true" && savedUser && savedPass) {
+    try {
+      const password = atob(savedPass);
+      return await signin({ username: savedUser, password, rememberMe: true });
+    } catch {
+      // Saved credentials invalid — fall through to return null
+    }
+  }
+
+  // Clean up stale auth data
+  localStorage.removeItem("token");
+  localStorage.removeItem("username");
+  return { session: null };
+}
+
+///////////////////
 // Get current user (check if logged in)
 ///////////////////
 
@@ -134,24 +158,36 @@ export async function getCurrentUser() {
   const username = localStorage.getItem("username");
 
   if (!token || !username) {
-    return { session: null };
+    return await tryAutoLogin();
   }
 
-  // Connect WebSocket if not already connected
-  connectWebSocket();
-  // Re-init push notifications for returning users
-  initPushNotifications();
-
-  // Fetch fresh profile from server to get up-to-date avatar, fullname, bio
+  // Verify token with server using raw fetch (bypasses apiFetch 401 handler)
   try {
-    const profile = await apiFetch(`/api/profile`);
+    const res = await fetch("/api/profile", {
+      headers: { "Authorization": `Bearer ${token}` },
+    });
+
+    if (!res.ok) {
+      if (res.status === 401) {
+        // Token expired — try silent re-login with saved credentials
+        return await tryAutoLogin();
+      }
+      throw new Error(`Profile fetch failed: ${res.status}`);
+    }
+
+    const profile = await res.json();
+
+    // Token is valid — connect WebSocket and init push
+    connectWebSocket();
+    initPushNotifications();
+
+    // Keep localStorage in sync
+    if (profile.avatarUrl) localStorage.setItem("avatarUrl", profile.avatarUrl);
+
     const avatarUrl = profile.avatarUrl || localStorage.getItem("avatarUrl") || "";
     const fullname = (profile.firstName && profile.lastName
       ? `${profile.firstName} ${profile.lastName}`.trim()
       : profile.firstName || profile.username || username);
-
-    // Keep localStorage in sync
-    if (profile.avatarUrl) localStorage.setItem("avatarUrl", profile.avatarUrl);
 
     return {
       session: {
@@ -171,7 +207,8 @@ export async function getCurrentUser() {
       },
     };
   } catch {
-    // Fallback to localStorage if server unreachable
+    // Network error — fall back to localStorage values (offline support)
+    connectWebSocket();
     return buildSession(
       token,
       username,

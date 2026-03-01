@@ -2,7 +2,7 @@
 // API Helper — authenticated fetch wrapper
 // ==========================================
 
-let isRedirecting = false;
+let isExpiring = false;
 
 export async function apiFetch(path, options = {}) {
   const token = localStorage.getItem("token");
@@ -23,12 +23,13 @@ export async function apiFetch(path, options = {}) {
   const res = await fetch(path, { ...options, headers });
 
   if (res.status === 401) {
-    // Token expired — clear auth (debounce multiple parallel 401s)
-    if (!isRedirecting) {
-      isRedirecting = true;
+    // Token expired — clear auth and notify React (no hard redirect)
+    if (!isExpiring) {
+      isExpiring = true;
       localStorage.removeItem("token");
       localStorage.removeItem("username");
-      window.location.href = "/signin";
+      window.dispatchEvent(new Event("auth:session-expired"));
+      setTimeout(() => { isExpiring = false; }, 3000);
     }
     throw new Error("Сессия истекла, войдите снова");
   }
