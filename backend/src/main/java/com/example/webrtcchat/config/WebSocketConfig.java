@@ -5,6 +5,7 @@ import jakarta.websocket.server.ServerContainer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
@@ -40,6 +41,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
      * Without this, video CALL_OFFERs are silently dropped by the server.
      */
     @Bean
+    @Profile("!test")
     public ServletServerContainerFactoryBean createWebSocketContainer() {
         ServletServerContainerFactoryBean container = new ServletServerContainerFactoryBean();
         container.setMaxTextMessageBufferSize(65536);   // 64 KB

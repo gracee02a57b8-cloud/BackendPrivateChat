@@ -45,6 +45,9 @@ public class MessageEntity {
 
     private String scheduledAt;
 
+    @Column(name = "disappears_at", length = 30)
+    private String disappearsAt;
+
     @Column(nullable = false)
     private boolean encrypted;
 
@@ -146,6 +149,9 @@ public class MessageEntity {
 
     public String getScheduledAt() { return scheduledAt; }
     public void setScheduledAt(String scheduledAt) { this.scheduledAt = scheduledAt; }
+
+    public String getDisappearsAt() { return disappearsAt; }
+    public void setDisappearsAt(String disappearsAt) { this.disappearsAt = disappearsAt; }
 
     public boolean isEncrypted() { return encrypted; }
     public void setEncrypted(boolean encrypted) { this.encrypted = encrypted; }

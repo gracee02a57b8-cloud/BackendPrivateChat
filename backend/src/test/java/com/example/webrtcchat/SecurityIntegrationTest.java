@@ -343,7 +343,8 @@ class SecurityIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "username", username,
-                                "password", "securePass123"
+                                "password", "securePass123",
+                                "tag", username
                         ))))
                 .andExpect(status().isOk())
                 .andReturn();

@@ -60,7 +60,8 @@ class IntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "username", "integrationUser",
-                                "password", "securePass123"
+                                "password", "securePass123",
+                                "tag", "integrationuser"
                         ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").exists())
@@ -108,7 +109,8 @@ class IntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "username", "duplicateUser",
-                                "password", "pass12345678"
+                                "password", "pass12345678",
+                                "tag", "duplicateUser"
                         ))))
                 .andExpect(status().isOk());
 
@@ -117,7 +119,8 @@ class IntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "username", "duplicateUser",
-                                "password", "otherpass123"
+                                "password", "otherpass123",
+                                "tag", "duplicateUser2"
                         ))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Пользователь уже существует"));
@@ -131,7 +134,8 @@ class IntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "username", "wrongPassUser",
-                                "password", "correctPass1"
+                                "password", "correctPass1",
+                                "tag", "wrongPassUser"
                         ))))
                 .andExpect(status().isOk());
 
@@ -160,7 +164,8 @@ class IntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "username", "roomTestUser",
-                                "password", "pass12345678"
+                                "password", "pass12345678",
+                                "tag", "roomTestUser"
                         ))))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -208,7 +213,8 @@ class IntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "username", "newsTestUser",
-                                "password", "pass12345678"
+                                "password", "pass12345678",
+                                "tag", "newsTestUser"
                         ))))
                 .andExpect(status().isOk())
                 .andReturn();

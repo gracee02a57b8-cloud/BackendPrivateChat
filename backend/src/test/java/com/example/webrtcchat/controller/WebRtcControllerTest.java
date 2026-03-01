@@ -28,7 +28,7 @@ class WebRtcControllerTest {
         mockMvc.perform(
                 org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/auth/register")
                         .contentType("application/json")
-                        .content("{\"username\":\"ice_test_user\",\"password\":\"password123\"}")
+                        .content("{\"username\":\"ice_test_user\",\"password\":\"password123\",\"tag\":\"ice_test_user\"}")
         );
 
         String loginResponse = mockMvc.perform(

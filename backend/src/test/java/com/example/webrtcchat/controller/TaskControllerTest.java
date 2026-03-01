@@ -32,6 +32,7 @@ class TaskControllerTest {
     @MockBean private TaskService taskService;
     @MockBean private ChatWebSocketHandler wsHandler;
     @MockBean private JwtService jwtService;
+    @MockBean private com.example.webrtcchat.service.WebPushService webPushService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 

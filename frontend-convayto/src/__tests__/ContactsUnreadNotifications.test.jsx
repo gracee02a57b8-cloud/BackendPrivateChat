@@ -64,9 +64,14 @@ vi.mock("../hooks/useOnlineUsers", () => ({
   useOnlineUsers: () => new Set(),
 }));
 
+vi.mock("../utils/showMessageToast", () => ({
+  showMessageToast: vi.fn(),
+}));
+
 // ====== Imports (after mocks) ======
 import { apiFetch } from "../services/apiHelper";
 import toast from "react-hot-toast";
+import { showMessageToast } from "../utils/showMessageToast";
 import { onWsMessage } from "../services/wsService";
 import * as unreadStore from "../utils/unreadStore";
 import { getContacts } from "../features/sideBar/useContacts";
@@ -306,7 +311,7 @@ describe("Message notifications", () => {
   let wsCallback;
 
   beforeEach(() => {
-    vi.mocked(toast).mockClear();
+    vi.mocked(showMessageToast).mockClear();
     vi.mocked(onWsMessage).mockImplementation((cb) => {
       wsCallback = cb;
       return () => {};
@@ -328,9 +333,8 @@ describe("Message notifications", () => {
       id: "m1",
     });
 
-    expect(toast).toHaveBeenCalledWith(
-      expect.stringContaining("alice"),
-      expect.objectContaining({ position: "bottom-right" }),
+    expect(showMessageToast).toHaveBeenCalledWith(
+      expect.objectContaining({ sender: "alice" }),
     );
   });
 
@@ -346,7 +350,7 @@ describe("Message notifications", () => {
       id: "m2",
     });
 
-    expect(toast).not.toHaveBeenCalled();
+    expect(showMessageToast).not.toHaveBeenCalled();
   });
 
   it("does not show toast when viewing the active room", () => {
@@ -362,7 +366,7 @@ describe("Message notifications", () => {
       id: "m3",
     });
 
-    expect(toast).not.toHaveBeenCalled();
+    expect(showMessageToast).not.toHaveBeenCalled();
   });
 
   it("increments unread count on incoming message", () => {
@@ -429,9 +433,8 @@ describe("Message notifications", () => {
       id: "m7",
     });
 
-    expect(toast).toHaveBeenCalledWith(
-      expect.stringContaining("alice"),
-      expect.objectContaining({ position: "bottom-right" }),
+    expect(showMessageToast).toHaveBeenCalledWith(
+      expect.objectContaining({ sender: "alice" }),
     );
   });
 
@@ -447,9 +450,8 @@ describe("Message notifications", () => {
       id: "m8",
     });
 
-    expect(toast).toHaveBeenCalledWith(
-      expect.stringContaining("bob"),
-      expect.objectContaining({ position: "bottom-right" }),
+    expect(showMessageToast).toHaveBeenCalledWith(
+      expect.objectContaining({ sender: "bob" }),
     );
   });
 
@@ -465,7 +467,7 @@ describe("Message notifications", () => {
       id: "m9",
     });
 
-    expect(toast).not.toHaveBeenCalled();
+    expect(showMessageToast).not.toHaveBeenCalled();
   });
 
   it("does not show toast for DELETE messages", () => {
@@ -479,6 +481,6 @@ describe("Message notifications", () => {
       id: "m10",
     });
 
-    expect(toast).not.toHaveBeenCalled();
+    expect(showMessageToast).not.toHaveBeenCalled();
   });
 });

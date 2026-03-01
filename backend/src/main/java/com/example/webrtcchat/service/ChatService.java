@@ -4,6 +4,7 @@ import com.example.webrtcchat.dto.MessageDto;
 import com.example.webrtcchat.entity.MessageEntity;
 import com.example.webrtcchat.entity.UserEntity;
 import com.example.webrtcchat.repository.MessageRepository;
+import com.example.webrtcchat.repository.RoomRepository;
 import com.example.webrtcchat.repository.UserRepository;
 import com.example.webrtcchat.types.MessageType;
 import org.springframework.data.domain.PageRequest;
@@ -17,14 +18,17 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ChatService {
 
     private final MessageRepository messageRepository;
+    private final RoomRepository roomRepository;
     private final UserRepository userRepository;
     private final PollService pollService;
 
     // Online users — runtime state, backed by ConcurrentHashMap.newKeySet() (R3)
     private final Set<String> onlineUsers = ConcurrentHashMap.newKeySet();
 
-    public ChatService(MessageRepository messageRepository, UserRepository userRepository, PollService pollService) {
+    public ChatService(MessageRepository messageRepository, RoomRepository roomRepository,
+                       UserRepository userRepository, PollService pollService) {
         this.messageRepository = messageRepository;
+        this.roomRepository = roomRepository;
         this.userRepository = userRepository;
         this.pollService = pollService;
     }
@@ -133,9 +137,19 @@ public class ChatService {
                         List.of(MessageType.CHAT, MessageType.VOICE, MessageType.VIDEO_CIRCLE),
                         reader, "READ");
 
+        // Check room's disappearing messages setting
+        int disappearingSecs = roomRepository.findById(roomId)
+                .map(r -> r.getDisappearingSeconds()).orElse(0);
+
         Map<String, List<String>> senderToMsgIds = new HashMap<>();
         for (MessageEntity msg : unread) {
             msg.setStatus("READ");
+            // Schedule deletion if disappearing messages are enabled
+            if (disappearingSecs > 0 && msg.getDisappearsAt() == null) {
+                msg.setDisappearsAt(
+                    java.time.LocalDateTime.now().plusSeconds(disappearingSecs)
+                        .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+            }
             senderToMsgIds.computeIfAbsent(msg.getSender(), k -> new ArrayList<>()).add(msg.getId());
         }
         if (!unread.isEmpty()) {

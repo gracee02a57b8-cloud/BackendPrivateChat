@@ -32,6 +32,9 @@ public interface MessageRepository extends JpaRepository<MessageEntity, String> 
 
     List<MessageEntity> findByRoomIdAndPinnedTrue(String roomId);
 
+    @Query("SELECT m FROM MessageEntity m WHERE m.disappearsAt IS NOT NULL AND m.disappearsAt <= :now")
+    List<MessageEntity> findExpiredDisappearingMessages(@Param("now") String now);
+
     // ── Media stats queries ──
 
     @Query("SELECT COUNT(m) FROM MessageEntity m WHERE m.roomId = :roomId AND m.fileUrl IS NOT NULL AND m.fileType LIKE 'image/%'")

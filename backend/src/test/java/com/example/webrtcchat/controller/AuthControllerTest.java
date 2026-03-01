@@ -51,6 +51,7 @@ class AuthControllerTest {
     @DisplayName("POST /api/auth/register - success")
     void register_success() throws Exception {
         when(userRepository.existsByUsername("newuser")).thenReturn(false);
+        when(userRepository.existsByTag("@newuser")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("$2a$encoded");
         when(userRepository.save(any(UserEntity.class))).thenAnswer(inv -> inv.getArgument(0));
         when(jwtService.generateToken("newuser", "USER")).thenReturn("jwt-token-123");
@@ -59,7 +60,8 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "username", "newuser",
-                                "password", "password123"
+                                "password", "password123",
+                                "tag", "newuser"
                         ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").value("jwt-token-123"))
@@ -78,7 +80,8 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "username", "existing",
-                                "password", "password123"
+                                "password", "password123",
+                                "tag", "existing"
                         ))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Пользователь уже существует"));
@@ -91,7 +94,8 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "username", "",
-                                "password", "password123"
+                                "password", "password123",
+                                "tag", "blankuser"
                         ))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").exists());
@@ -104,7 +108,8 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "username", "user",
-                                "password", "short1"
+                                "password", "short1",
+                                "tag", "shortpwd"
                         ))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Пароль должен быть не менее 8 символов"));
@@ -117,7 +122,8 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "username", "a".repeat(21),
-                                "password", "password123"
+                                "password", "password123",
+                                "tag", "longuser"
                         ))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Имя не более 20 символов"));

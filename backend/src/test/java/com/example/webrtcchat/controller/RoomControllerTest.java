@@ -3,9 +3,8 @@ package com.example.webrtcchat.controller;
 import com.example.webrtcchat.dto.MessageDto;
 import com.example.webrtcchat.dto.RoomDto;
 import com.example.webrtcchat.repository.MessageRepository;
-import com.example.webrtcchat.service.ChatService;
-import com.example.webrtcchat.service.JwtService;
-import com.example.webrtcchat.service.RoomService;
+import com.example.webrtcchat.repository.RoomRepository;
+import com.example.webrtcchat.service.*;
 import com.example.webrtcchat.types.RoomType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
@@ -45,6 +44,21 @@ class RoomControllerTest {
 
     @MockBean
     private MessageRepository messageRepository;
+
+    @MockBean
+    private ChatWebSocketHandler wsHandler;
+
+    @MockBean
+    private RoomMuteService roomMuteService;
+
+    @MockBean
+    private ReadReceiptService readReceiptService;
+
+    @MockBean
+    private LinkPreviewService linkPreviewService;
+
+    @MockBean
+    private RoomRepository roomRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 

@@ -2,8 +2,10 @@ package com.example.webrtcchat.service;
 
 import com.example.webrtcchat.dto.MessageDto;
 import com.example.webrtcchat.entity.MessageEntity;
+import com.example.webrtcchat.entity.RoomEntity;
 import com.example.webrtcchat.entity.UserEntity;
 import com.example.webrtcchat.repository.MessageRepository;
+import com.example.webrtcchat.repository.RoomRepository;
 import com.example.webrtcchat.repository.UserRepository;
 import com.example.webrtcchat.types.MessageType;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,7 +32,13 @@ class ChatServiceTest {
     private MessageRepository messageRepository;
 
     @Mock
+    private RoomRepository roomRepository;
+
+    @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private PollService pollService;
 
     @InjectMocks
     private ChatService chatService;
@@ -295,7 +303,8 @@ class ChatServiceTest {
     @DisplayName("searchUsers delegates to repository")
     void searchUsers_delegates() {
         UserEntity user = new UserEntity("alice", "pass", "2026-01-01");
-        when(userRepository.findByUsernameContainingIgnoreCase("ali")).thenReturn(List.of(user));
+        when(userRepository.findByUsernameContainingIgnoreCaseOrTagContainingIgnoreCase("ali", "ali"))
+                .thenReturn(List.of(user));
 
         List<String> result = chatService.searchUsers("ali");
         assertEquals(1, result.size());
@@ -458,6 +467,133 @@ class ChatServiceTest {
         assertEquals("READ", voiceMsg.getStatus());
         assertEquals("READ", vcMsg.getStatus());
         verify(messageRepository).saveAll(List.of(voiceMsg, vcMsg));
+    }
+
+    // === Disappearing messages on read ===
+
+    @Test
+    @DisplayName("markMessagesAsRead sets disappearsAt when room has disappearing enabled")
+    void markMessagesAsRead_setsDisappearsAt() {
+        MessageEntity msg = createEntity("m1", "alice", "Hello", "2026-01-01 12:00:00");
+        msg.setRoomId("room1");
+        msg.setStatus("SENT");
+
+        RoomEntity room = new RoomEntity();
+        room.setId("room1");
+        room.setDisappearingSeconds(30);
+
+        when(messageRepository.findByRoomIdAndTypeInAndSenderNotAndStatusNot(
+                eq("room1"),
+                eq(List.of(MessageType.CHAT, MessageType.VOICE, MessageType.VIDEO_CIRCLE)),
+                eq("bob"), eq("READ")))
+                .thenReturn(List.of(msg));
+        when(roomRepository.findById("room1")).thenReturn(Optional.of(room));
+
+        chatService.markMessagesAsRead("room1", "bob");
+
+        assertEquals("READ", msg.getStatus());
+        assertNotNull(msg.getDisappearsAt(), "disappearsAt should be set");
+        verify(messageRepository).saveAll(List.of(msg));
+    }
+
+    @Test
+    @DisplayName("markMessagesAsRead does NOT set disappearsAt when room disappearing is 0")
+    void markMessagesAsRead_noDisappearsAtWhenDisabled() {
+        MessageEntity msg = createEntity("m1", "alice", "Hello", "2026-01-01 12:00:00");
+        msg.setRoomId("room1");
+        msg.setStatus("SENT");
+
+        RoomEntity room = new RoomEntity();
+        room.setId("room1");
+        room.setDisappearingSeconds(0);
+
+        when(messageRepository.findByRoomIdAndTypeInAndSenderNotAndStatusNot(
+                eq("room1"),
+                eq(List.of(MessageType.CHAT, MessageType.VOICE, MessageType.VIDEO_CIRCLE)),
+                eq("bob"), eq("READ")))
+                .thenReturn(List.of(msg));
+        when(roomRepository.findById("room1")).thenReturn(Optional.of(room));
+
+        chatService.markMessagesAsRead("room1", "bob");
+
+        assertEquals("READ", msg.getStatus());
+        assertNull(msg.getDisappearsAt(), "disappearsAt should not be set when disabled");
+    }
+
+    @Test
+    @DisplayName("markMessagesAsRead does not overwrite existing disappearsAt")
+    void markMessagesAsRead_doesNotOverwriteExistingDisappearsAt() {
+        MessageEntity msg = createEntity("m1", "alice", "Hello", "2026-01-01 12:00:00");
+        msg.setRoomId("room1");
+        msg.setStatus("SENT");
+        msg.setDisappearsAt("2026-01-01 12:00:30");
+
+        RoomEntity room = new RoomEntity();
+        room.setId("room1");
+        room.setDisappearingSeconds(60);
+
+        when(messageRepository.findByRoomIdAndTypeInAndSenderNotAndStatusNot(
+                eq("room1"),
+                eq(List.of(MessageType.CHAT, MessageType.VOICE, MessageType.VIDEO_CIRCLE)),
+                eq("bob"), eq("READ")))
+                .thenReturn(List.of(msg));
+        when(roomRepository.findById("room1")).thenReturn(Optional.of(room));
+
+        chatService.markMessagesAsRead("room1", "bob");
+
+        assertEquals("2026-01-01 12:00:30", msg.getDisappearsAt(),
+                "Existing disappearsAt should not be overwritten");
+    }
+
+    @Test
+    @DisplayName("markMessagesAsRead disappearsAt is in the future by disappearingSeconds")
+    void markMessagesAsRead_disappearsAtCorrectOffset() {
+        MessageEntity msg = createEntity("m1", "alice", "Hello", "2026-01-01 12:00:00");
+        msg.setRoomId("room1");
+        msg.setStatus("SENT");
+
+        RoomEntity room = new RoomEntity();
+        room.setId("room1");
+        room.setDisappearingSeconds(300); // 5 minutes
+
+        when(messageRepository.findByRoomIdAndTypeInAndSenderNotAndStatusNot(
+                eq("room1"),
+                eq(List.of(MessageType.CHAT, MessageType.VOICE, MessageType.VIDEO_CIRCLE)),
+                eq("bob"), eq("READ")))
+                .thenReturn(List.of(msg));
+        when(roomRepository.findById("room1")).thenReturn(Optional.of(room));
+
+        chatService.markMessagesAsRead("room1", "bob");
+
+        assertNotNull(msg.getDisappearsAt());
+        java.time.LocalDateTime disappearsAt = java.time.LocalDateTime.parse(
+                msg.getDisappearsAt(),
+                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        // disappearsAt should be roughly 5 minutes from now (allow 10s tolerance)
+        long diffSeconds = java.time.Duration.between(now, disappearsAt).getSeconds();
+        assertTrue(diffSeconds >= 290 && diffSeconds <= 310,
+                "disappearsAt should be ~300s from now, was " + diffSeconds + "s");
+    }
+
+    @Test
+    @DisplayName("markMessagesAsRead handles missing room gracefully")
+    void markMessagesAsRead_missingRoom() {
+        MessageEntity msg = createEntity("m1", "alice", "Hello", "2026-01-01 12:00:00");
+        msg.setRoomId("room1");
+        msg.setStatus("SENT");
+
+        when(messageRepository.findByRoomIdAndTypeInAndSenderNotAndStatusNot(
+                eq("room1"),
+                eq(List.of(MessageType.CHAT, MessageType.VOICE, MessageType.VIDEO_CIRCLE)),
+                eq("bob"), eq("READ")))
+                .thenReturn(List.of(msg));
+        when(roomRepository.findById("room1")).thenReturn(Optional.empty());
+
+        chatService.markMessagesAsRead("room1", "bob");
+
+        assertEquals("READ", msg.getStatus());
+        assertNull(msg.getDisappearsAt(), "disappearsAt should not be set when room not found");
     }
 
     // === Helpers (original) ===
