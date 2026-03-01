@@ -1,5 +1,5 @@
 # Stage 1: Build Convayto frontend
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 WORKDIR /app
 COPY frontend-convayto/package.json ./
 RUN npm install
