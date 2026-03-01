@@ -4,6 +4,7 @@ import useConvInfo from "./useConvInfo";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { RiPlayFill, RiPauseFill, RiDownloadLine, RiCheckboxCircleLine, RiCheckboxBlankCircleLine, RiPushpinFill, RiTimerLine, RiBarChartBoxLine, RiEyeLine } from "react-icons/ri";
 import MessageContextMenu from "../../components/MessageContextMenu";
+import { useUserProfileModal } from "../../contexts/UserProfileModalContext";
 import toast from "react-hot-toast";
 
 // ---------- Вспомогательные компоненты ----------
@@ -479,6 +480,7 @@ function MessageItem({
 }) {
   const { user } = useUser();
   const { convInfo } = useConvInfo();
+  const { openUserProfile } = useUserProfileModal();
   const isGroup = convInfo?.isGroup;
   const isOwn = message?.sender_id === user.id;
 
@@ -526,7 +528,7 @@ function MessageItem({
     return (
       <BubbleWrapper {...commonProps}>
         {isGroup && !isOwn && message?.sender_id && (
-          <p className="mb-1 text-xs font-bold text-bgAccent dark:text-bgAccent-dark">{message.sender_id}</p>
+          <p className="mb-1 cursor-pointer text-xs font-bold text-bgAccent hover:underline dark:text-bgAccent-dark" onClick={() => openUserProfile(message.sender_id)}>{message.sender_id}</p>
         )}
         <VoicePlayer fileUrl={message.fileUrl} duration={message.duration} waveform={message.waveform} isOwn={isOwn} />
         <span className="float-right ml-2 mt-1 select-none text-xs opacity-70">
@@ -541,7 +543,7 @@ function MessageItem({
     return (
       <BubbleWrapper {...commonProps} noBubble>
         {isGroup && !isOwn && message?.sender_id && (
-          <p className="mb-1 text-xs font-bold text-bgAccent dark:text-bgAccent-dark">{message.sender_id}</p>
+          <p className="mb-1 cursor-pointer text-xs font-bold text-bgAccent hover:underline dark:text-bgAccent-dark" onClick={() => openUserProfile(message.sender_id)}>{message.sender_id}</p>
         )}
         <VideoCirclePlayer fileUrl={message.fileUrl} duration={message.duration} />
         <p className="mt-1 text-center text-xs opacity-50">{formatTime(message?.created_at)}</p>
@@ -557,7 +559,7 @@ function MessageItem({
     return (
       <BubbleWrapper {...commonProps}>
         {isGroup && !isOwn && message?.sender_id && (
-          <p className="mb-0.5 text-xs font-bold text-bgAccent dark:text-bgAccent-dark">{message.sender_id}</p>
+          <p className="mb-0.5 cursor-pointer text-xs font-bold text-bgAccent hover:underline dark:text-bgAccent-dark" onClick={() => openUserProfile(message.sender_id)}>{message.sender_id}</p>
         )}
         <PollDisplay message={message} onVote={onVotePoll} />
         <span className="block select-none text-right text-xs opacity-70 mt-1">{formatTime(message?.created_at)}</span>
@@ -574,7 +576,7 @@ function MessageItem({
     return (
       <BubbleWrapper {...commonProps} noBubble>
         {isGroup && !isOwn && message?.sender_id && (
-          <p className="mb-1 text-xs font-bold text-bgAccent dark:text-bgAccent-dark">{message.sender_id}</p>
+          <p className="mb-1 cursor-pointer text-xs font-bold text-bgAccent hover:underline dark:text-bgAccent-dark" onClick={() => openUserProfile(message.sender_id)}>{message.sender_id}</p>
         )}
         {message?.replyToContent && (
           <div className="mb-1 rounded-lg border-l-2 border-bgAccent bg-black/30 px-2 py-1 text-xs dark:border-bgAccent-dark">
@@ -603,7 +605,7 @@ function MessageItem({
   return (
     <BubbleWrapper {...commonProps}>
       {isGroup && !isOwn && message?.sender_id && (
-        <p className="mb-0.5 text-xs font-bold text-bgAccent dark:text-bgAccent-dark">
+        <p className="mb-0.5 cursor-pointer text-xs font-bold text-bgAccent hover:underline dark:text-bgAccent-dark" onClick={() => openUserProfile(message.sender_id)}>
           {message.sender_id}
         </p>
       )}

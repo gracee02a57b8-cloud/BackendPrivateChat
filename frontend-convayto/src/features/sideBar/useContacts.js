@@ -1,47 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiFetch } from "../../services/apiHelper";
+import { fetchContacts } from "../../services/apiContacts";
 
 /**
- * Fetch contacts = users from private conversations.
- * Combines /api/chat/contacts (all users with profile info) and /api/rooms
- * to filter only those the current user has a private chat with.
+ * Fetch the user's explicitly-added contacts via /api/contacts.
  */
 export async function getContacts() {
-  const myUsername = localStorage.getItem("username");
+  const raw = await fetchContacts();
+  if (!Array.isArray(raw)) return [];
 
-  // Fetch all users (for profile info) and rooms (for private conversations) in parallel
-  const [allUsers, rooms] = await Promise.all([
-    apiFetch("/api/chat/contacts").catch(() => []),
-    apiFetch("/api/rooms").catch(() => []),
-  ]);
-
-  // Get usernames from private rooms — these are the user's contacts
-  const contactUsernames = new Set();
-  if (Array.isArray(rooms)) {
-    rooms
-      .filter((r) => r.type === "PRIVATE")
-      .forEach((r) => {
-        const other = r.members?.find((m) => m !== myUsername);
-        if (other) contactUsernames.add(other);
-      });
-  }
-
-  if (!Array.isArray(allUsers) || contactUsernames.size === 0) return [];
-
-  return allUsers
-    .filter((c) => contactUsernames.has(c.contact))
-    .map((c) => ({
-      id: c.contact,
-      fullname:
-        c.firstName && c.lastName
-          ? `${c.firstName} ${c.lastName}`
-          : c.firstName || c.contact,
-      username: c.contact,
-      avatar_url: c.avatarUrl || "",
-      tag: c.tag || "",
-      online: !!c.online,
-      lastSeen: c.lastSeen || null,
-    }));
+  return raw.map((c) => ({
+    id: c.contact,
+    fullname:
+      c.firstName && c.lastName
+        ? `${c.firstName} ${c.lastName}`
+        : c.firstName || c.contact,
+    username: c.contact,
+    avatar_url: c.avatarUrl || "",
+    tag: c.tag || "",
+    online: !!c.online,
+    lastSeen: c.lastSeen || null,
+  }));
 }
 
 export function useContacts() {

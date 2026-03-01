@@ -10,6 +10,7 @@ import MessageView from "./features/messageArea/MessageView";
 import { UiProvider } from "./contexts/UiContext";
 import { CallProvider } from "./contexts/CallContext";
 import { ConferenceProvider } from "./contexts/ConferenceContext";
+import { UserProfileModalProvider } from "./contexts/UserProfileModalContext";
 import CallOverlay from "./components/CallOverlay";
 import ConferenceOverlay from "./components/ConferenceOverlay";
 import NotFound from "./components/NotFound";
@@ -51,6 +52,7 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <CallProvider>
           <ConferenceProvider>
+            <UserProfileModalProvider>
             <Toaster
               position="top-center"
               toastOptions={{
@@ -96,6 +98,7 @@ function App() {
             </Routes>
           </AllRoutesWrapper>
             </BrowserRouter>
+            </UserProfileModalProvider>
           </ConferenceProvider>
         </CallProvider>
       </QueryClientProvider>

@@ -4,9 +4,14 @@ import ToggleableContent from "../../components/ToggleableContent";
 import IconButton from "../../components/IconButton";
 import { useState, useEffect } from "react";
 import { apiFetch } from "../../services/apiHelper";
+import { addContact, removeContact, fetchUserProfile } from "../../services/apiContacts";
 import useConvInfo from "../messageArea/useConvInfo";
+import { useUserProfileModal } from "../../contexts/UserProfileModalContext";
+import { useOnlineUsers } from "../../hooks/useOnlineUsers";
+import { getRandomAvatar } from "../../utils/avatarUtils";
 import toast from "react-hot-toast";
-import { RiVolumeMuteLine, RiVolumeUpLine, RiTimerLine } from "react-icons/ri";
+import { useQueryClient } from "@tanstack/react-query";
+import { RiVolumeMuteLine, RiVolumeUpLine, RiTimerLine, RiUserAddLine, RiUserUnfollowLine, RiGroupLine } from "react-icons/ri";
 
 const DISAPPEAR_OPTIONS = [
   { label: "Выкл", value: 0 },
@@ -21,10 +26,19 @@ function ProfileSideBar({ friend }) {
   const { avatar_url, fullname, username, bio } = friend ?? {};
   const { closeFriendSidebar, isFriendsSidebarOpen } = useUi();
   const { convInfo } = useConvInfo();
+  const { openUserProfile } = useUserProfileModal();
+  const onlineUsers = useOnlineUsers();
+  const queryClient = useQueryClient();
   const roomId = convInfo?.id;
+  const isGroup = convInfo?.isGroup;
+  const members = convInfo?.members || [];
 
   const [muted, setMuted] = useState(false);
   const [disappearing, setDisappearing] = useState(0);
+
+  // Contact state for private chats
+  const [isContact, setIsContact] = useState(false);
+  const [contactLoading, setContactLoading] = useState(false);
 
   // Fetch mute & disappearing status
   useEffect(() => {
@@ -32,11 +46,39 @@ function ProfileSideBar({ friend }) {
     apiFetch(`/api/rooms/${encodeURIComponent(roomId)}/mute`)
       .then((d) => setMuted(!!d?.muted))
       .catch(() => {});
-    // Get room info for disappearing
     if (convInfo?.disappearingSeconds !== undefined) {
       setDisappearing(convInfo.disappearingSeconds);
     }
   }, [roomId, isFriendsSidebarOpen, convInfo?.disappearingSeconds]);
+
+  // Fetch isContact for private chats
+  useEffect(() => {
+    if (!username || !isFriendsSidebarOpen || isGroup) return;
+    fetchUserProfile(username)
+      .then((p) => setIsContact(!!p?.isContact))
+      .catch(() => {});
+  }, [username, isFriendsSidebarOpen, isGroup]);
+
+  async function handleToggleContact() {
+    if (contactLoading || !username) return;
+    setContactLoading(true);
+    try {
+      if (isContact) {
+        await removeContact(username);
+        setIsContact(false);
+        toast.success("Удалён из контактов");
+      } else {
+        await addContact(username);
+        setIsContact(true);
+        toast.success("Добавлен в контакты");
+      }
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+    } catch {
+      toast.error("Ошибка");
+    } finally {
+      setContactLoading(false);
+    }
+  }
 
   async function toggleMute() {
     if (!roomId) return;
@@ -130,6 +172,63 @@ function ProfileSideBar({ friend }) {
                 Bio
               </p>
               <p className="break-all text-base">{bio}</p>
+            </div>
+          )}
+
+          {/* Add / Remove contact — private chat only */}
+          {!isGroup && username && (
+            <button
+              onClick={handleToggleContact}
+              disabled={contactLoading}
+              data-testid="toggle-contact-btn"
+              className={`mt-5 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition hover:opacity-90 active:scale-[0.98] disabled:opacity-50 ${
+                isContact
+                  ? "bg-red-500/10 text-red-500 dark:bg-red-500/20"
+                  : "bg-green-500/10 text-green-600 dark:bg-green-500/20 dark:text-green-400"
+              }`}
+            >
+              {isContact ? (
+                <>
+                  <RiUserUnfollowLine className="text-base" />
+                  Удалить из контактов
+                </>
+              ) : (
+                <>
+                  <RiUserAddLine className="text-base" />
+                  Добавить в контакты
+                </>
+              )}
+            </button>
+          )}
+
+          {/* Group members list */}
+          {isGroup && members.length > 0 && (
+            <div className="mt-6 border-t border-LightShade/20 pt-4">
+              <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                <RiGroupLine className="text-lg" />
+                <span>Участники ({members.length})</span>
+              </div>
+              <div className="space-y-1">
+                {members.map((memberUsername) => (
+                  <button
+                    key={memberUsername}
+                    onClick={() => openUserProfile(memberUsername)}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm transition hover:bg-LightShade/10"
+                  >
+                    <div className="relative h-9 w-9 flex-shrink-0">
+                      <img
+                        src={getRandomAvatar(memberUsername)}
+                        alt={memberUsername}
+                        className="h-full w-full rounded-full object-cover"
+                      />
+                      {onlineUsers.has(memberUsername) && (
+                        <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-bgPrimary bg-green-500 dark:border-bgPrimary-dark" />
+                      )}
+                    </div>
+                    <span className="truncate">{memberUsername}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 

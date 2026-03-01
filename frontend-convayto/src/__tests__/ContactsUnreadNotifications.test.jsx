@@ -167,28 +167,19 @@ describe("Unread Store", () => {
 });
 
 // ============================================================
-// 2. Contacts Filtering (getContacts)
+// 2. Contacts (getContacts via /api/contacts)
 // ============================================================
 describe("getContacts", () => {
   beforeEach(() => {
     vi.mocked(apiFetch).mockReset();
-    localStorage.setItem("username", "me");
   });
 
-  it("returns only users from private conversations", async () => {
+  it("returns contacts from backend /api/contacts", async () => {
     vi.mocked(apiFetch).mockImplementation((url) => {
-      if (url === "/api/chat/contacts") {
+      if (url === "/api/contacts") {
         return Promise.resolve([
-          { contact: "alice", firstName: "Alice", online: true, avatarUrl: "", tag: "" },
-          { contact: "bob", firstName: "Bob", online: false, avatarUrl: "", tag: "" },
-          { contact: "charlie", firstName: "Charlie", online: false, avatarUrl: "", tag: "" },
-        ]);
-      }
-      if (url === "/api/rooms") {
-        return Promise.resolve([
-          { id: "r1", type: "PRIVATE", members: ["me", "alice"] },
-          { id: "r2", type: "PRIVATE", members: ["me", "bob"] },
-          { id: "r3", type: "ROOM", members: ["me", "alice", "charlie"] },
+          { contact: "alice", firstName: "Alice", lastName: "Smith", avatarUrl: "", tag: "", online: true, lastSeen: null },
+          { contact: "bob", firstName: "Bob", lastName: "", avatarUrl: "", tag: "", online: false, lastSeen: null },
         ]);
       }
       return Promise.resolve([]);
@@ -199,17 +190,10 @@ describe("getContacts", () => {
     const usernames = contacts.map((c) => c.username);
     expect(usernames).toContain("alice");
     expect(usernames).toContain("bob");
-    expect(usernames).not.toContain("charlie");
   });
 
-  it("returns empty when no private rooms exist", async () => {
-    vi.mocked(apiFetch).mockImplementation((url) => {
-      if (url === "/api/chat/contacts")
-        return Promise.resolve([{ contact: "alice", firstName: "Alice" }]);
-      if (url === "/api/rooms")
-        return Promise.resolve([{ id: "r1", type: "ROOM", members: ["me", "alice"] }]);
-      return Promise.resolve([]);
-    });
+  it("returns empty when API returns empty array", async () => {
+    vi.mocked(apiFetch).mockResolvedValue([]);
 
     const contacts = await getContacts();
     expect(contacts).toHaveLength(0);
@@ -217,22 +201,13 @@ describe("getContacts", () => {
 
   it("handles API errors gracefully", async () => {
     vi.mocked(apiFetch).mockRejectedValue(new Error("network"));
-    const contacts = await getContacts();
-    expect(contacts).toEqual([]);
+    await expect(getContacts()).rejects.toThrow();
   });
 
   it("maps fullname with firstName + lastName", async () => {
-    vi.mocked(apiFetch).mockImplementation((url) => {
-      if (url === "/api/chat/contacts") {
-        return Promise.resolve([
-          { contact: "alice", firstName: "Alice", lastName: "Smith", avatarUrl: "img.png", tag: "#dev", online: true },
-        ]);
-      }
-      if (url === "/api/rooms") {
-        return Promise.resolve([{ id: "r1", type: "PRIVATE", members: ["me", "alice"] }]);
-      }
-      return Promise.resolve([]);
-    });
+    vi.mocked(apiFetch).mockResolvedValue([
+      { contact: "alice", firstName: "Alice", lastName: "Smith", avatarUrl: "img.png", tag: "#dev", online: true, lastSeen: null },
+    ]);
 
     const contacts = await getContacts();
     expect(contacts[0]).toMatchObject({
@@ -246,17 +221,9 @@ describe("getContacts", () => {
   });
 
   it("falls back to contact name when firstName is empty", async () => {
-    vi.mocked(apiFetch).mockImplementation((url) => {
-      if (url === "/api/chat/contacts") {
-        return Promise.resolve([
-          { contact: "bob", firstName: null, lastName: null, avatarUrl: "" },
-        ]);
-      }
-      if (url === "/api/rooms") {
-        return Promise.resolve([{ id: "r1", type: "PRIVATE", members: ["me", "bob"] }]);
-      }
-      return Promise.resolve([]);
-    });
+    vi.mocked(apiFetch).mockResolvedValue([
+      { contact: "bob", firstName: null, lastName: null, avatarUrl: "", tag: "", online: false, lastSeen: null },
+    ]);
 
     const contacts = await getContacts();
     expect(contacts[0].fullname).toBe("bob");
