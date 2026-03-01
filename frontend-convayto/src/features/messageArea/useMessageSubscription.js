@@ -1,10 +1,17 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { subscribeRealtimeMessage } from "./apiRealtimeMessage";
+import { setActiveRoom } from "../../utils/unreadStore";
 
 function useMessageSubscription({ conversation_id, friendUserId }) {
   const queryClient = useQueryClient();
   const subscriptionRef = useRef(null);
+
+  // Track active room for unread count management
+  useEffect(() => {
+    if (conversation_id) setActiveRoom(conversation_id);
+    return () => setActiveRoom(null);
+  }, [conversation_id]);
 
   useEffect(
     function () {

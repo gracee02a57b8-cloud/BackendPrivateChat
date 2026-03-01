@@ -8,11 +8,19 @@ import { useOnlineUsers } from "../../hooks/useOnlineUsers";
 import { useState, useEffect } from "react";
 import { apiFetch } from "../../services/apiHelper";
 import { RiVolumeMuteLine } from "react-icons/ri";
+import { getCounts, subscribe } from "../../utils/unreadStore";
+
+function useUnreadCounts() {
+  const [counts, setCounts] = useState(() => getCounts());
+  useEffect(() => subscribe((c) => setCounts(c)), []);
+  return counts;
+}
 
 function UserList({ filter = "all", folderId = null }) {
   const { conversations, isPending, error } = useConversations();
   const { closeSidebar } = useUi();
   const onlineUsers = useOnlineUsers();
+  const unreadCounts = useUnreadCounts();
   const [folderRoomIds, setFolderRoomIds] = useState(null);
 
   // Load folder rooms when folderId changes
@@ -92,6 +100,7 @@ function UserList({ filter = "all", folderId = null }) {
         roomId={conv?.id}
         online={onlineUsers.has(conv?.friendInfo?.username || id)}
         muted={!!conv?.muted}
+        unreadCount={unreadCounts[conv?.id] || 0}
       />
     );
   });

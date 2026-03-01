@@ -1,4 +1,6 @@
 import { onWsMessage } from "../../services/wsService";
+import { increment, getActiveRoom } from "../../utils/unreadStore";
+import toast from "react-hot-toast";
 
 export function subscribeRealtimeConversation({ myUserId, callback }) {
   // Listen for all incoming WebSocket messages to update the conversation list
@@ -12,6 +14,30 @@ export function subscribeRealtimeConversation({ myUserId, callback }) {
 
     // Handle CHAT/VOICE/VIDEO_CIRCLE — update last message preview in sidebar
     if (msg.type === "CHAT" || msg.type === "VOICE" || msg.type === "VIDEO_CIRCLE") {
+      // Track unread count
+      increment(msg.roomId);
+
+      // Show notification toast if user is not viewing this chat
+      if (getActiveRoom() !== msg.roomId) {
+        const sender = msg.sender || "Сообщение";
+        const preview = (msg.content || "").substring(0, 60);
+        toast(`${sender}: ${preview || "📎 Вложение"}`, {
+          position: "bottom-right",
+          duration: 4000,
+          icon: "💬",
+          id: `msg-${msg.id || Date.now()}`,
+          style: {
+            background: "#1e293b",
+            color: "#f1f5f9",
+            borderRadius: "12px",
+            padding: "12px 16px",
+            fontSize: "14px",
+            maxWidth: "360px",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
+          },
+        });
+      }
+
       callback({
         eventType: "UPDATE",
         new: {

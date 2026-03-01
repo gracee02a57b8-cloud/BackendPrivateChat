@@ -2,6 +2,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useEnterKeyPress } from "../utils/useEnterKeyPress";
 import { getRandomAvatar } from "../utils/avatarUtils";
 import { isPinned, togglePinChat } from "../utils/pinnedChats";
+import { clear as clearUnread } from "../utils/unreadStore";
 import { useState, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { RiPushpinLine, RiUnpinLine, RiVolumeMuteLine } from "react-icons/ri";
@@ -16,6 +17,7 @@ function UserItem({
   roomId,
   online,
   muted,
+  unreadCount = 0,
 }) {
   const { userId: currentFriendId } = useParams();
   const isActiveUser = currentFriendId === id;
@@ -30,6 +32,7 @@ function UserItem({
 
   function handleClick() {
     if (ctxMenu) { setCtxMenu(null); return; }
+    if (roomId) clearUnread(roomId);
     handler();
     navigate(`/chat/${id}`, { replace: shouldReplace });
   }
@@ -100,6 +103,15 @@ function UserItem({
 
           <span className="truncate text-sm opacity-70">{subtext}</span>
         </span>
+
+        {unreadCount > 0 && (
+          <span
+            data-testid="unread-badge"
+            className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-bgAccent px-1.5 text-[11px] font-bold leading-none text-white dark:bg-bgAccent-dark"
+          >
+            {unreadCount > 99 ? "99+" : unreadCount}
+          </span>
+        )}
       </div>
 
       {/* Context menu */}
