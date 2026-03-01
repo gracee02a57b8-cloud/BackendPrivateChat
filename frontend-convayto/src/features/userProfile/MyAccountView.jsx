@@ -57,7 +57,7 @@ function MyAccountView() {
           minLength={MIN_USERNAME_LENGTH}
           maxLength={MAX_USERNAME_LENGTH}
           regex={USERNAME_REGEX}
-          patternMessage="Только строчные буквы, цифры, _ и -."
+          patternMessage="Логин не может быть пустым."
           checkUsername={checkUsername}
           isChecking={isChecking}
           isTaken={isTaken}

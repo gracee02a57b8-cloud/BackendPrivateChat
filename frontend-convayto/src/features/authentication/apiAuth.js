@@ -29,7 +29,7 @@ function buildSession(token, username, role, avatarUrl, tag, email) {
 // Sign in
 ///////////////////
 
-export async function signin({ username, password }) {
+export async function signin({ username, password, rememberMe = false }) {
   const res = await fetch("/api/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -53,6 +53,18 @@ export async function signin({ username, password }) {
   localStorage.setItem("role", loginData.role || "USER");
   localStorage.setItem("avatarUrl", loginData.avatarUrl || "");
   localStorage.setItem("tag", loginData.tag || "");  localStorage.setItem("email", loginData.email || "");
+
+  // Remember me: persist credentials for auto-login
+  if (rememberMe) {
+    localStorage.setItem("rememberMe", "true");
+    localStorage.setItem("savedUsername", username.trim());
+    localStorage.setItem("savedPassword", btoa(password));
+  } else {
+    localStorage.removeItem("rememberMe");
+    localStorage.removeItem("savedUsername");
+    localStorage.removeItem("savedPassword");
+  }
+
   // Connect WebSocket after login
   connectWebSocket();
 
@@ -63,11 +75,11 @@ export async function signin({ username, password }) {
 // Sign up
 ///////////////////
 
-export async function signup({ username, password, tag }) {
+export async function signup({ username, password, tag, fullname }) {
   const res = await fetch("/api/auth/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username: username.trim(), password, tag: tag?.trim() }),
+    body: JSON.stringify({ username: username.trim(), password, tag: tag?.trim(), fullname: fullname?.trim() }),
   });
 
   if (!res.ok) {
@@ -100,6 +112,7 @@ export async function signup({ username, password, tag }) {
 ///////////////////
 
 export async function signout() {
+  await unsubscribePush();
   disconnectWebSocket();
   localStorage.removeItem("token");
   localStorage.removeItem("username");
@@ -107,6 +120,9 @@ export async function signout() {
   localStorage.removeItem("avatarUrl");
   localStorage.removeItem("tag");
   localStorage.removeItem("email");
+  localStorage.removeItem("rememberMe");
+  localStorage.removeItem("savedUsername");
+  localStorage.removeItem("savedPassword");
 }
 
 ///////////////////
@@ -123,6 +139,8 @@ export async function getCurrentUser() {
 
   // Connect WebSocket if not already connected
   connectWebSocket();
+  // Re-init push notifications for returning users
+  initPushNotifications();
 
   // Fetch fresh profile from server to get up-to-date avatar, fullname, bio
   try {

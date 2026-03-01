@@ -21,7 +21,13 @@ import PrivacyPolicy from "./components/PrivacyPolicy";
 import TermsOfService from "./components/TermsOfService";
 import JoinConferencePage from "./components/JoinConferencePage";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 /*
  * Copyright [2024] [Al-Amin]
@@ -81,11 +87,7 @@ function App() {
               <Route path="signin" element={<Signin />} />
               <Route
                 path="conference/:confId"
-                element={
-                  <ProtectedRoute>
-                    <JoinConferencePage />
-                  </ProtectedRoute>
-                }
+                element={<JoinConferencePage />}
               />
               <Route path="about" element={<AboutPage />} />
               <Route path="privacy" element={<PrivacyPolicy />} />

@@ -27,7 +27,7 @@ export const MAX_PREFETCHED_CONVERSATIONS = 10;
 export const MAX_MESSAGES_PER_PAGE = 25;
 
 // Regex patterns for validation
-export const USERNAME_REGEX = /^[a-z0-9_-]+$/;
+export const USERNAME_REGEX = /^.+$/;
 export const NAME_REGEX = /^(?!.*\s{2})[a-zA-Z0-9 ]+$/;
 export const EMAIL_REGEX =
   /^[^\W_]+\w*(?:[.-]\w*)*[^\W_]+@[^\W_]+(?:[.-]?\w*[^\W_]+)*(?:\.[^\W_]{2,})$/;

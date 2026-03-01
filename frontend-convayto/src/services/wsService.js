@@ -7,6 +7,7 @@ const REALTIME_ENABLED = true;
 
 let ws = null;
 let reconnectTimer = null;
+let pingTimer = null;
 let messageListeners = [];
 let connectionListeners = [];
 let isConnecting = false;
@@ -16,10 +17,12 @@ let confListeners = [];
 const CALL_TYPES = new Set([
   'CALL_OFFER', 'CALL_ANSWER', 'CALL_REJECT', 'CALL_END',
   'CALL_BUSY', 'ICE_CANDIDATE', 'CALL_LOG',
+  'CALL_REOFFER', 'CALL_REANSWER',
 ]);
 const CONF_TYPES = new Set([
   'CONF_JOIN', 'CONF_LEAVE', 'CONF_PEERS',
   'CONF_OFFER', 'CONF_ANSWER', 'CONF_ICE',
+  'CONF_INVITE',
 ]);
 
 function getWsUrl() {
@@ -59,6 +62,13 @@ export function connectWebSocket() {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
     }
+    // Start ping keepalive to detect dead connections
+    if (pingTimer) clearInterval(pingTimer);
+    pingTimer = setInterval(() => {
+      if (ws === thisWs && thisWs.readyState === WebSocket.OPEN) {
+        try { thisWs.send(JSON.stringify({ type: "PING" })); } catch {}
+      }
+    }, 30000);
   };
 
   thisWs.onmessage = (event) => {
@@ -85,17 +95,24 @@ export function connectWebSocket() {
     }
 
     isConnecting = false;
+    if (pingTimer) { clearInterval(pingTimer); pingTimer = null; }
     console.log("[WS] Disconnected", event.code, event.reason);
     connectionListeners.forEach((cb) => cb(false));
     ws = null;
 
+    // Code 4001 = session replaced by another tab/device.
+    // Do NOT reconnect — that would kick the other session in an infinite loop.
+    if (event.code === 4001) {
+      console.warn("[WS] Session replaced by another connection. Not reconnecting.");
+      return;
+    }
+
     // Auto-reconnect if we have a token
     if (localStorage.getItem("token")) {
-      const delay = event.code === 4001 ? 5000 : 3000;
       reconnectTimer = setTimeout(() => {
         console.log("[WS] Reconnecting...");
         connectWebSocket();
-      }, delay);
+      }, 3000);
     }
   };
 
@@ -107,6 +124,8 @@ export function connectWebSocket() {
 }
 
 export function disconnectWebSocket() {
+  isConnecting = false;
+  if (pingTimer) { clearInterval(pingTimer); pingTimer = null; }
   if (reconnectTimer) {
     clearTimeout(reconnectTimer);
     reconnectTimer = null;

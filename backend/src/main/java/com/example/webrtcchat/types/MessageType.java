@@ -26,6 +26,8 @@ public enum MessageType {
     CALL_REJECT,
     CALL_END,
     CALL_BUSY,
+    CALL_REOFFER,   // mid-call SDP renegotiation (e.g. audio→video upgrade)
+    CALL_REANSWER,  // answer to CALL_REOFFER
     ICE_CANDIDATE,
 
     // E2E group key distribution (relay to target user)
@@ -50,6 +52,7 @@ public enum MessageType {
     CONF_OFFER,     // peer-to-peer SDP offer within conference
     CONF_ANSWER,    // peer-to-peer SDP answer within conference
     CONF_ICE,       // peer-to-peer ICE candidate within conference
+    CONF_INVITE,    // invite a user to an active conference (relay to target)
 
     // Stories
     STORY_POSTED,   // server → all: new story uploaded
@@ -69,6 +72,10 @@ public enum MessageType {
 
     // Disappearing messages
     DISAPPEARING_SET,   // set disappearing timer for a room
+
+    // Keepalive
+    PING,               // client → server heartbeat (no-op)
+    PONG,               // server → client heartbeat response
 
     ERROR           // server → client error notification
 }

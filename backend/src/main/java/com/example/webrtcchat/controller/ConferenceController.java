@@ -62,7 +62,7 @@ public class ConferenceController {
     }
 
     /**
-     * Get conference info (participants, count, etc.).
+     * Get conference info (participants, count, etc.). Requires auth.
      */
     @GetMapping("/{confId}")
     public ResponseEntity<Map<String, Object>> getConference(@PathVariable String confId) {
@@ -71,5 +71,38 @@ public class ConferenceController {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(info);
+    }
+
+    /**
+     * Find active conference by chat room ID.
+     */
+    @GetMapping("/room/{roomId}")
+    public ResponseEntity<Map<String, Object>> getConferenceByRoom(
+            @PathVariable String roomId) {
+        Map<String, Object> info = conferenceService.getConferenceByRoomId(roomId);
+        if (info == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(info);
+    }
+
+    /**
+     * Public conference info — no auth required.
+     * Returns minimal info so invite links can show conference status to unregistered users.
+     */
+    @GetMapping("/{confId}/info")
+    public ResponseEntity<Map<String, Object>> getConferencePublic(@PathVariable String confId) {
+        if (!conferenceService.exists(confId)) {
+            return ResponseEntity.notFound().build();
+        }
+        Map<String, Object> full = conferenceService.getConferenceInfo(confId);
+        // Return only safe fields (no participant usernames for public)
+        Map<String, Object> pub = new java.util.LinkedHashMap<>();
+        pub.put("confId", confId);
+        pub.put("active", true);
+        pub.put("count", full.get("count"));
+        pub.put("maxParticipants", full.get("maxParticipants"));
+        pub.put("createdAt", full.get("createdAt"));
+        return ResponseEntity.ok(pub);
     }
 }

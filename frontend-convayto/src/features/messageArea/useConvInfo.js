@@ -24,8 +24,8 @@ function useConvInfo() {
         ? getGroupConvInfo({ roomId })
         : getConvInfoById({ myUserId, friendUserId }),
 
-    // convInfo is not going to change so we can set staleTime to Infinity
-    staleTime: Infinity,
+    // convInfo can change when user updates avatar/name or group is renamed
+    staleTime: 5 * 60 * 1000, // 5 min
     enabled: !!(friendUserId || roomId),
   });
 

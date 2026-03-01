@@ -20,7 +20,7 @@ import TextLink from "../../components/TextLink";
 import LogoLarge from "../../components/LogoLarge";
 
 function Signup() {
-  document.title = APP_NAME + " — Регистрация";
+  useEffect(() => { document.title = APP_NAME + " — Регистрация"; }, []);
   const { signup, isPending, isSuccess } = useSignup();
   const { isAuthenticated } = useUser();
   const navigate = useNavigate();
@@ -33,6 +33,7 @@ function Signup() {
     watch,
   } = useForm({
     defaultValues: {
+      fullname: "",
       username: "",
       tag: "",
       password: "",
@@ -44,12 +45,18 @@ function Signup() {
 
   useEffect(() => {
     if (isAuthenticated || isSuccess) {
-      navigate("/chat", { replace: true });
+      const pendingConf = sessionStorage.getItem("pendingConference");
+      if (pendingConf) {
+        sessionStorage.removeItem("pendingConference");
+        navigate(`/conference/${pendingConf}`, { replace: true });
+      } else {
+        navigate("/chat", { replace: true });
+      }
     }
   }, [isAuthenticated, isSuccess, navigate]);
 
-  const onSubmit = ({ username, tag, password }) => {
-    signup({ username: username.trim(), password, tag: tag.trim() });
+  const onSubmit = ({ fullname, username, tag, password }) => {
+    signup({ username: username.trim(), password, tag: tag.trim(), fullname: fullname.trim() });
   };
 
   return (
@@ -60,14 +67,42 @@ function Signup() {
         <Heading addClass="text-3xl">Регистрация</Heading>
 
         <Controller
+          name="fullname"
+          control={control}
+          rules={{
+            required: "Введите имя.",
+            minLength: {
+              value: 2,
+              message: "Минимум 2 символа.",
+            },
+            maxLength: {
+              value: 50,
+              message: "Максимум 50 символов.",
+            },
+          }}
+          render={({ field }) => (
+            <InputBox
+              type="text"
+              value={field.value}
+              onChange={field.onChange}
+              onBlur={() => trigger("fullname")}
+              placeholder="Имя"
+              htmlFor="fullname"
+              error={errors.fullname?.message}
+              disabled={isPending}
+              autoFocus
+            />
+          )}
+        />
+
+        <Controller
           name="username"
           control={control}
           rules={{
-            required: "Введите имя пользователя.",
+            required: "Введите логин.",
             pattern: {
               value: USERNAME_REGEX,
-              message:
-                "Только строчные буквы, цифры, подчёркивания и дефисы.",
+              message: "Логин не может быть пустым.",
             },
             minLength: {
               value: MIN_USERNAME_LENGTH,
@@ -84,11 +119,10 @@ function Signup() {
               value={field.value}
               onChange={field.onChange}
               onBlur={() => trigger("username")}
-              placeholder="Имя пользователя"
+              placeholder="Логин"
               htmlFor="username"
               error={errors.username?.message}
               disabled={isPending}
-              autoFocus
             />
           )}
         />

@@ -2,6 +2,8 @@
 // API Helper — authenticated fetch wrapper
 // ==========================================
 
+let isRedirecting = false;
+
 export async function apiFetch(path, options = {}) {
   const token = localStorage.getItem("token");
 
@@ -21,10 +23,13 @@ export async function apiFetch(path, options = {}) {
   const res = await fetch(path, { ...options, headers });
 
   if (res.status === 401) {
-    // Token expired — clear auth
-    localStorage.removeItem("token");
-    localStorage.removeItem("username");
-    window.location.href = "/signin";
+    // Token expired — clear auth (debounce multiple parallel 401s)
+    if (!isRedirecting) {
+      isRedirecting = true;
+      localStorage.removeItem("token");
+      localStorage.removeItem("username");
+      window.location.href = "/signin";
+    }
     throw new Error("Сессия истекла, войдите снова");
   }
 

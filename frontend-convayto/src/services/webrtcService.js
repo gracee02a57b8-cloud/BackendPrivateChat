@@ -17,7 +17,7 @@ export async function getIceServers() {
     const config = await apiFetch("/api/webrtc/ice-config");
     // Backend returns { iceServers: [...] } or just an array
     cachedIceServers = config.iceServers || config;
-    iceConfigExpiry = now + 23 * 60 * 60 * 1000; // 23h
+    iceConfigExpiry = now + 2 * 60 * 60 * 1000; // 2h (match TURN credential TTL)
     return cachedIceServers;
   } catch (e) {
     console.error("[WebRTC] Failed to get ICE config:", e);
@@ -49,7 +49,14 @@ export async function createPeerConnection({
   };
 
   pc.ontrack = (event) => {
-    onTrack(event.streams[0] || new MediaStream([event.track]));
+    if (event.streams && event.streams[0]) {
+      onTrack(event.streams[0]);
+    } else {
+      // Fallback: accumulate tracks into a single stream (some browsers don't populate event.streams)
+      if (!pc._fallbackStream) pc._fallbackStream = new MediaStream();
+      pc._fallbackStream.addTrack(event.track);
+      onTrack(pc._fallbackStream);
+    }
   };
 
   pc.onconnectionstatechange = () => {

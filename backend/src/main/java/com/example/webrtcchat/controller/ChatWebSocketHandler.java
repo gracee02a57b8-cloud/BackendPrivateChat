@@ -142,6 +142,14 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             incoming.setContent(incoming.getContent().substring(0, MAX_MESSAGE_LENGTH));
         }
 
+        // Handle PING - client keepalive, respond with PONG
+        if (incoming.getType() == MessageType.PING) {
+            try {
+                session.sendMessage(new TextMessage("{\"type\":\"PONG\"}"));
+            } catch (Exception ignored) {}
+            return;
+        }
+
         // Handle READ_RECEIPT
         if (incoming.getType() == MessageType.READ_RECEIPT) {
             handleReadReceipt(username, incoming.getRoomId());
@@ -173,6 +181,10 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             handleConferenceRelay(username, incoming);
             return;
         }
+        if (incoming.getType() == MessageType.CONF_INVITE) {
+            handleConferenceInvite(username, incoming);
+            return;
+        }
         if (incoming.getType() == MessageType.CONF_JOIN) {
             handleConferenceJoin(username, incoming);
             return;
@@ -188,6 +200,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 || incoming.getType() == MessageType.CALL_REJECT
                 || incoming.getType() == MessageType.CALL_END
                 || incoming.getType() == MessageType.CALL_BUSY
+                || incoming.getType() == MessageType.CALL_REOFFER
+                || incoming.getType() == MessageType.CALL_REANSWER
                 || incoming.getType() == MessageType.ICE_CANDIDATE) {
             handleCallSignaling(username, incoming);
             return;
@@ -619,10 +633,11 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             activeCallTypes.put(callKey, callType);
 
             // Always send push for incoming call (handles mobile with app backgrounded/screen off)
+            boolean isVideo = "video".equalsIgnoreCase(callType);
             webPushService.sendPushToUserAsync(target,
-                    "📞 Входящий звонок",
+                    isVideo ? "📹 Видеозвонок" : "📞 Входящий звонок",
                     username + " звонит вам",
-                    "call", null);
+                    isVideo ? "video-call" : "call", null);
         }
 
         // Reset call start time on CALL_ANSWER (accurate duration from answer, not offer)
@@ -940,6 +955,32 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         if (!conferenceService.isInConference(confId, username)
                 || !conferenceService.isInConference(confId, target)) {
             log.warn("[Conference] Relay rejected: {} → {} in conf {}", username, target, confId);
+            return;
+        }
+
+        incoming.setSender(username);
+        incoming.setTimestamp(now());
+
+        WebSocketSession targetSession = userSessions.get(target);
+        if (targetSession != null && targetSession.isOpen()) {
+            sendSafe(targetSession, serialize(incoming));
+        }
+    }
+
+    /**
+     * Handle CONF_INVITE: relay invitation to target user (target doesn't have to be in conference).
+     * Only requires the sender to be in the conference.
+     */
+    private void handleConferenceInvite(String username, MessageDto incoming) {
+        Map<String, String> extra = incoming.getExtra();
+        if (extra == null) return;
+        String target = extra.get("target");
+        String confId = extra.get("confId");
+        if (target == null || confId == null) return;
+
+        // Sender must be in the conference
+        if (!conferenceService.isInConference(confId, username)) {
+            log.warn("[Conference] Invite rejected: {} not in conf {}", username, confId);
             return;
         }
 

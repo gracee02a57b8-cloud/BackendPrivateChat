@@ -12,6 +12,8 @@ const useConversationSubscription = (myUserId) => {
 
       const callback = (payload) => {
         queryClient.setQueryData(["conversations", myUserId], (prevData) => {
+          if (!prevData) return prevData;
+
           if (payload?.eventType === "INSERT") {
             // Insert the new entry at the beginning of the array
             return [payload.new, ...prevData];

@@ -9,12 +9,13 @@ import {
   useEffect,
   useCallback,
 } from "react";
-import { onConferenceMessage, sendWsMessage } from "../services/wsService";
+import { onConferenceMessage, sendWsMessage, isWsConnected } from "../services/wsService";
 import {
   createPeerConnection,
   getUserMediaStream,
 } from "../services/webrtcService";
 import { apiFetch } from "../services/apiHelper";
+import toast from "react-hot-toast";
 
 const ConferenceContext = createContext();
 
@@ -23,6 +24,8 @@ export const CONF_STATE = {
   JOINING: "joining",
   ACTIVE: "active",
 };
+
+export const MAX_PARTICIPANTS = 10;
 
 function ConferenceProvider({ children }) {
   const [confState, setConfState] = useState(CONF_STATE.IDLE);
@@ -49,6 +52,21 @@ function ConferenceProvider({ children }) {
     confIdRef.current = confId;
   }, [confId]);
 
+  // Ref to let WS listener call startConference without stale closure
+  const startConferenceRef = useRef(null);
+
+  // Cleanup on unmount (e.g. route change while in conference)
+  useEffect(() => {
+    return () => {
+      Object.values(pcsRef.current).forEach((pc) => pc.close());
+      pcsRef.current = {};
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach((t) => t.stop());
+        localStreamRef.current = null;
+      }
+    };
+  }, []);
+
   // ====== cleanup ======
   const cleanup = useCallback(() => {
     Object.values(pcsRef.current).forEach((pc) => pc.close());
@@ -61,7 +79,9 @@ function ConferenceProvider({ children }) {
     setLocalStream(null);
     setPeerStreams({});
     setParticipants([]);
+    stateRef.current = CONF_STATE.IDLE;
     setConfState(CONF_STATE.IDLE);
+    confIdRef.current = null;
     setConfId(null);
     setConfRoomId(null);
     setIsAudioMuted(false);
@@ -93,7 +113,22 @@ function ConferenceProvider({ children }) {
           setPeerStreams((prev) => ({ ...prev, [peerId]: remoteStream }));
         },
         onConnectionStateChange: (state) => {
-          if (state === "disconnected" || state === "failed") {
+          if (state === "disconnected") {
+            // Temporary network issue — wait for recovery
+            setTimeout(() => {
+              const pc = pcsRef.current[peerId];
+              if (pc && pc.connectionState !== "connected") {
+                console.warn("[Conf] Peer", peerId, "did not recover, closing");
+                pc.close();
+                delete pcsRef.current[peerId];
+                setPeerStreams((prev) => {
+                  const n = { ...prev };
+                  delete n[peerId];
+                  return n;
+                });
+              }
+            }, 10_000);
+          } else if (state === "failed") {
             if (pcsRef.current[peerId]) {
               pcsRef.current[peerId].close();
               delete pcsRef.current[peerId];
@@ -132,10 +167,17 @@ function ConferenceProvider({ children }) {
 
   // ====== Start / join conference ======
   const startConference = useCallback(
-    async (roomId, type = "video") => {
+    async (roomId, type = "video", autoInviteUser = null) => {
       if (stateRef.current !== CONF_STATE.IDLE) return;
 
+      if (!isWsConnected()) {
+        console.warn("[Conf] Cannot start conference — WebSocket not connected");
+        toast.error("Нет подключения к серверу");
+        return;
+      }
+
       try {
+        stateRef.current = CONF_STATE.JOINING;
         setConfState(CONF_STATE.JOINING);
         setConfRoomId(roomId);
 
@@ -150,12 +192,23 @@ function ConferenceProvider({ children }) {
             method: "POST",
             body: JSON.stringify({ roomId }),
           });
-        } catch {
-          // Conference might already exist — try to find active one for this room
-          conference = null;
+        } catch (e) {
+          console.warn("[Conf] Create conference REST failed, trying to find active one:", e);
+          // Conference might already exist — try to get info
+          try {
+            conference = await apiFetch(`/api/conference/room/${encodeURIComponent(roomId)}`);
+          } catch {
+            conference = null;
+          }
         }
 
-        const cId = conference?.confId || conference?.id || `${roomId}-conf`;
+        const cId = conference?.confId || conference?.id;
+        if (!cId) {
+          console.error("[Conf] No conference ID available");
+          cleanup();
+          return;
+        }
+        confIdRef.current = cId;
         setConfId(cId);
 
         // Join conference via REST
@@ -184,6 +237,22 @@ function ConferenceProvider({ children }) {
             : "📹 Начата видеоконференция. Присоединяйтесь!",
         });
 
+        // Auto-invite user (e.g. escalation from 1:1 call)
+        if (autoInviteUser) {
+          sendWsMessage({
+            type: "CONF_INVITE",
+            roomId: roomId,
+            content: "",
+            extra: {
+              target: autoInviteUser,
+              confId: cId,
+              inviteLink: `${window.location.origin}/conference/${cId}`,
+              autoJoin: "true",
+            },
+          });
+        }
+
+        stateRef.current = CONF_STATE.ACTIVE;
         setConfState(CONF_STATE.ACTIVE);
       } catch (e) {
         console.error("[Conf] Failed to start conference:", e);
@@ -192,6 +261,11 @@ function ConferenceProvider({ children }) {
     },
     [cleanup],
   );
+
+  // Keep ref in sync so WS listener can call startConference
+  useEffect(() => {
+    startConferenceRef.current = startConference;
+  }, [startConference]);
 
   // ====== Leave conference ======
   const leaveConference = useCallback(() => {
@@ -246,7 +320,14 @@ function ConferenceProvider({ children }) {
     async (targetConfId, type = "video") => {
       if (stateRef.current !== CONF_STATE.IDLE) return null;
 
+      if (!isWsConnected()) {
+        console.warn("[Conf] Cannot join conference — WebSocket not connected");
+        toast.error("Нет подключения к серверу");
+        return null;
+      }
+
       try {
+        stateRef.current = CONF_STATE.JOINING;
         setConfState(CONF_STATE.JOINING);
 
         // Fetch conference info via REST
@@ -257,6 +338,7 @@ function ConferenceProvider({ children }) {
 
         const roomId = info.roomId || null;
         setConfRoomId(roomId);
+        confIdRef.current = targetConfId;
         setConfId(targetConfId);
 
         // Get user media
@@ -282,6 +364,7 @@ function ConferenceProvider({ children }) {
           extra: { confId: targetConfId },
         });
 
+        stateRef.current = CONF_STATE.ACTIVE;
         setConfState(CONF_STATE.ACTIVE);
         return roomId;
       } catch (e) {
@@ -298,6 +381,40 @@ function ConferenceProvider({ children }) {
     if (!confIdRef.current) return null;
     return `${window.location.origin}/conference/${confIdRef.current}`;
   }, []);
+
+  // ====== Invite a specific user to the conference via WS ======
+  const inviteUser = useCallback((targetUsername, autoJoin = false) => {
+    if (stateRef.current !== CONF_STATE.ACTIVE) {
+      toast.error("Нет активной конференции");
+      return;
+    }
+    if (!confIdRef.current) return;
+
+    const totalNow = 1 + Object.keys(pcsRef.current).length; // me + peers
+    if (totalNow >= MAX_PARTICIPANTS) {
+      toast.error(`Максимум ${MAX_PARTICIPANTS} участников`);
+      return;
+    }
+
+    if (!isWsConnected()) {
+      toast.error("Нет подключения к серверу");
+      return;
+    }
+
+    sendWsMessage({
+      type: "CONF_INVITE",
+      roomId: confRoomId || "",
+      content: "",
+      extra: {
+        target: targetUsername,
+        confId: confIdRef.current,
+        inviteLink: `${window.location.origin}/conference/${confIdRef.current}`,
+        autoJoin: autoJoin ? "true" : "",
+      },
+    });
+
+    toast.success(`Приглашение отправлено: ${targetUsername}`);
+  }, [confRoomId]);
 
   // ====== WS conference message listener ======
   useEffect(() => {
@@ -424,6 +541,7 @@ function ConferenceProvider({ children }) {
           setParticipants((prev) =>
             prev.includes(sender) ? prev : [...prev, sender],
           );
+          toast(`${sender} присоединился`, { icon: "👋" });
           break;
         }
 
@@ -440,6 +558,53 @@ function ConferenceProvider({ children }) {
             return n;
           });
           setParticipants((prev) => prev.filter((p) => p !== sender));
+          toast(`${sender} покинул конференцию`, { icon: "👋" });
+          break;
+        }
+
+        case "CONF_INVITE": {
+          // Someone invited us to a conference
+          const invConfId = extra.confId;
+          const invLink = extra.inviteLink;
+          const isAutoJoin = extra.autoJoin === "true";
+          if (!invConfId) break;
+
+          // Don't show invite if already in this conference
+          if (stateRef.current !== CONF_STATE.IDLE) break;
+
+          // Auto-join when escalating from 1:1 call (no manual accept needed)
+          if (isAutoJoin && startConferenceRef.current) {
+            const invRoomId = msg.roomId || "";
+            startConferenceRef.current(invRoomId, "video");
+            break;
+          }
+
+          toast(
+            (t) => (
+              <div className="flex flex-col gap-2">
+                <span className="font-medium">📹 {sender} приглашает в конференцию</span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      toast.dismiss(t.id);
+                      // Navigate to conference join
+                      window.location.href = invLink || `/conference/${invConfId}`;
+                    }}
+                    className="rounded-lg bg-green-500 px-4 py-1.5 text-sm font-medium text-white hover:bg-green-600"
+                  >
+                    Присоединиться
+                  </button>
+                  <button
+                    onClick={() => toast.dismiss(t.id)}
+                    className="rounded-lg bg-gray-500 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-600"
+                  >
+                    Отклонить
+                  </button>
+                </div>
+              </div>
+            ),
+            { duration: 30000, icon: "📹" }
+          );
           break;
         }
 
@@ -464,10 +629,12 @@ function ConferenceProvider({ children }) {
     startConference,
     joinConferenceById,
     getInviteLink,
+    inviteUser,
     leaveConference,
     toggleAudio,
     toggleVideo,
     toggleMinimize,
+    MAX_PARTICIPANTS,
     CONF_STATE,
   };
 

@@ -19,6 +19,7 @@ import {
   createPeerConnection,
   getUserMediaStream,
 } from "../services/webrtcService";
+import toast from "react-hot-toast";
 
 const CallContext = createContext();
 
@@ -27,6 +28,7 @@ export const CALL_STATE = {
   CALLING: "calling", // outgoing, waiting for answer
   RINGING: "ringing", // incoming, waiting for user to accept
   ACTIVE: "active", // call in progress
+  ESCALATING: "escalating", // transitioning 1:1 call → conference
 };
 
 function CallProvider({ children }) {
@@ -40,6 +42,7 @@ function CallProvider({ children }) {
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isReconnecting, setIsReconnecting] = useState(false);
 
   const pcRef = useRef(null);
   const durationRef = useRef(null);
@@ -48,6 +51,8 @@ function CallProvider({ children }) {
   const callStartRef = useRef(null);
   const localStreamRef = useRef(null);
   const incomingDataRef = useRef(null);
+  const reconnectTimeoutRef = useRef(null);
+  const acceptingRef = useRef(false);
   const stateRef = useRef(CALL_STATE.IDLE);
 
   // Keep stateRef in sync
@@ -57,6 +62,8 @@ function CallProvider({ children }) {
 
   // ====== cleanup ======
   const cleanup = useCallback(() => {
+    stateRef.current = CALL_STATE.IDLE;
+    acceptingRef.current = false;
     if (pcRef.current) {
       pcRef.current.close();
       pcRef.current = null;
@@ -73,6 +80,10 @@ function CallProvider({ children }) {
       clearTimeout(callTimeoutRef.current);
       callTimeoutRef.current = null;
     }
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
     setLocalStream(null);
     setRemoteStream(null);
     setCallState(CALL_STATE.IDLE);
@@ -83,10 +94,16 @@ function CallProvider({ children }) {
     setIsVideoOff(false);
     setCallDuration(0);
     setIsMinimized(false);
+    setIsReconnecting(false);
     pendingIceRef.current = [];
     callStartRef.current = null;
     incomingDataRef.current = null;
   }, []);
+
+  // Cleanup on unmount (e.g. route change while in call)
+  useEffect(() => {
+    return () => cleanup();
+  }, [cleanup]);
 
   // ====== Start outgoing call ======
   const startCall = useCallback(
@@ -114,9 +131,9 @@ function CallProvider({ children }) {
           stream = await getUserMediaStream(type);
         } catch (mediaErr) {
           if (type === "video") {
-            console.warn("[Call] Video failed, falling back to audio:", mediaErr.message);
+            console.warn("[Call] Video failed, camera unavailable:", mediaErr.message);
             actualType = "audio";
-            setCallType("audio");
+            setIsVideoOff(true);
             stream = await getUserMediaStream("audio");
           } else {
             throw mediaErr;
@@ -140,7 +157,28 @@ function CallProvider({ children }) {
           },
           onTrack: (remoteStr) => setRemoteStream(remoteStr),
           onConnectionStateChange: (state) => {
-            if (state === "failed") {
+            if (state === "disconnected") {
+              console.warn("[Call] Connection disconnected, waiting for recovery...");
+              setIsReconnecting(true);
+              if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+              reconnectTimeoutRef.current = setTimeout(() => {
+                if (pcRef.current && pcRef.current.connectionState !== "connected") {
+                  sendWsMessage({
+                    type: "CALL_END",
+                    roomId: room,
+                    content: "",
+                    extra: { target: targetUser, reason: "ice_failed" },
+                  });
+                  cleanup();
+                }
+              }, 15_000);
+            } else if (state === "connected") {
+              setIsReconnecting(false);
+              if (reconnectTimeoutRef.current) {
+                clearTimeout(reconnectTimeoutRef.current);
+                reconnectTimeoutRef.current = null;
+              }
+            } else if (state === "failed") {
               sendWsMessage({
                 type: "CALL_END",
                 roomId: room,
@@ -164,7 +202,7 @@ function CallProvider({ children }) {
           content: "",
           extra: {
             target: targetUser,
-            callType: actualType,
+            callType: type,
             sdp: JSON.stringify(offer),
           },
         });
@@ -206,6 +244,8 @@ function CallProvider({ children }) {
   // ====== Accept incoming call ======
   const acceptCall = useCallback(async () => {
     if (stateRef.current !== CALL_STATE.RINGING) return;
+    if (acceptingRef.current) return;
+    acceptingRef.current = true;
 
     const data = incomingDataRef.current;
     if (!data) return;
@@ -228,8 +268,8 @@ function CallProvider({ children }) {
         stream = await getUserMediaStream(type);
       } catch (mediaErr) {
         if (type === "video") {
-          console.warn("[Call] Video failed on accept, falling back to audio:", mediaErr.message);
-          setCallType("audio");
+          console.warn("[Call] Video failed on accept, camera unavailable:", mediaErr.message);
+          setIsVideoOff(true);
           stream = await getUserMediaStream("audio");
         } else {
           throw mediaErr;
@@ -256,7 +296,28 @@ function CallProvider({ children }) {
         },
         onTrack: (remoteStr) => setRemoteStream(remoteStr),
         onConnectionStateChange: (state) => {
-          if (state === "failed") {
+          if (state === "disconnected") {
+            console.warn("[Call] Connection disconnected, waiting for recovery...");
+            setIsReconnecting(true);
+            if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+            reconnectTimeoutRef.current = setTimeout(() => {
+              if (pcRef.current && pcRef.current.connectionState !== "connected") {
+                sendWsMessage({
+                  type: "CALL_END",
+                  roomId: room,
+                  content: "",
+                  extra: { target: caller, reason: "ice_failed" },
+                });
+                cleanup();
+              }
+            }, 15_000);
+          } else if (state === "connected") {
+            setIsReconnecting(false);
+            if (reconnectTimeoutRef.current) {
+              clearTimeout(reconnectTimeoutRef.current);
+              reconnectTimeoutRef.current = null;
+            }
+          } else if (state === "failed") {
             sendWsMessage({
               type: "CALL_END",
               roomId: room,
@@ -352,6 +413,56 @@ function CallProvider({ children }) {
     cleanup();
   }, [roomId, remoteUser, cleanup]);
 
+  // ====== Escalate 1:1 call to conference (keep transitional UI) ======
+  const escalateToConference = useCallback(() => {
+    if (stateRef.current !== CALL_STATE.ACTIVE) return;
+
+    // Notify remote side about escalation (reason tells them to keep UI)
+    sendWsMessage({
+      type: "CALL_END",
+      roomId: roomId,
+      content: "",
+      extra: { target: remoteUser, reason: "escalate" },
+    });
+
+    // Clean up WebRTC resources
+    if (pcRef.current) { pcRef.current.close(); pcRef.current = null; }
+    if (localStreamRef.current) { localStreamRef.current.getTracks().forEach((t) => t.stop()); localStreamRef.current = null; }
+    if (durationRef.current) { clearInterval(durationRef.current); durationRef.current = null; }
+    if (callTimeoutRef.current) { clearTimeout(callTimeoutRef.current); callTimeoutRef.current = null; }
+    if (reconnectTimeoutRef.current) { clearTimeout(reconnectTimeoutRef.current); reconnectTimeoutRef.current = null; }
+    setLocalStream(null);
+    setRemoteStream(null);
+    pendingIceRef.current = [];
+
+    // Transition to ESCALATING — UI shows "Переход в конференцию..."
+    stateRef.current = CALL_STATE.ESCALATING;
+    setCallState(CALL_STATE.ESCALATING);
+
+    // Fallback: if conference doesn't start within 8 seconds, clean up
+    callTimeoutRef.current = setTimeout(() => {
+      if (stateRef.current === CALL_STATE.ESCALATING) cleanup();
+    }, 8000);
+  }, [roomId, remoteUser, cleanup]);
+
+  // ====== Finish escalation — clear transitional state ======
+  const finishEscalation = useCallback(() => {
+    if (stateRef.current !== CALL_STATE.ESCALATING) return;
+    if (callTimeoutRef.current) { clearTimeout(callTimeoutRef.current); callTimeoutRef.current = null; }
+    stateRef.current = CALL_STATE.IDLE;
+    acceptingRef.current = false;
+    setCallState(CALL_STATE.IDLE);
+    setCallType(null);
+    setRemoteUser(null);
+    setRoomId(null);
+    setIsAudioMuted(false);
+    setIsVideoOff(false);
+    setCallDuration(0);
+    setIsMinimized(false);
+    setIsReconnecting(false);
+    incomingDataRef.current = null;
+  }, []);
+
   // ====== Toggle audio mute ======
   const toggleAudio = useCallback(() => {
     if (localStreamRef.current) {
@@ -363,14 +474,58 @@ function CallProvider({ children }) {
   }, []);
 
   // ====== Toggle video ======
-  const toggleVideo = useCallback(() => {
-    if (localStreamRef.current) {
-      localStreamRef.current.getVideoTracks().forEach((t) => {
-        t.enabled = !t.enabled;
-      });
-      setIsVideoOff((p) => !p);
+  const toggleVideo = useCallback(async () => {
+    if (!localStreamRef.current) return;
+    const videoTracks = localStreamRef.current.getVideoTracks();
+
+    if (videoTracks.length === 0) {
+      // No video tracks — upgrade audio call to video (add camera + renegotiate)
+      try {
+        const videoStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
+        });
+        const videoTrack = videoStream.getVideoTracks()[0];
+        if (!videoTrack) {
+          toast("Камера недоступна", { icon: "📷" });
+          return;
+        }
+
+        // Add video track to local stream
+        localStreamRef.current.addTrack(videoTrack);
+
+        // Add video track to peer connection and renegotiate
+        if (pcRef.current) {
+          pcRef.current.addTrack(videoTrack, localStreamRef.current);
+          const offer = await pcRef.current.createOffer();
+          await pcRef.current.setLocalDescription(offer);
+          sendWsMessage({
+            type: "CALL_REOFFER",
+            roomId,
+            content: "",
+            extra: {
+              target: remoteUser,
+              callType: "video",
+              sdp: JSON.stringify(offer),
+            },
+          });
+        }
+
+        setCallType("video");
+        setIsVideoOff(false);
+        // Force localStream state update so PIP re-renders
+        setLocalStream(localStreamRef.current);
+        toast("Камера включена", { icon: "📹" });
+      } catch (err) {
+        console.warn("[Call] Failed to add video:", err);
+        toast("Камера недоступна", { icon: "📷" });
+      }
+      return;
     }
-  }, []);
+
+    // Video tracks exist — toggle enabled/disabled
+    videoTracks.forEach((t) => { t.enabled = !t.enabled; });
+    setIsVideoOff((p) => !p);
+  }, [roomId, remoteUser]);
 
   // ====== Toggle minimize ======
   const toggleMinimize = useCallback(() => {
@@ -407,6 +562,14 @@ function CallProvider({ children }) {
           setRemoteUser(sender);
           setRoomId(msg.roomId);
           setCallType(extra.callType || "audio");
+
+          // Ringing timeout: auto-cleanup if caller's CALL_END is lost
+          callTimeoutRef.current = setTimeout(() => {
+            if (stateRef.current === CALL_STATE.RINGING) {
+              console.log("[Call] Ringing timeout (50s), cleaning up");
+              cleanup();
+            }
+          }, 50_000);
           break;
         }
 
@@ -472,6 +635,47 @@ function CallProvider({ children }) {
           break;
         }
 
+        // Mid-call SDP renegotiation (e.g. audio→video upgrade)
+        case "CALL_REOFFER": {
+          if (stateRef.current !== CALL_STATE.ACTIVE || !pcRef.current) return;
+          console.log("[Call] Got CALL_REOFFER from", sender, "- renegotiating");
+          (async () => {
+            try {
+              const offer = JSON.parse(extra.sdp);
+              await pcRef.current.setRemoteDescription(new RTCSessionDescription(offer));
+              const answer = await pcRef.current.createAnswer();
+              await pcRef.current.setLocalDescription(answer);
+              sendWsMessage({
+                type: "CALL_REANSWER",
+                roomId: msg.roomId,
+                content: "",
+                extra: { target: sender, sdp: JSON.stringify(answer) },
+              });
+              // If the remote side upgraded to video, update callType so UI shows video
+              if (extra.callType === "video") {
+                setCallType("video");
+              }
+            } catch (e) {
+              console.error("[Call] Failed to handle reoffer:", e);
+            }
+          })();
+          break;
+        }
+
+        case "CALL_REANSWER": {
+          if (stateRef.current !== CALL_STATE.ACTIVE || !pcRef.current) return;
+          console.log("[Call] Got CALL_REANSWER from", sender);
+          (async () => {
+            try {
+              const answer = JSON.parse(extra.sdp);
+              await pcRef.current.setRemoteDescription(new RTCSessionDescription(answer));
+            } catch (e) {
+              console.error("[Call] Failed to handle reanswer:", e);
+            }
+          })();
+          break;
+        }
+
         case "CALL_END":
         case "CALL_REJECT":
         case "CALL_BUSY": {
@@ -479,6 +683,34 @@ function CallProvider({ children }) {
           if (callTimeoutRef.current) {
             clearTimeout(callTimeoutRef.current);
             callTimeoutRef.current = null;
+          }
+          // Conference escalation — keep transitional UI instead of full cleanup
+          if (msg.type === "CALL_END" && extra.reason === "escalate") {
+            if (pcRef.current) { pcRef.current.close(); pcRef.current = null; }
+            if (localStreamRef.current) { localStreamRef.current.getTracks().forEach((t) => t.stop()); localStreamRef.current = null; }
+            if (durationRef.current) { clearInterval(durationRef.current); durationRef.current = null; }
+            if (reconnectTimeoutRef.current) { clearTimeout(reconnectTimeoutRef.current); reconnectTimeoutRef.current = null; }
+            setLocalStream(null);
+            setRemoteStream(null);
+            pendingIceRef.current = [];
+            stateRef.current = CALL_STATE.ESCALATING;
+            setCallState(CALL_STATE.ESCALATING);
+            callTimeoutRef.current = setTimeout(() => {
+              if (stateRef.current === CALL_STATE.ESCALATING) cleanup();
+            }, 8000);
+            break;
+          }
+          // Show toast notification for call end reason
+          if (msg.type === "CALL_BUSY") {
+            toast("Абонент занят", { icon: "📱" });
+          } else if (msg.type === "CALL_REJECT") {
+            if (stateRef.current === CALL_STATE.CALLING) toast("Звонок отклонён", { icon: "📵" });
+          } else if (msg.type === "CALL_END") {
+            const reason = extra.reason || "";
+            if (reason === "unavailable") toast("Абонент не в сети", { icon: "📴" });
+            else if (reason === "timeout") toast("Нет ответа", { icon: "⏱️" });
+            else if (reason === "ice_failed") toast("Ошибка соединения", { icon: "❌" });
+            else if (reason === "disconnect") toast("Соединение потеряно", { icon: "📡" });
           }
           cleanup();
           break;
@@ -502,11 +734,14 @@ function CallProvider({ children }) {
     isAudioMuted,
     isVideoOff,
     isMinimized,
+    isReconnecting,
     callDuration,
     startCall,
     acceptCall,
     rejectCall,
     endCall,
+    escalateToConference,
+    finishEscalation,
     toggleAudio,
     toggleVideo,
     toggleMinimize,

@@ -4,6 +4,7 @@ public class UserDto {
     private String username;
     private String password;
     private String tag;
+    private String fullname;
     private boolean online;
     private String lastSeen;
     private String avatarUrl;
@@ -57,4 +58,7 @@ public class UserDto {
 
     public String getTag() { return tag; }
     public void setTag(String tag) { this.tag = tag; }
+
+    public String getFullname() { return fullname; }
+    public void setFullname(String fullname) { this.fullname = fullname; }
 }

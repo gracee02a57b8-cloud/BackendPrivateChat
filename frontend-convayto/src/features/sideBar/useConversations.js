@@ -10,11 +10,12 @@ import useConversationSubscription from "./useConversationSubscription";
 export function useConversations() {
   const queryClient = useQueryClient();
   const { user } = useUser();
-  const myUserId = user.id;
+  const myUserId = user?.id;
 
   const { data, isPending, error } = useQuery({
     queryKey: ["conversations", myUserId],
     queryFn: () => getConversations({ myUserId }),
+    enabled: !!myUserId,
   });
 
   // Realtime Subscription
@@ -24,6 +25,11 @@ export function useConversations() {
   // Prefetching
   /////////////
   const hasPrefetched = useRef(false);
+
+  // Reset prefetch flag when user changes
+  useEffect(() => {
+    hasPrefetched.current = false;
+  }, [myUserId]);
 
   useEffect(() => {
     if (!data || hasPrefetched.current) return;
@@ -39,6 +45,7 @@ export function useConversations() {
       queryClient.prefetchInfiniteQuery({
         queryKey: ["friend", friendUserId],
         queryFn: ({ pageParam }) => getMessages({ conversation_id, pageParam }),
+        initialPageParam: 0,
         pages: 1,
       });
 

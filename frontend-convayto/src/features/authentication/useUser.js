@@ -12,7 +12,7 @@ export function useUser() {
   const user = data?.session?.user;
 
   const invalidateUser = () => {
-    queryClient.invalidateQueries("user");
+    queryClient.invalidateQueries({ queryKey: ["user"] });
   };
 
   return {

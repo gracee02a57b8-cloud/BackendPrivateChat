@@ -6,12 +6,12 @@ export function useSignin() {
   const queryClient = useQueryClient();
 
   const { mutate: signin, isPending } = useMutation({
-    mutationFn: ({ username, password }) => ApiSignin({ username, password }),
+    mutationFn: ({ username, password, rememberMe }) => ApiSignin({ username, password, rememberMe }),
     onMutate: () => {
       toast.loading("Вход...");
     },
     onSuccess: (data) => {
-      queryClient.setQueriesData(["user"], data);
+      queryClient.setQueryData(["user"], data);
       toast.dismiss();
     },
     onError: (error) => {

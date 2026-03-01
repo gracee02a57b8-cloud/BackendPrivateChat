@@ -43,6 +43,14 @@ export function subscribeRealtimeMessage({ conversation_id, callback }) {
         created_at: msg.timestamp,
         type: "CHAT",
         edited: true,
+        // Preserve file/media fields from the original message
+        fileUrl: msg.fileUrl,
+        fileName: msg.fileName,
+        fileSize: msg.fileSize,
+        fileType: msg.fileType,
+        duration: msg.duration,
+        waveform: msg.waveform,
+        thumbnailUrl: msg.thumbnailUrl,
       });
     }
 

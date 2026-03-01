@@ -11,13 +11,13 @@ export function useSignup() {
     error,
     isSuccess,
   } = useMutation({
-    mutationFn: ({ username, password, tag }) =>
-      apiSignup({ username, password, tag }),
+    mutationFn: ({ username, password, tag, fullname }) =>
+      apiSignup({ username, password, tag, fullname }),
     onMutate: () => {
       toast.loading("Регистрация...");
     },
     onSuccess: (data) => {
-      queryClient.setQueriesData(["user"], data);
+      queryClient.setQueryData(["user"], data);
       toast.dismiss();
       toast.success("Аккаунт создан!");
     },

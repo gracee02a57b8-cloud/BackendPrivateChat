@@ -94,24 +94,24 @@ function useMessageSubscription({ conversation_id, friendUserId }) {
             return prevData;
           }
 
-          const existingOptimisticMessage = prevData?.pages[0]?.find(
-            (message) => message?.id === newData.id,
+          // Check ALL pages for existing message (optimistic update or edit)
+          const existsInAnyPage = prevData?.pages?.some((page) =>
+            page?.some((message) => message?.id === newData.id),
           );
 
-          if (existingOptimisticMessage) {
-            // replace existing optimistic message with server new message
+          if (existsInAnyPage) {
+            // Replace existing message in whichever page it's in
             return {
               ...prevData,
-              // replace the new message to the first page's data which id matches the optimistic message
-              pages: prevData.pages
-                .slice()
-                .map((page, index) =>
-                  index === 0
-                    ? page.map((message) =>
-                        message.id === newData.id ? newData : message,
-                      )
-                    : page,
+              pages: prevData.pages.map((page) =>
+                page.map((message) =>
+                  message.id === newData.id
+                    ? newData.edited
+                      ? { ...message, ...newData }
+                      : newData
+                    : message,
                 ),
+              ),
             };
           } else {
             return {

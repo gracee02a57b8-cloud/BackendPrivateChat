@@ -2,7 +2,7 @@
 // ConferenceOverlay — fullscreen + minimized group video call UI
 // ==========================================
 import { useRef, useEffect, useState } from "react";
-import { useConference, CONF_STATE } from "../contexts/ConferenceContext";
+import { useConference, CONF_STATE, MAX_PARTICIPANTS } from "../contexts/ConferenceContext";
 import {
   RiMicLine,
   RiMicOffLine,
@@ -10,10 +10,11 @@ import {
   RiCameraOffLine,
   RiFullscreenLine,
   RiArrowDownSLine,
-  RiLinkM,
+  RiUserAddLine,
 } from "react-icons/ri";
 import { HiPhoneXMark } from "react-icons/hi2";
 import toast from "react-hot-toast";
+import InviteConferenceModal from "./InviteConferenceModal";
 
 /** Mounts a MediaStream on a <video> element */
 function VideoTile({ stream, muted = false, label }) {
@@ -21,6 +22,7 @@ function VideoTile({ stream, muted = false, label }) {
   useEffect(() => {
     if (ref.current && stream) {
       ref.current.srcObject = stream;
+      ref.current.play().catch(() => {});
     }
   }, [stream]);
 
@@ -62,17 +64,11 @@ function ConferenceOverlay() {
     toggleVideo,
     toggleMinimize,
     getInviteLink,
+    inviteUser,
     CONF_STATE: CS,
   } = useConference();
 
-  const handleCopyLink = () => {
-    const link = getInviteLink();
-    if (link) {
-      navigator.clipboard.writeText(link).then(() => {
-        toast.success("Ссылка скопирована!");
-      });
-    }
-  };
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   // Dragging state for minimized widget
   const [dragPos, setDragPos] = useState({ x: 16, y: 80 });
@@ -202,23 +198,23 @@ function ConferenceOverlay() {
 
   return (
     <div className="fixed inset-0 z-[9999] flex flex-col bg-gray-900 text-white">
+      {/* Invite modal */}
+      {showInviteModal && (
+        <InviteConferenceModal onClose={() => setShowInviteModal(false)} />
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3">
         <h2 className="text-lg font-semibold">
-          Конференция • {participants.length + 1} участник
-          {participants.length === 0
-            ? ""
-            : participants.length < 4
-              ? "а"
-              : "ов"}
+          Конференция • {participants.length + 1}/{MAX_PARTICIPANTS}
         </h2>
         <div className="flex items-center gap-2">
           <button
-            onClick={handleCopyLink}
-            className="flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-1.5 text-sm transition hover:bg-white/20 active:scale-95"
-            title="Копировать ссылку-приглашение"
+            onClick={() => setShowInviteModal(true)}
+            className="flex items-center gap-1.5 rounded-lg bg-blue-500/70 px-3 py-1.5 text-sm font-medium transition hover:bg-blue-600 active:scale-95"
+            title="Пригласить участников"
           >
-            <RiLinkM className="text-base" />
+            <RiUserAddLine className="text-base" />
             Пригласить
           </button>
           {confState === CS.JOINING && (
@@ -293,7 +289,10 @@ function ConferenceOverlay() {
 function MiniVideo({ stream, muted }) {
   const ref = useRef(null);
   useEffect(() => {
-    if (ref.current && stream) ref.current.srcObject = stream;
+    if (ref.current && stream) {
+      ref.current.srcObject = stream;
+      ref.current.play().catch(() => {});
+    }
   }, [stream]);
   return (
     <video

@@ -389,7 +389,7 @@ function MessageInputBar({ replyTo, setReplyTo }) {
           </button>
         </div>
       )}
-      <form className="mx-auto grid max-w-3xl grid-cols-[auto_auto_1fr_auto_auto_auto] items-center gap-1 overflow-hidden rounded-full border border-transparent bg-bgPrimary shadow-lg dark:border-LightShade/20 dark:bg-LightShade/20">
+      <form onSubmit={handleSendNewMessage} className="mx-auto grid max-w-3xl grid-cols-[auto_auto_1fr_auto_auto_auto] items-center gap-1 overflow-hidden rounded-full border border-transparent bg-bgPrimary shadow-lg dark:border-LightShade/20 dark:bg-LightShade/20">
         {/* File attachment */}
         <label
           htmlFor="fileAttach"

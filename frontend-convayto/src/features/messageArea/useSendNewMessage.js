@@ -29,9 +29,12 @@ export function useSendNewMessage() {
 
       // Optimistically update to the new value
       queryClient.setQueryData(["friend", friendUserId], (oldMessages) => {
+        if (!oldMessages?.pages) {
+          return { pages: [[newMessage]], pageParams: [0] };
+        }
         return {
           ...oldMessages,
-          pages: oldMessages?.pages
+          pages: oldMessages.pages
             .slice()
             .map((page, index) =>
               index === 0

@@ -4,6 +4,7 @@ import MainContainer from "./MainContainer";
 import { useUser } from "../features/authentication/useUser";
 import Loader from "./Loader";
 import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 function AccountConfirmation() {
   const navigate = useNavigate();
@@ -13,6 +14,13 @@ function AccountConfirmation() {
   const params = new URLSearchParams(hash.slice(1));
   const errorDescription = params.get("error_description");
 
+  // Navigate in useEffect to avoid side-effect during render
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      navigate("/chat", { replace: true });
+    }
+  }, [isLoading, isAuthenticated, navigate]);
+
   if (isLoading)
     return (
       <MainContainer>
@@ -20,8 +28,8 @@ function AccountConfirmation() {
       </MainContainer>
     );
 
-  // if authenticated, navigate to the home page
-  if (isAuthenticated) navigate("/chat", { replace: true });
+  // if authenticated, useEffect will redirect
+  if (isAuthenticated) return null;
 
   // if not authenticated, show the error message
   if (!isAuthenticated)

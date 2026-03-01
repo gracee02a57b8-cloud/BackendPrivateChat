@@ -32,13 +32,35 @@ public class ConferenceService {
     private final Map<String, String> userConference = new ConcurrentHashMap<>();
 
     /**
-     * Create a new conference.
+     * Create a new conference, or join the existing one for the same roomId.
      *
      * @param creator the username of the creator
-     * @return conference ID
+     * @return conference ID (may be existing)
      */
     public String createConference(String creator, String roomId) {
-        // If user is already in a conference, leave it first
+        // If there is already an active conference for this room — join it instead
+        if (roomId != null) {
+            for (ConferenceRoom existing : conferences.values()) {
+                if (roomId.equals(existing.getRoomId())) {
+                    if (existing.getParticipants().contains(creator)) {
+                        // Already in this conference
+                        return existing.getId();
+                    }
+                    if (existing.getParticipants().size() >= MAX_PARTICIPANTS) {
+                        break; // full — fall through to create new
+                    }
+                    // Leave any OTHER conference first, then join this one
+                    leaveConference(creator);
+                    existing.addParticipant(creator);
+                    userConference.put(creator, existing.getId());
+                    log.info("[Conference] '{}' joined existing conference '{}' for room '{}'. Participants: {}",
+                            creator, existing.getId(), roomId, existing.getParticipants().size());
+                    return existing.getId();
+                }
+            }
+        }
+
+        // No active conference for this room — create a new one
         leaveConference(creator);
 
         String confId = UUID.randomUUID().toString();
@@ -49,6 +71,22 @@ public class ConferenceService {
 
         log.info("[Conference] '{}' created conference '{}'. Participants: 1", creator, confId);
         return confId;
+    }
+
+    /**
+     * Find an active conference for a given room.
+     *
+     * @param roomId the chat room ID
+     * @return conference info map, or null if none active
+     */
+    public Map<String, Object> getConferenceByRoomId(String roomId) {
+        if (roomId == null) return null;
+        for (ConferenceRoom room : conferences.values()) {
+            if (roomId.equals(room.getRoomId())) {
+                return getConferenceInfo(room.getId());
+            }
+        }
+        return null;
     }
 
     /**

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSignin } from "./useSignin";
 import Loader from "../../components/Loader";
 import { useUser } from "./useUser";
@@ -14,10 +14,12 @@ import LogoLarge from "../../components/LogoLarge";
 import { APP_NAME } from "../../config";
 
 function Signin() {
-  document.title = APP_NAME + " — Вход";
+  useEffect(() => { document.title = APP_NAME + " — Вход"; }, []);
   const { signin, isPending } = useSignin();
   const navigate = useNavigate();
   const { isAuthenticated } = useUser();
+  const [rememberMe, setRememberMe] = useState(false);
+  const autoLoginAttempted = useRef(false);
 
   const {
     control,
@@ -37,18 +39,56 @@ function Signin() {
     }
   }, [isAuthenticated, navigate]);
 
+  // Auto-login from saved credentials
+  useEffect(() => {
+    if (autoLoginAttempted.current) return;
+    if (isAuthenticated) return;
+    const saved = localStorage.getItem("rememberMe");
+    const savedUser = localStorage.getItem("savedUsername");
+    const savedPass = localStorage.getItem("savedPassword");
+    if (saved === "true" && savedUser && savedPass) {
+      autoLoginAttempted.current = true;
+      try {
+        const password = atob(savedPass);
+        signin(
+          { username: savedUser, password, rememberMe: true },
+          {
+            onSuccess: () => {
+              const pendingConf = sessionStorage.getItem("pendingConference");
+              if (pendingConf) {
+                sessionStorage.removeItem("pendingConference");
+                navigate(`/conference/${pendingConf}`, { replace: true });
+              } else {
+                navigate("/chat", { replace: true });
+              }
+            },
+          },
+        );
+      } catch {
+        // Corrupted saved data — clear it
+        localStorage.removeItem("rememberMe");
+        localStorage.removeItem("savedUsername");
+        localStorage.removeItem("savedPassword");
+      }
+    }
+  }, [isAuthenticated, signin, navigate]);
+
   const onSubmit = (data) => {
     const { username, password } = data;
 
     if (!username || !password) return;
 
     signin(
-      { username, password },
+      { username, password, rememberMe },
       {
         onSuccess: () => {
-          navigate("/chat", {
-            replace: true,
-          });
+          const pendingConf = sessionStorage.getItem("pendingConference");
+          if (pendingConf) {
+            sessionStorage.removeItem("pendingConference");
+            navigate(`/conference/${pendingConf}`, { replace: true });
+          } else {
+            navigate("/chat", { replace: true });
+          }
         },
       },
     );
@@ -99,6 +139,17 @@ function Signin() {
             />
           )}
         />
+
+        <label className="flex items-center gap-2 mb-4 cursor-pointer select-none text-sm text-LightGray dark:text-LightGray-dark">
+          <input
+            type="checkbox"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+            disabled={isPending}
+            className="h-4 w-4 rounded border-LightShade/50 text-textAccentDim focus:ring-textAccentDim dark:border-LightShade dark:text-textAccentDim-dark"
+          />
+          Запомнить меня
+        </label>
 
         <SubmitBtn disabled={isPending}>
           {isPending ? (

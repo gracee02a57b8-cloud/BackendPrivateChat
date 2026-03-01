@@ -55,6 +55,8 @@ export function useMessages() {
     initialPageParam: 0,
     // it should depend and wait untill the conversation_id and friendUserId are available
     enabled: !!friendUserId,
+    staleTime: 5 * 60 * 1000, // 5 min — WS handles realtime updates
+    refetchOnWindowFocus: false,
   });
 
   // Realtime subscription

@@ -62,10 +62,15 @@ public class AuthController {
                 LocalDateTime.now().format(FORMATTER)
         );
         user.setTag(tag);
+        // Save display name (fullname) as firstName if provided
+        if (userDto.getFullname() != null && !userDto.getFullname().isBlank()) {
+            user.setFirstName(userDto.getFullname().trim());
+        }
         userRepository.save(user);
 
         String token = jwtService.generateToken(username, user.getRole());
-        return ResponseEntity.ok(new AuthResponse(token, username, user.getRole(), user.getAvatarUrl(), tag));
+        String displayName = user.getFirstName() != null ? user.getFirstName() : username;
+        return ResponseEntity.ok(new AuthResponse(token, username, user.getRole(), user.getAvatarUrl(), tag, displayName));
     }
 
     @PostMapping("/login")
@@ -101,6 +106,7 @@ public class AuthController {
         }
 
         String token = jwtService.generateToken(user.getUsername(), user.getRole());
-        return ResponseEntity.ok(new AuthResponse(token, user.getUsername(), user.getRole(), user.getAvatarUrl(), user.getTag()));
+        String displayName = user.getFirstName() != null ? user.getFirstName() : user.getUsername();
+        return ResponseEntity.ok(new AuthResponse(token, user.getUsername(), user.getRole(), user.getAvatarUrl(), user.getTag(), displayName));
     }
 }

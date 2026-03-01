@@ -69,6 +69,11 @@ function Messages({
   const { convInfo } = useConvInfo();
   const markedRef = useRef(new Set());
 
+  // Reset read-receipt tracking when conversation changes
+  useEffect(() => {
+    markedRef.current = new Set();
+  }, [convInfo?.id]);
+
   useEffect(() => {
     const roomId = convInfo?.id;
     const isGroup = convInfo?.isGroup;
@@ -104,11 +109,11 @@ function Messages({
         tabIndex={-1}
         className="mx-auto flex w-full max-w-3xl flex-col px-4"
       >
-        {pages && !pages[0] && (
+        {pages && (!pages[0] || pages[0].length === 0) && (
           <ShortTextMessage>Нет сообщений</ShortTextMessage>
         )}
 
-        {pages && pages[0] && (
+        {pages && pages[0] && pages[0].length > 0 && (
           <>
             {hasNextPage && (
               <span ref={topRef}>{isFetchingNextPage && <Loader />}</span>
