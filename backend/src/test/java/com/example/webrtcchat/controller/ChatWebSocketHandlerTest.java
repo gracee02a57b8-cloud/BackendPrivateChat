@@ -547,7 +547,7 @@ class ChatWebSocketHandlerTest {
     // === E2E Field Propagation via WebSocket ===
 
     @Test
-    @DisplayName("handleTextMessage - E2E encrypted message fields are saved and broadcast")
+    @DisplayName("handleTextMessage - E2E encryption fields are stripped (encryption disabled)")
     void handleMessage_e2eFieldsBroadcast() throws Exception {
         setupConnectedSession("session1", "alice");
 
@@ -570,20 +570,20 @@ class ChatWebSocketHandlerTest {
 
         handler.handleTextMessage(session, new TextMessage(objectMapper.writeValueAsString(encrypted)));
 
-        // Verify E2E fields are passed to chatService.send
+        // Verify E2E fields are stripped (encryption is disabled)
         ArgumentCaptor<MessageDto> captor = ArgumentCaptor.forClass(MessageDto.class);
         verify(chatService).send(eq("general"), captor.capture());
         MessageDto saved = captor.getValue();
 
-        assertTrue(saved.isEncrypted());
-        assertEquals("cipher-base64", saved.getEncryptedContent());
-        assertEquals("iv-base64", saved.getIv());
-        assertEquals("ratchet-key-base64", saved.getRatchetKey());
-        assertEquals(1, saved.getMessageNumber());
-        assertEquals(0, saved.getPreviousChainLength());
-        assertEquals("eph-key-base64", saved.getEphemeralKey());
-        assertEquals("sender-ik-base64", saved.getSenderIdentityKey());
-        assertEquals(5, saved.getOneTimeKeyId());
+        assertFalse(saved.isEncrypted());
+        assertNull(saved.getEncryptedContent());
+        assertNull(saved.getIv());
+        assertNull(saved.getRatchetKey());
+        assertNull(saved.getMessageNumber());
+        assertNull(saved.getPreviousChainLength());
+        assertNull(saved.getEphemeralKey());
+        assertNull(saved.getSenderIdentityKey());
+        assertNull(saved.getOneTimeKeyId());
     }
 
     // === Disconnect ===
@@ -1043,38 +1043,31 @@ class ChatWebSocketHandlerTest {
     // === GROUP_KEY RELAY TESTS ===
 
     @Test
-    @DisplayName("GROUP_KEY - relays encrypted group key to target user")
+    @DisplayName("GROUP_KEY - falls through to CHAT processing (E2E disabled, no dedicated handler)")
     void groupKey_relaysToTarget() throws Exception {
         WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
         WebSocketSession bobSession = connectUser("s2", "bob", "token-b");
 
-        // Alice sends GROUP_KEY to Bob (distributing group encryption key)
+        // Alice sends GROUP_KEY — but no dedicated handler exists.
+        // It falls through to regular CHAT processing, roomId is required.
         MessageDto groupKeyMsg = new MessageDto();
         groupKeyMsg.setType(MessageType.GROUP_KEY);
+        groupKeyMsg.setRoomId("general");
+        groupKeyMsg.setContent("key-payload");
         Map<String, String> extra = new HashMap<>();
         extra.put("target", "bob");
-        extra.put("roomId", "group-room-1");
+        extra.put("roomId", "general");
         groupKeyMsg.setExtra(extra);
-        // E2E encrypted payload (group key encrypted with pairwise Double Ratchet)
-        groupKeyMsg.setEncryptedContent("base64-encrypted-group-key");
-        groupKeyMsg.setIv("base64-iv");
-        groupKeyMsg.setRatchetKey("base64-rk");
+
+        RoomDto room = createRoom("general", RoomType.GENERAL);
+        when(roomService.getRoomById("general")).thenReturn(room);
 
         handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(groupKeyMsg)));
 
-        // Bob should receive the GROUP_KEY
-        verify(bobSession).sendMessage(argThat(msg -> {
-            String payload = ((TextMessage) msg).getPayload();
-            return payload.contains("\"type\":\"GROUP_KEY\"")
-                    && payload.contains("\"sender\":\"alice\"")
-                    && payload.contains("\"roomId\":\"group-room-1\"");
-        }));
-
-        // Alice should NOT receive the GROUP_KEY
-        verify(aliceSession, never()).sendMessage(argThat(msg -> {
-            String payload = ((TextMessage) msg).getPayload();
-            return payload.contains("\"type\":\"GROUP_KEY\"");
-        }));
+        // GROUP_KEY becomes a regular CHAT message (type is overwritten)
+        ArgumentCaptor<MessageDto> captor = ArgumentCaptor.forClass(MessageDto.class);
+        verify(chatService).send(eq("general"), captor.capture());
+        assertEquals(MessageType.CHAT, captor.getValue().getType());
     }
 
     @Test
@@ -1095,16 +1088,19 @@ class ChatWebSocketHandlerTest {
     }
 
     @Test
-    @DisplayName("GROUP_KEY - preserves E2E encryption fields during relay")
+    @DisplayName("GROUP_KEY - E2E fields are stripped during CHAT processing (encryption disabled)")
     void groupKey_preservesE2eFields() throws Exception {
         WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
         WebSocketSession bobSession = connectUser("s2", "bob", "token-b");
 
+        // GROUP_KEY with E2E fields falls through to CHAT processing
         MessageDto groupKeyMsg = new MessageDto();
         groupKeyMsg.setType(MessageType.GROUP_KEY);
+        groupKeyMsg.setRoomId("general");
+        groupKeyMsg.setContent("group-key-payload");
         Map<String, String> extra = new HashMap<>();
         extra.put("target", "bob");
-        extra.put("roomId", "group-room-3");
+        extra.put("roomId", "general");
         groupKeyMsg.setExtra(extra);
         groupKeyMsg.setEncryptedContent("enc-payload");
         groupKeyMsg.setIv("iv-data");
@@ -1114,14 +1110,18 @@ class ChatWebSocketHandlerTest {
         groupKeyMsg.setEphemeralKey("ek-data");
         groupKeyMsg.setSenderIdentityKey("sik-data");
 
+        RoomDto room = createRoom("general", RoomType.GENERAL);
+        when(roomService.getRoomById("general")).thenReturn(room);
+
         handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(groupKeyMsg)));
 
-        verify(bobSession).sendMessage(argThat(msg -> {
-            String payload = ((TextMessage) msg).getPayload();
-            return payload.contains("\"encryptedContent\":\"enc-payload\"")
-                    && payload.contains("\"iv\":\"iv-data\"")
-                    && payload.contains("\"ratchetKey\":\"rk-data\"");
-        }));
+        // Verify E2E fields are stripped
+        ArgumentCaptor<MessageDto> captor = ArgumentCaptor.forClass(MessageDto.class);
+        verify(chatService).send(eq("general"), captor.capture());
+        MessageDto saved = captor.getValue();
+        assertNull(saved.getEncryptedContent());
+        assertNull(saved.getIv());
+        assertNull(saved.getRatchetKey());
     }
 
     @Test
@@ -1193,11 +1193,11 @@ class ChatWebSocketHandlerTest {
 
         handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(offer)));
 
-        // Push should be sent for the call
+        // Push should be sent for the video call
         verify(webPushService).sendPushToUserAsync(eq("bob"),
-                eq("📞 Входящий звонок"),
+                eq("📹 Видеозвонок"),
                 eq("alice звонит вам"),
-                eq("call"), isNull());
+                eq("video-call"), isNull());
     }
 
     @Test

@@ -16,7 +16,8 @@ export function useMessages() {
 
   const queryClient = useQueryClient();
 
-  // Clear the cache when the conversation changes
+  // Clear older pages when the user switches to a different chat.
+  // Only friendUserId matters here — it identifies the chat.
   useEffect(() => {
     queryClient.setQueryData(["friend", friendUserId], (prev) => {
       if (!prev || !prev.pages[1]?.length) return;
@@ -26,7 +27,7 @@ export function useMessages() {
         pageParams: prev.pageParams.slice(0, 1),
       };
     });
-  }, [friendUserId, queryClient, conversation_id]);
+  }, [friendUserId, queryClient]);
 
   const {
     data: { pages } = {},
