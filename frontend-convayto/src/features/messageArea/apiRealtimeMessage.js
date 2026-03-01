@@ -27,6 +27,9 @@ export function subscribeRealtimeMessage({ conversation_id, callback }) {
         duration: msg.duration,
         waveform: msg.waveform,
         thumbnailUrl: msg.thumbnailUrl,
+        replyToId: msg.replyToId,
+        replyToSender: msg.replyToSender,
+        replyToContent: msg.replyToContent,
       });
     }
 

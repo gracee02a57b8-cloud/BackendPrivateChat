@@ -113,6 +113,49 @@ class RoomControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    @Test
+    @DisplayName("POST /api/rooms/create - with memberUsernames adds members to room")
+    void createRoom_withMembers() throws Exception {
+        RoomDto room = createRoomDto("abc12345", "My Room", RoomType.ROOM, Set.of("alice"));
+        RoomDto roomWithMembers = createRoomDto("abc12345", "My Room", RoomType.ROOM, Set.of("alice", "bob", "charlie"));
+
+        when(roomService.createRoom(eq("My Room"), eq("alice"), any(), any())).thenReturn(room);
+        when(roomService.joinRoom(eq("abc12345"), anyString())).thenReturn(roomWithMembers);
+        when(roomService.getRoomById("abc12345")).thenReturn(roomWithMembers);
+
+        String body = objectMapper.writeValueAsString(Map.of(
+                "name", "My Room",
+                "memberUsernames", java.util.List.of("bob", "charlie")
+        ));
+
+        mockMvc.perform(post("/api/rooms/create")
+                        .principal(() -> "alice")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("abc12345"))
+                .andExpect(jsonPath("$.members").isArray());
+
+        verify(roomService).joinRoom("abc12345", "bob");
+        verify(roomService).joinRoom("abc12345", "charlie");
+    }
+
+    @Test
+    @DisplayName("POST /api/rooms/create - without memberUsernames still works")
+    void createRoom_withoutMembers() throws Exception {
+        RoomDto room = createRoomDto("abc12345", "Solo Room", RoomType.ROOM, Set.of("alice"));
+        when(roomService.createRoom(eq("Solo Room"), eq("alice"), any(), any())).thenReturn(room);
+
+        mockMvc.perform(post("/api/rooms/create")
+                        .principal(() -> "alice")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("name", "Solo Room"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("abc12345"));
+
+        verify(roomService, never()).joinRoom(anyString(), anyString());
+    }
+
     // === getRoom ===
 
     @Test

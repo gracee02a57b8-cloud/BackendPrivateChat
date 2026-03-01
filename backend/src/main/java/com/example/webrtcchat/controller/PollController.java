@@ -57,6 +57,7 @@ public class PollController {
         extra.put("anonymous", String.valueOf(anonymous));
         extra.put("optionCount", String.valueOf(options.size()));
         msg.setExtra(extra);
+        msg.setPollData(pollData);
 
         wsHandler.broadcastMessageToRoom(roomId, msg);
 

@@ -326,6 +326,33 @@ describe("apiRealtimeMessage", () => {
     );
   });
 
+  it("processes CHAT message with reply fields", () => {
+    const cb = vi.fn();
+    subscribeRealtimeMessage({ conversation_id: "room1", callback: cb });
+
+    wsCallback({
+      type: "CHAT",
+      roomId: "room1",
+      sender: "alice",
+      content: "Reply text",
+      id: "m-reply",
+      timestamp: "2026-03-01T12:00:00Z",
+      replyToId: "orig-123",
+      replyToSender: "bob",
+      replyToContent: "Original message",
+    });
+
+    expect(cb).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "m-reply",
+        content: "Reply text",
+        replyToId: "orig-123",
+        replyToSender: "bob",
+        replyToContent: "Original message",
+      }),
+    );
+  });
+
   it("handles EDIT message with edited flag", () => {
     const cb = vi.fn();
     subscribeRealtimeMessage({ conversation_id: "room1", callback: cb });
@@ -809,6 +836,53 @@ describe("apiMessage functions", () => {
       "/api/rooms/room1/messages",
       expect.objectContaining({ method: "POST" }),
     );
+  });
+
+  it("sendMessage includes reply fields in WS message and return value", async () => {
+    vi.mocked(sendWsMessage).mockReturnValue(true);
+
+    const result = await sendMessage({
+      id: "m-reply",
+      conversation_id: "room1",
+      content: "My reply",
+      replyToId: "orig-id",
+      replyToSender: "bob",
+      replyToContent: "Original text",
+    });
+
+    expect(sendWsMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "CHAT",
+        roomId: "room1",
+        content: "My reply",
+        id: "m-reply",
+        replyToId: "orig-id",
+        replyToSender: "bob",
+        replyToContent: "Original text",
+      }),
+    );
+
+    expect(result).toMatchObject({
+      id: "m-reply",
+      content: "My reply",
+      replyToId: "orig-id",
+      replyToSender: "bob",
+      replyToContent: "Original text",
+    });
+  });
+
+  it("sendMessage omits reply fields when not replying", async () => {
+    vi.mocked(sendWsMessage).mockReturnValue(true);
+
+    const result = await sendMessage({
+      id: "m-normal",
+      conversation_id: "room1",
+      content: "Just a message",
+    });
+
+    const wsArg = sendWsMessage.mock.calls[0][0];
+    expect(wsArg).not.toHaveProperty("replyToId");
+    expect(result).not.toHaveProperty("replyToId");
   });
 
   it("openConversation creates private room", async () => {

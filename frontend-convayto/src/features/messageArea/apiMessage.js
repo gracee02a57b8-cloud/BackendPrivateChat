@@ -115,6 +115,9 @@ export async function sendMessage({
   conversation_id,
   content,
   friendUserId,
+  replyToId,
+  replyToSender,
+  replyToContent,
 }) {
   let roomId = conversation_id;
 
@@ -127,6 +130,7 @@ export async function sendMessage({
     roomId: roomId,
     content: content,
     id: id,
+    ...(replyToId ? { replyToId, replyToSender, replyToContent } : {}),
   };
 
   await sendViaWsOrRest(wsMessage);
@@ -138,6 +142,7 @@ export async function sendMessage({
     sender_id: localStorage.getItem("username"),
     created_at: new Date().toISOString(),
     type: "CHAT",
+    ...(replyToId ? { replyToId, replyToSender, replyToContent } : {}),
   };
 }
 

@@ -80,17 +80,30 @@ public class RoomController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<RoomDto> createRoom(@RequestBody Map<String, String> body, Principal principal) {
-        String name = body.get("name");
+    public ResponseEntity<RoomDto> createRoom(@RequestBody Map<String, Object> body, Principal principal) {
+        String name = (String) body.get("name");
         if (name == null || name.isBlank()) {
             return ResponseEntity.badRequest().build();
         }
         if (name.trim().length() > 50) {
             return ResponseEntity.badRequest().build();
         }
-        String description = body.get("description");
-        String avatarUrl = body.get("avatarUrl");
+        String description = (String) body.get("description");
+        String avatarUrl = (String) body.get("avatarUrl");
         RoomDto room = roomService.createRoom(name.trim(), principal.getName(), description, avatarUrl);
+
+        // Add selected members to the room
+        Object memberUsernamesObj = body.get("memberUsernames");
+        if (memberUsernamesObj instanceof java.util.List<?> memberList) {
+            for (Object member : memberList) {
+                if (member instanceof String memberUsername && !memberUsername.isBlank()) {
+                    roomService.joinRoom(room.getId(), memberUsername);
+                }
+            }
+            // Refresh room to include all members
+            room = roomService.getRoomById(room.getId());
+        }
+
         return ResponseEntity.ok(room);
     }
 
