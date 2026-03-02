@@ -280,6 +280,11 @@ public class RoomController {
     public ResponseEntity<?> muteRoom(@PathVariable String roomId,
                                       @RequestBody(required = false) Map<String, String> body,
                                       Principal principal) {
+        RoomDto room = roomService.getRoomById(roomId);
+        if (room == null) return ResponseEntity.notFound().build();
+        if (room.getType() != RoomType.GENERAL && !room.getMembers().contains(principal.getName())) {
+            return ResponseEntity.status(403).build();
+        }
         String until = body != null ? body.get("mutedUntil") : null;
         roomMuteService.muteRoom(principal.getName(), roomId, until);
         return ResponseEntity.ok(Map.of("status", "muted", "roomId", roomId));
@@ -287,12 +292,22 @@ public class RoomController {
 
     @DeleteMapping("/{roomId}/mute")
     public ResponseEntity<?> unmuteRoom(@PathVariable String roomId, Principal principal) {
+        RoomDto room = roomService.getRoomById(roomId);
+        if (room == null) return ResponseEntity.notFound().build();
+        if (room.getType() != RoomType.GENERAL && !room.getMembers().contains(principal.getName())) {
+            return ResponseEntity.status(403).build();
+        }
         roomMuteService.unmuteRoom(principal.getName(), roomId);
         return ResponseEntity.ok(Map.of("status", "unmuted", "roomId", roomId));
     }
 
     @GetMapping("/{roomId}/mute")
     public ResponseEntity<?> getMuteStatus(@PathVariable String roomId, Principal principal) {
+        RoomDto room = roomService.getRoomById(roomId);
+        if (room == null) return ResponseEntity.notFound().build();
+        if (room.getType() != RoomType.GENERAL && !room.getMembers().contains(principal.getName())) {
+            return ResponseEntity.status(403).build();
+        }
         boolean muted = roomMuteService.isRoomMuted(principal.getName(), roomId);
         return ResponseEntity.ok(Map.of("muted", muted));
     }
@@ -349,6 +364,11 @@ public class RoomController {
 
     @PostMapping("/{roomId}/messages/{messageId}/read")
     public ResponseEntity<?> markMessageRead(@PathVariable String roomId, @PathVariable String messageId, Principal principal) {
+        RoomDto room = roomService.getRoomById(roomId);
+        if (room == null) return ResponseEntity.notFound().build();
+        if (room.getType() != RoomType.GENERAL && !room.getMembers().contains(principal.getName())) {
+            return ResponseEntity.status(403).build();
+        }
         readReceiptService.recordRead(messageId, roomId, principal.getName());
         return ResponseEntity.ok(Map.of("status", "ok"));
     }

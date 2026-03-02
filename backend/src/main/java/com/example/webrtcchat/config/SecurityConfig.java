@@ -42,14 +42,20 @@ public class SecurityConfig {
     private final JwtService jwtService;
     private final List<String> corsOrigins;
 
-    // Simple in-memory rate limiter for auth endpoints
+    // Token-bucket rate limiter for auth endpoints (P1-6: fixed race conditions + bounded cleanup)
     private final Map<String, long[]> rateLimitMap = new ConcurrentHashMap<>();
-    private static final int MAX_AUTH_REQUESTS = 10; // per window
-    private static final long RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
+    private final int maxAuthRequests;
+    private final long rateLimitWindowMs;
+    private static final int MAX_RATE_LIMIT_ENTRIES = 10_000; // hard cap to prevent OOM
+    private volatile long lastCleanup = System.currentTimeMillis();
 
     public SecurityConfig(JwtService jwtService,
-                          @Value("${cors.allowed-origins:http://localhost:*}") String origins) {
+                          @Value("${cors.allowed-origins:http://localhost:*}") String origins,
+                          @Value("${rate-limit.max-requests:10}") int maxAuthRequests,
+                          @Value("${rate-limit.window-ms:60000}") long rateLimitWindowMs) {
         this.jwtService = jwtService;
+        this.maxAuthRequests = maxAuthRequests;
+        this.rateLimitWindowMs = rateLimitWindowMs;
         this.corsOrigins = Arrays.stream(origins.split(","))
                 .map(String::trim)
                 .filter(o -> !o.isEmpty())
@@ -128,19 +134,28 @@ public class SecurityConfig {
 
     private boolean isAllowed(String ip) {
         long now = System.currentTimeMillis();
-        rateLimitMap.compute(ip, (key, window) -> {
-            if (window == null || now - window[0] > RATE_LIMIT_WINDOW_MS) {
+
+        // Periodic cleanup — remove expired windows (every 60s, not on every call)
+        if (now - lastCleanup > rateLimitWindowMs) {
+            lastCleanup = now;
+            rateLimitMap.entrySet().removeIf(e -> now - e.getValue()[0] > rateLimitWindowMs);
+        }
+
+        // Hard cap: if map is too large (DDoS with rotating IPs), reject new IPs
+        if (rateLimitMap.size() >= MAX_RATE_LIMIT_ENTRIES && !rateLimitMap.containsKey(ip)) {
+            return false;
+        }
+
+        // Atomic compute — returns the updated window directly (no separate get())
+        long[] window = rateLimitMap.compute(ip, (key, val) -> {
+            if (val == null || now - val[0] > rateLimitWindowMs) {
                 return new long[]{now, 1};
             }
-            window[1]++;
-            return window;
+            val[1]++;
+            return val;
         });
-        long[] window = rateLimitMap.get(ip);
-        // Periodic cleanup (every 100 checks)
-        if (rateLimitMap.size() > 1000) {
-            rateLimitMap.entrySet().removeIf(e -> now - e.getValue()[0] > RATE_LIMIT_WINDOW_MS);
-        }
-        return window != null && window[1] <= MAX_AUTH_REQUESTS;
+
+        return window[1] <= maxAuthRequests;
     }
 
     private String getClientIp(HttpServletRequest request) {

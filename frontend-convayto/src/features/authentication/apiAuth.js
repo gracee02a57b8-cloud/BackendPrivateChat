@@ -49,6 +49,7 @@ export async function signin({ username, password, rememberMe = false }) {
 
   // Persist auth data
   localStorage.setItem("token", loginData.token);
+  if (loginData.refreshToken) localStorage.setItem("refreshToken", loginData.refreshToken);
   localStorage.setItem("username", loginData.username);
   localStorage.setItem("role", loginData.role || "USER");
   localStorage.setItem("avatarUrl", loginData.avatarUrl || "");
@@ -95,6 +96,7 @@ export async function signup({ username, password, tag, fullname }) {
 
   // Auto-login after registration
   localStorage.setItem("token", data.token);
+  if (data.refreshToken) localStorage.setItem("refreshToken", data.refreshToken);
   localStorage.setItem("username", data.username);
   localStorage.setItem("role", data.role || "USER");
   localStorage.setItem("avatarUrl", data.avatarUrl || "");
@@ -114,7 +116,22 @@ export async function signup({ username, password, tag, fullname }) {
 export async function signout() {
   await unsubscribePush();
   disconnectWebSocket();
+
+  // Revoke refresh token on server
+  const refreshToken = localStorage.getItem("refreshToken");
+  if (refreshToken) {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json",
+                   "Authorization": `Bearer ${localStorage.getItem("token")}` },
+        body: JSON.stringify({ refreshToken }),
+      });
+    } catch { /* ignore — best effort */ }
+  }
+
   localStorage.removeItem("token");
+  localStorage.removeItem("refreshToken");
   localStorage.removeItem("username");
   localStorage.removeItem("role");
   localStorage.removeItem("avatarUrl");
@@ -169,7 +186,23 @@ export async function getCurrentUser() {
 
     if (!res.ok) {
       if (res.status === 401) {
-        // Token expired — try silent re-login with saved credentials
+        // Token expired — try refresh first, then silent re-login
+        const refreshToken = localStorage.getItem("refreshToken");
+        if (refreshToken) {
+          try {
+            const refreshRes = await fetch("/api/auth/refresh", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ refreshToken }),
+            });
+            if (refreshRes.ok) {
+              const rd = await refreshRes.json();
+              localStorage.setItem("token", rd.token);
+              if (rd.refreshToken) localStorage.setItem("refreshToken", rd.refreshToken);
+              return await getCurrentUser(); // retry with new token
+            }
+          } catch { /* fall through */ }
+        }
         return await tryAutoLogin();
       }
       throw new Error(`Profile fetch failed: ${res.status}`);

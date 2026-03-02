@@ -273,7 +273,7 @@ class SecurityAuditTest {
         @DisplayName("SecurityConfig rejects standalone '*' CORS origin")
         @SuppressWarnings("unchecked")
         void rejects_wildcardStar() throws Exception {
-            SecurityConfig config = new SecurityConfig(null, "*");
+            SecurityConfig config = new SecurityConfig(null, "*", 10, 60000);
             List<String> origins = getCorsOrigins(config);
             assertFalse(origins.contains("*"),
                     "Standalone '*' must be filtered out of CORS origins");
@@ -285,7 +285,7 @@ class SecurityAuditTest {
         @SuppressWarnings("unchecked")
         void keeps_validOrigins() throws Exception {
             SecurityConfig config = new SecurityConfig(null,
-                    "https://barsikchat.duckdns.org,http://localhost:*");
+                    "https://barsikchat.duckdns.org,http://localhost:*", 10, 60000);
             List<String> origins = getCorsOrigins(config);
             assertEquals(2, origins.size());
             assertTrue(origins.contains("https://barsikchat.duckdns.org"));
@@ -296,7 +296,7 @@ class SecurityAuditTest {
         @SuppressWarnings("unchecked")
         void filters_wildcardAmongValid() throws Exception {
             SecurityConfig config = new SecurityConfig(null,
-                    "https://barsikchat.duckdns.org,*");
+                    "https://barsikchat.duckdns.org,*", 10, 60000);
             List<String> origins = getCorsOrigins(config);
             assertEquals(1, origins.size());
             assertEquals("https://barsikchat.duckdns.org", origins.get(0));

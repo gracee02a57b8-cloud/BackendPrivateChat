@@ -16,6 +16,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.security.Principal;
 import java.util.List;
 import java.util.Optional;
 
@@ -46,11 +47,9 @@ class ContactBlockControllerTest {
     @MockBean
     private ChatService chatService;
 
-    private static final String AUTH = "Bearer valid-jwt";
-
-    private void mockAuth(String username) {
-        when(jwtService.isTokenValid("valid-jwt")).thenReturn(true);
-        when(jwtService.extractUsername("valid-jwt")).thenReturn(username);
+    // P1-9: controller now uses Principal, so we use .principal() instead of @RequestHeader
+    private static Principal principal(String name) {
+        return () -> name;
     }
 
     // ════════════════════════════════════════════
@@ -64,11 +63,10 @@ class ContactBlockControllerTest {
         @Test
         @DisplayName("success — adds contact and returns 'added'")
         void addContact_success() throws Exception {
-            mockAuth("alice");
             when(userRepository.findByUsername("bob")).thenReturn(Optional.of(new UserEntity("bob", "pwd", "now")));
             when(contactRepository.existsByOwnerAndContact("alice", "bob")).thenReturn(false);
 
-            mockMvc.perform(post("/api/contacts/bob").header("Authorization", AUTH))
+            mockMvc.perform(post("/api/contacts/bob").principal(principal("alice")))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.status").value("added"));
 
@@ -78,11 +76,10 @@ class ContactBlockControllerTest {
         @Test
         @DisplayName("duplicate — returns 'already_contact' without saving")
         void addContact_duplicate() throws Exception {
-            mockAuth("alice");
             when(userRepository.findByUsername("bob")).thenReturn(Optional.of(new UserEntity("bob", "pwd", "now")));
             when(contactRepository.existsByOwnerAndContact("alice", "bob")).thenReturn(true);
 
-            mockMvc.perform(post("/api/contacts/bob").header("Authorization", AUTH))
+            mockMvc.perform(post("/api/contacts/bob").principal(principal("alice")))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.status").value("already_contact"));
 
@@ -92,9 +89,7 @@ class ContactBlockControllerTest {
         @Test
         @DisplayName("self — returns 400")
         void addContact_self() throws Exception {
-            mockAuth("alice");
-
-            mockMvc.perform(post("/api/contacts/alice").header("Authorization", AUTH))
+            mockMvc.perform(post("/api/contacts/alice").principal(principal("alice")))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.error").value("Cannot add yourself"));
         }
@@ -102,22 +97,14 @@ class ContactBlockControllerTest {
         @Test
         @DisplayName("user not found — returns 404")
         void addContact_notFound() throws Exception {
-            mockAuth("alice");
             when(userRepository.findByUsername("ghost")).thenReturn(Optional.empty());
 
-            mockMvc.perform(post("/api/contacts/ghost").header("Authorization", AUTH))
+            mockMvc.perform(post("/api/contacts/ghost").principal(principal("alice")))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.error").value("User not found"));
         }
 
-        @Test
-        @DisplayName("no auth — returns 401")
-        void addContact_noAuth() throws Exception {
-            when(jwtService.isTokenValid(anyString())).thenReturn(false);
 
-            mockMvc.perform(post("/api/contacts/bob").header("Authorization", "Bearer bad"))
-                    .andExpect(status().isUnauthorized());
-        }
     }
 
     // ════════════════════════════════════════════
@@ -131,23 +118,14 @@ class ContactBlockControllerTest {
         @Test
         @DisplayName("success — removes and returns 'removed'")
         void removeContact_success() throws Exception {
-            mockAuth("alice");
-
-            mockMvc.perform(delete("/api/contacts/bob").header("Authorization", AUTH))
+            mockMvc.perform(delete("/api/contacts/bob").principal(principal("alice")))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.status").value("removed"));
 
             verify(contactRepository).deleteByOwnerAndContact("alice", "bob");
         }
 
-        @Test
-        @DisplayName("no auth — returns 401")
-        void removeContact_noAuth() throws Exception {
-            when(jwtService.isTokenValid(anyString())).thenReturn(false);
 
-            mockMvc.perform(delete("/api/contacts/bob").header("Authorization", "Bearer bad"))
-                    .andExpect(status().isUnauthorized());
-        }
     }
 
     // ════════════════════════════════════════════
@@ -161,7 +139,6 @@ class ContactBlockControllerTest {
         @Test
         @DisplayName("returns enriched contact list using batch load (audit 3.2)")
         void getContacts_success() throws Exception {
-            mockAuth("alice");
             ContactEntity c = new ContactEntity("alice", "bob", "2026-01-01 12:00:00");
             when(contactRepository.findByOwner("alice")).thenReturn(List.of(c));
 
@@ -174,7 +151,7 @@ class ContactBlockControllerTest {
             when(chatService.isUserOnline("bob")).thenReturn(true);
             when(chatService.getLastSeen("bob")).thenReturn("2026-01-01 12:00:00");
 
-            mockMvc.perform(get("/api/contacts").header("Authorization", AUTH))
+            mockMvc.perform(get("/api/contacts").principal(principal("alice")))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$[0].contact").value("bob"))
                     .andExpect(jsonPath("$[0].firstName").value("Bob"))
@@ -190,7 +167,6 @@ class ContactBlockControllerTest {
         @Test
         @DisplayName("multiple contacts — batch loads all in one query (audit 3.2)")
         void getContacts_batchLoadsMultiple() throws Exception {
-            mockAuth("alice");
             ContactEntity c1 = new ContactEntity("alice", "bob", "2026-01-01 12:00:00");
             ContactEntity c2 = new ContactEntity("alice", "charlie", "2026-01-01 13:00:00");
             when(contactRepository.findByOwner("alice")).thenReturn(List.of(c1, c2));
@@ -204,7 +180,7 @@ class ContactBlockControllerTest {
             when(chatService.isUserOnline(anyString())).thenReturn(false);
             when(chatService.getLastSeen(anyString())).thenReturn("2026-01-01 12:00:00");
 
-            mockMvc.perform(get("/api/contacts").header("Authorization", AUTH))
+            mockMvc.perform(get("/api/contacts").principal(principal("alice")))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$[0].contact").value("bob"))
                     .andExpect(jsonPath("$[0].firstName").value("Bob"))
@@ -219,10 +195,9 @@ class ContactBlockControllerTest {
         @Test
         @DisplayName("returns empty list when no contacts")
         void getContacts_empty() throws Exception {
-            mockAuth("alice");
             when(contactRepository.findByOwner("alice")).thenReturn(List.of());
 
-            mockMvc.perform(get("/api/contacts").header("Authorization", AUTH))
+            mockMvc.perform(get("/api/contacts").principal(principal("alice")))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$").isArray())
                     .andExpect(jsonPath("$").isEmpty());
@@ -243,7 +218,6 @@ class ContactBlockControllerTest {
         @Test
         @DisplayName("returns profile with isContact = true")
         void getProfile_isContact() throws Exception {
-            mockAuth("alice");
             UserEntity bob = new UserEntity("bob", "pwd", "now");
             bob.setFirstName("Bob");
             bob.setLastName("Smith");
@@ -253,7 +227,7 @@ class ContactBlockControllerTest {
             when(contactRepository.existsByOwnerAndContact("alice", "bob")).thenReturn(true);
             when(blockedUserRepository.existsByBlockerAndBlocked("alice", "bob")).thenReturn(false);
 
-            mockMvc.perform(get("/api/profile/bob").header("Authorization", AUTH))
+            mockMvc.perform(get("/api/profile/bob").principal(principal("alice")))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.username").value("bob"))
                     .andExpect(jsonPath("$.firstName").value("Bob"))
@@ -265,13 +239,12 @@ class ContactBlockControllerTest {
         @Test
         @DisplayName("returns profile with isContact = false")
         void getProfile_notContact() throws Exception {
-            mockAuth("alice");
             UserEntity bob = new UserEntity("bob", "pwd", "now");
             when(userRepository.findByUsername("bob")).thenReturn(Optional.of(bob));
             when(contactRepository.existsByOwnerAndContact("alice", "bob")).thenReturn(false);
             when(blockedUserRepository.existsByBlockerAndBlocked("alice", "bob")).thenReturn(false);
 
-            mockMvc.perform(get("/api/profile/bob").header("Authorization", AUTH))
+            mockMvc.perform(get("/api/profile/bob").principal(principal("alice")))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.isContact").value(false));
         }
@@ -279,10 +252,9 @@ class ContactBlockControllerTest {
         @Test
         @DisplayName("user not found — returns 404")
         void getProfile_notFound() throws Exception {
-            mockAuth("alice");
             when(userRepository.findByUsername("ghost")).thenReturn(Optional.empty());
 
-            mockMvc.perform(get("/api/profile/ghost").header("Authorization", AUTH))
+            mockMvc.perform(get("/api/profile/ghost").principal(principal("alice")))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.error").value("User not found"));
         }

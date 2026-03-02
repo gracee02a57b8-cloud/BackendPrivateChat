@@ -11,7 +11,8 @@ services:
     environment:
       SERVER_PORT: ${SERVER_PORT:-9001}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
-      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-900000}
+      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-604800000}
       MAX_FILE_SIZE: ${MAX_FILE_SIZE:-100MB}
       MAX_REQUEST_SIZE: ${MAX_REQUEST_SIZE:-100MB}
       UPLOAD_DIR: /app/uploads
@@ -23,7 +24,7 @@ services:
       DB_NAME: ${DB_NAME:-barsikdb}
       DB_USER: ${DB_USER:-barsik}
       DB_PASSWORD: ${DB_PASSWORD:-barsik}
-      DDL_AUTO: ${DDL_AUTO:-update}
+      DDL_AUTO: ${DDL_AUTO:-validate}
       HIKARI_MAX_POOL: ${HIKARI_MAX_POOL:-10}
       JAVA_OPTS: ${JAVA_OPTS:--Xmx512m -Xms256m}
       STUN_URL: ${STUN_URL:-stun:85.239.44.28:3478}

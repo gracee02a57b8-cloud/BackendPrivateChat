@@ -24,6 +24,7 @@ spring:
 jwt:
   secret: test-jwt-secret-key-for-unit-tests-min-32-chars!!
   expiration: 3600000
+  refresh-expiration: 604800000
 
 cors:
   allowed-origins: http://localhost:*

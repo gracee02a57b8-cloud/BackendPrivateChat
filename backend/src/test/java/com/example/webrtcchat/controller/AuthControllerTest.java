@@ -1,7 +1,9 @@
 package com.example.webrtcchat.controller;
 
 import com.example.webrtcchat.dto.AuthResponse;
+import com.example.webrtcchat.entity.RefreshTokenEntity;
 import com.example.webrtcchat.entity.UserEntity;
+import com.example.webrtcchat.repository.RefreshTokenRepository;
 import com.example.webrtcchat.repository.UserRepository;
 import com.example.webrtcchat.service.JwtService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -17,6 +19,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Map;
@@ -29,6 +32,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(AuthController.class)
 @AutoConfigureMockMvc(addFilters = false) // Disable security filters for unit testing controller logic
+@TestPropertySource(properties = {
+        "jwt.refresh-expiration=604800000"
+})
 class AuthControllerTest {
 
     @Autowired
@@ -43,6 +49,9 @@ class AuthControllerTest {
     @MockBean
     private PasswordEncoder passwordEncoder;
 
+    @MockBean
+    private RefreshTokenRepository refreshTokenRepository;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // === Register ===
@@ -55,6 +64,7 @@ class AuthControllerTest {
         when(passwordEncoder.encode("password123")).thenReturn("$2a$encoded");
         when(userRepository.save(any(UserEntity.class))).thenAnswer(inv -> inv.getArgument(0));
         when(jwtService.generateToken("newuser", "USER")).thenReturn("jwt-token-123");
+        when(refreshTokenRepository.save(any(RefreshTokenEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -65,10 +75,12 @@ class AuthControllerTest {
                         ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").value("jwt-token-123"))
+                .andExpect(jsonPath("$.refreshToken").exists())
                 .andExpect(jsonPath("$.username").value("newuser"))
                 .andExpect(jsonPath("$.role").value("USER"));
 
         verify(userRepository).save(any(UserEntity.class));
+        verify(refreshTokenRepository).save(any(RefreshTokenEntity.class));
     }
 
     @Test
@@ -138,6 +150,7 @@ class AuthControllerTest {
         when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("correctpass", "$2a$encoded")).thenReturn(true);
         when(jwtService.generateToken("alice", "USER")).thenReturn("jwt-token-alice");
+        when(refreshTokenRepository.save(any(RefreshTokenEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -147,6 +160,7 @@ class AuthControllerTest {
                         ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").value("jwt-token-alice"))
+                .andExpect(jsonPath("$.refreshToken").exists())
                 .andExpect(jsonPath("$.username").value("alice"))
                 .andExpect(jsonPath("$.role").value("USER"));
     }

@@ -7,13 +7,13 @@ import com.example.webrtcchat.repository.BlockedUserRepository;
 import com.example.webrtcchat.repository.ContactRepository;
 import com.example.webrtcchat.repository.UserRepository;
 import com.example.webrtcchat.service.ChatService;
-import com.example.webrtcchat.service.JwtService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -28,18 +28,15 @@ public class ContactBlockController {
     private final ContactRepository contactRepository;
     private final BlockedUserRepository blockedUserRepository;
     private final UserRepository userRepository;
-    private final JwtService jwtService;
     private final ChatService chatService;
 
     public ContactBlockController(ContactRepository contactRepository,
                                   BlockedUserRepository blockedUserRepository,
                                   UserRepository userRepository,
-                                  JwtService jwtService,
                                   ChatService chatService) {
         this.contactRepository = contactRepository;
         this.blockedUserRepository = blockedUserRepository;
         this.userRepository = userRepository;
-        this.jwtService = jwtService;
         this.chatService = chatService;
     }
 
@@ -48,9 +45,8 @@ public class ContactBlockController {
     // ════════════════════════════════════════════
 
     @GetMapping("/api/contacts")
-    public ResponseEntity<?> getContacts(@RequestHeader("Authorization") String authHeader) {
-        String username = extractUsername(authHeader);
-        if (username == null) return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+    public ResponseEntity<?> getContacts(Principal principal) {
+        String username = principal.getName();
 
         List<ContactEntity> contacts = contactRepository.findByOwner(username);
 
@@ -83,10 +79,9 @@ public class ContactBlockController {
     }
 
     @PostMapping("/api/contacts/{targetUsername}")
-    public ResponseEntity<?> addContact(@RequestHeader("Authorization") String authHeader,
+    public ResponseEntity<?> addContact(Principal principal,
                                         @PathVariable String targetUsername) {
-        String username = extractUsername(authHeader);
-        if (username == null) return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+        String username = principal.getName();
         if (username.equals(targetUsername)) return ResponseEntity.badRequest().body(Map.of("error", "Cannot add yourself"));
 
         if (userRepository.findByUsername(targetUsername).isEmpty()) {
@@ -105,10 +100,9 @@ public class ContactBlockController {
 
     @DeleteMapping("/api/contacts/{targetUsername}")
     @Transactional
-    public ResponseEntity<?> removeContact(@RequestHeader("Authorization") String authHeader,
+    public ResponseEntity<?> removeContact(Principal principal,
                                            @PathVariable String targetUsername) {
-        String username = extractUsername(authHeader);
-        if (username == null) return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+        String username = principal.getName();
 
         contactRepository.deleteByOwnerAndContact(username, targetUsername);
         log.info("User '{}' removed '{}' from contacts", username, targetUsername);
@@ -120,9 +114,8 @@ public class ContactBlockController {
     // ════════════════════════════════════════════
 
     @GetMapping("/api/blocks")
-    public ResponseEntity<?> getBlocks(@RequestHeader("Authorization") String authHeader) {
-        String username = extractUsername(authHeader);
-        if (username == null) return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+    public ResponseEntity<?> getBlocks(Principal principal) {
+        String username = principal.getName();
 
         List<BlockedUserEntity> blocks = blockedUserRepository.findByBlocker(username);
         List<Map<String, String>> result = blocks.stream().map(b -> {
@@ -135,10 +128,9 @@ public class ContactBlockController {
     }
 
     @PostMapping("/api/blocks/{targetUsername}")
-    public ResponseEntity<?> blockUser(@RequestHeader("Authorization") String authHeader,
+    public ResponseEntity<?> blockUser(Principal principal,
                                        @PathVariable String targetUsername) {
-        String username = extractUsername(authHeader);
-        if (username == null) return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+        String username = principal.getName();
         if (username.equals(targetUsername)) return ResponseEntity.badRequest().body(Map.of("error", "Cannot block yourself"));
 
         if (blockedUserRepository.existsByBlockerAndBlocked(username, targetUsername)) {
@@ -153,10 +145,9 @@ public class ContactBlockController {
 
     @DeleteMapping("/api/blocks/{targetUsername}")
     @Transactional
-    public ResponseEntity<?> unblockUser(@RequestHeader("Authorization") String authHeader,
+    public ResponseEntity<?> unblockUser(Principal principal,
                                          @PathVariable String targetUsername) {
-        String username = extractUsername(authHeader);
-        if (username == null) return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+        String username = principal.getName();
 
         blockedUserRepository.deleteByBlockerAndBlocked(username, targetUsername);
         log.info("User '{}' unblocked '{}'", username, targetUsername);
@@ -168,10 +159,9 @@ public class ContactBlockController {
     // ════════════════════════════════════════════
 
     @GetMapping("/api/profile/{targetUsername}")
-    public ResponseEntity<?> getUserProfile(@RequestHeader("Authorization") String authHeader,
+    public ResponseEntity<?> getUserProfile(Principal principal,
                                             @PathVariable String targetUsername) {
-        String username = extractUsername(authHeader);
-        if (username == null) return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+        String username = principal.getName();
 
         Optional<UserEntity> userOpt = userRepository.findByUsername(targetUsername);
         if (userOpt.isEmpty()) return ResponseEntity.status(404).body(Map.of("error", "User not found"));
@@ -199,13 +189,6 @@ public class ContactBlockController {
     }
 
     // ════════════════════════════════════════════
-
-    private String extractUsername(String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) return null;
-        String token = authHeader.substring(7);
-        if (!jwtService.isTokenValid(token)) return null;
-        return jwtService.extractUsername(token);
-    }
 
     private String now() {
         return LocalDateTime.now().format(FORMATTER);

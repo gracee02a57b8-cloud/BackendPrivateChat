@@ -1,426 +1,888 @@
-# 🔍 Аудит системы BarsikChat
+# 🔍 BarsikChat Backend — Comprehensive Code Audit Report
 
 **Дата:** Июль 2025  
-**Версия:** 1.0.4  
-**Стек:** Spring Boot 3.3.5 (Java 21) + React 18.2 (Vite 4.4.5) + PostgreSQL
+**Версия:** 2.0 (полный аудит каждого файла)  
+**Стек:** Spring Boot 3.3.5 (Java 21) + PostgreSQL  
+**Scope:** Все Java-файлы, конфигурация, Docker, SQL-миграции
 
 ---
 
 ## Содержание
 
-1. [Мёртвый и неиспользуемый код — Backend](#1-мёртвый-и-неиспользуемый-код--backend)
-2. [Мёртвый и неиспользуемый код — Frontend](#2-мёртвый-и-неиспользуемый-код--frontend)
-3. [Проблемы производительности](#3-проблемы-производительности)
-4. [Проблемы конфигурации](#4-проблемы-конфигурации)
-5. [Рекомендации по улучшению (приоритезированные)](#5-рекомендации-по-улучшению)
-6. [Сводная таблица](#6-сводная-таблица)
+1. [Executive Summary](#1-executive-summary)
+2. [Technology Stack](#2-technology-stack)
+3. [Структура проекта](#3-структура-проекта)
+4. [Файл-по-файлу: Configuration Layer](#4-configuration-layer)
+5. [Файл-по-файлу: Controller Layer](#5-controller-layer)
+6. [Файл-по-файлу: Service Layer](#6-service-layer)
+7. [Файл-по-файлу: Entity Layer](#7-entity-layer)
+8. [Файл-по-файлу: Repository Layer](#8-repository-layer)
+9. [Файл-по-файлу: DTO Layer](#9-dto-layer)
+10. [Infrastructure (Docker, SQL, Tests)](#10-infrastructure)
+11. [🔴 CRITICAL Security Issues](#11-critical-security-issues)
+12. [🟠 Security Concerns](#12-security-concerns)
+13. [🟡 Performance Issues](#13-performance-issues)
+14. [🔵 Architecture & Design Issues](#14-architecture-design-issues)
+15. [⚪ Code Quality & Maintainability](#15-code-quality)
+16. [Testing Gaps](#16-testing-gaps)
+17. [Scalability Concerns](#17-scalability-concerns)
+18. [Приоритизированные рекомендации](#18-приоритизированные-рекомендации)
+19. [Предыдущий аудит (v1.0.4)](#19-предыдущий-аудит-v104)
 
 ---
 
-## 1. Мёртвый и неиспользуемый код — Backend
+## 1. Executive Summary
 
-### 1.1 🗑️ Подсистема E2E-шифрования (6 файлов — можно удалить целиком)
+BarsikChat backend — **монолитное** Spring Boot 3.3.5 приложение для real-time чата с WebSocket-сообщениями, WebRTC-звонками, stories, polls, tasks, news, push-уведомлениями и admin-панелью. Кодовая база включает **88 Java-файлов**, **22 Flyway-миграции**, Docker/Nginx-инфраструктуру.
 
-Фронтенд **не содержит ни одного вызова** к API `/api/key-bundle/*`. Вся подсистема — мёртвый код:
+### Ключевые метрики
+| Метрика | Значение |
+|---------|----------|
+| Java-файлов (main) | 88 |
+| Controllers | 18 |
+| Services | 17 |
+| Entities | 19 |
+| Repositories | 18 |
+| DTOs | 9 (+inner classes) |
+| Миграций | 22 (V1–V22) |
+| Крупнейший файл | `ChatWebSocketHandler.java` — **1 319 строк** |
+| Примерно строк Java | ~7 500 |
 
-| Файл | Тип | Описание |
-|---|---|---|
-| `KeyBundleController.java` | Controller | 6 эндпоинтов — ни один не вызывается |
-| `KeyBundleService.java` | Service | Логика подписания/выдачи ключей |
-| `KeyBundleEntity.java` | Entity | Таблица `key_bundles` в БД |
-| `OneTimePreKeyEntity.java` | Entity | Таблица `one_time_pre_keys` в БД |
-| `KeyBundleRepository.java` | Repository | JPA-репозиторий |
-| `OneTimePreKeyRepository.java` | Repository | JPA-репозиторий |
+### Severity Tally
+| Severity | Кол-во |
+|----------|--------|
+| 🔴 Critical | 3 |
+| 🟠 High | 8 |
+| 🟡 Medium | 14 |
+| 🔵 Low / Design | 12 |
+| ⚪ Code quality | 10+ |
 
-**Дополнительно:** В `ChatWebSocketHandler.java` (строки 288–297) на **каждое** сообщение выполняется 10 `setter`-вызовов для зануления E2E-полей:
+---
 
-```java
-incoming.setEncrypted(false);
-incoming.setGroupEncrypted(false);
-incoming.setEncryptedContent(null);
-incoming.setIv(null);
-incoming.setRatchetKey(null);
-incoming.setMessageNumber(null);
-incoming.setPreviousChainLength(null);
-incoming.setEphemeralKey(null);
-incoming.setSenderIdentityKey(null);
-incoming.setOneTimeKeyId(null);
+## 2. Technology Stack
+
+| Компонент | Версия / Детали |
+|-----------|-----------------|
+| Java | 21 (Temurin) |
+| Spring Boot | 3.3.5 |
+| Spring Security | Stateless JWT, BCrypt |
+| WebSocket | Raw `TextWebSocketHandler` (НЕ STOMP) |
+| JPA / Hibernate | via Spring Data JPA |
+| Database | PostgreSQL (prod), H2 (test) |
+| Migrations | Flyway |
+| JWT | `io.jsonwebtoken:jjwt` 0.11.5 |
+| Connection pool | HikariCP (max 10, min 2, leak detection 30s) |
+| Build | Maven, Docker multi-stage (JDK → JRE Alpine) |
+| Web Push | Кастомная RFC 8291/VAPID реализация (без библиотеки) |
+| Observability | Spring Actuator (`/health` only) |
+
+---
+
+## 3. Структура проекта
+
 ```
-
-### 1.2 🗑️ E2E-колонки в `MessageEntity.java`
-
-В таблице `messages` 10 колонок, которые **всегда NULL/false** (шифрование отключено):
-
-`encrypted`, `group_encrypted`, `encrypted_content`, `iv`, `ratchet_key`, `message_number`, `previous_chain_length`, `ephemeral_key`, `sender_identity_key`, `one_time_key_id`
-
-**Влияние:** лишний расход хранилища и пропускной способности при каждом SELECT/INSERT.
-
-### 1.3 🗑️ Lombok в `pom.xml`
-
-Зависимость `lombok` объявлена в `pom.xml`, но **ни один файл** в проекте не содержит `import lombok`. Все entity используют ручные getter/setter. Зависимость можно удалить.
-
----
-
-## 2. Мёртвый и неиспользуемый код — Frontend
-
-### 2.1 🗑️ Компоненты без маршрутов (6 файлов)
-
-Эти компоненты **не имеют маршрутов** в `App.jsx` и недоступны пользователю:
-
-| Файл | Причина |
-|---|---|
-| `AccountConfirmation.jsx` | Нигде не импортируется, нет маршрута |
-| `EmailConfirmation.jsx` | Нигде не импортируется, нет маршрута |
-| `ResetPasswordPage.jsx` | Не имеет маршрута в `App.jsx`, нет навигации к нему |
-| `NewPasswordPage.jsx` | Не имеет маршрута в `App.jsx`, нет навигации к нему |
-| `RecoveryEmailSent.jsx` | Импортируется только мёртвым `ResetPasswordPage` |
-| `ResetLinkExpired.jsx` | Импортируется только мёртвым `NewPasswordPage` |
-
-### 2.2 🗑️ Неиспользуемый импорт `LandingPage`
-
-В `App.jsx` (строка 20) импортирован `LandingPage`, но **нет соответствующего `<Route>`** — компонент не отображается нигде.
-
-### 2.3 🗑️ Capacitor — 3 пакета без единого использования
-
-В `package.json` объявлены:
-- `@capacitor/android` ^8.1.0
-- `@capacitor/cli` ^8.1.0
-- `@capacitor/core` ^8.1.0
-
-**Ни один файл** в `src/` не содержит `import` из `@capacitor/*`. Пакеты увеличивают `node_modules` и время `npm install` без пользы.
-
-### 2.4 ⚠️ `react-query-devtools` в продакшн-бандле
-
-В `App.jsx` (строка 8):
-```jsx
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-```
-
-Пакет devtools **импортируется безусловно** и попадает в продакшн-бандл. Это увеличивает размер бандла и отдаёт инструменты отладки конечным пользователям.
-
----
-
-## 3. Проблемы производительности
-
-### 🔴 3.1 CRITICAL — Множественные вызовы `getRoomById()` на одно WS-сообщение
-
-**Файл:** `ChatWebSocketHandler.java`
-
-При обработке **одного** CHAT-сообщения `roomService.getRoomById(roomId)` вызывается **до 5 раз**:
-
-| Место | Строка | Цель |
-|---|---|---|
-| `isUserInRoom()` | 324 | Проверка членства |
-| Проверка блокировки | 271 | Получение типа комнаты |
-| `broadcastToRoom()` | 1165 | Получение списка участников |
-| `sendPushToOfflineMembers()` | 1184 | Получение списка участников |
-| `sendDeliveryStatus()` | ~305 | Повторная проверка комнаты |
-
-Каждый вызов — это `roomRepository.findById()` → SQL запрос к PostgreSQL. **Для 100 сообщений/сек = 500 SELECT'ов к таблице rooms.**
-
-**Рекомендация:** Загрузить `RoomDto` один раз в начале обработки и передать по цепочке:
-
-```java
-RoomDto room = roomService.getRoomById(roomId);
-if (room == null) return;
-if (!isUserInRoom(username, room)) return;  // принимает RoomDto
-broadcastToRoom(room, message);             // принимает RoomDto
-sendPushToOfflineMembers(username, room);   // принимает RoomDto
+com.example.webrtcchat
+├── WebrtcChatBackendApplication.java   (main)
+├── config/
+│   ├── SecurityConfig.java
+│   ├── WebSocketConfig.java
+│   ├── GlobalExceptionHandler.java
+│   └── AdminUserInitializer.java
+├── controller/    (18 контроллеров)
+├── service/       (17 сервисов)
+├── entity/        (19 сущностей)
+├── repository/    (18 репозиториев)
+├── dto/           (9 DTO)
+└── types/
+    ├── MessageType.java
+    └── RoomType.java
 ```
 
 ---
 
-### 🔴 3.2 CRITICAL — N+1 запрос в `getContacts()`
-
-**Файл:** `ContactBlockController.java`, строка 62
-
-```java
-contacts.stream().map(c -> {
-    userRepository.findByUsername(c.getContact()).ifPresent(u -> { ... });
-    // ↑ SQL SELECT для КАЖДОГО контакта
-    map.put("online", chatService.isUserOnline(c.getContact()));
-    map.put("lastSeen", chatService.getLastSeen(c.getContact()));
-}).collect(Collectors.toList());
-```
-
-**Для 50 контактов = 50 отдельных SELECT'ов** вместо одного.
-
-**Рекомендация:** Один batch-запрос:
-
-```java
-List<String> usernames = contacts.stream().map(ContactEntity::getContact).toList();
-Map<String, UserEntity> usersMap = userRepository.findByUsernameIn(usernames)
-    .stream().collect(Collectors.toMap(UserEntity::getUsername, u -> u));
-```
+## 4. Configuration Layer
 
 ---
 
-### 🔴 3.3 CRITICAL — Отсутствие индексов на 10+ таблицах
+### `config/SecurityConfig.java`
+**Назначение:** Spring Security filter chain, CORS, rate limiting, JWT-аутентификация.
 
-Проверены все `@Table` аннотации. Таблицы **без единого индекса** (кроме PK):
+**Что делает:**
+- Отключает CSRF (корректно для stateless JWT API).
+- `permitAll` для `/api/auth/**`, `/ws/**`, actuator health; `/api/admin/**` → `hasRole('ADMIN')`.
+- In-memory `ConcurrentHashMap` rate limiter (10 req/min per IP на auth-эндпоинтах).
+- Inline `OncePerRequestFilter` для JWT extraction → `UsernamePasswordAuthenticationToken`.
 
-| Таблица | Частые запросы без индекса |
-|---|---|
-| `rooms` | `findUserRooms` (LEFT JOIN по members) |
-| `reactions` | по `messageId` |
-| `polls` | по `roomId`, `messageId` |
-| `poll_votes` | по `pollId` + `username` |
-| `user_contacts` | по `owner` |
-| `blocked_users` | по `blocker`, `blocked` |
-| `read_receipts` | по `roomId` + `username` |
-| `room_mutes` | по `username` + `roomId` |
-| `news` / `news_comments` | по `createdAt`, `newsId` |
-| `chat_folders` | по `username` |
-| `tasks` | по `roomId`, `assignedTo` |
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🟠 High | **Rate limiter memory leak** — `requestCounts` растёт бесконтрольно; cleanup при `size > 1000` с race condition. Под DDoS от вращающихся IP → OOM. |
+| 2 | 🟡 Medium | **Rate limit только на `/api/auth/**`** — файл-аплоад, создание комнат, отправка сообщений — без ограничений. |
+| 3 | 🟡 Medium | **Нет token blacklist / revocation** — JWT нельзя отозвать (logout, смена пароля, бан). |
+| 4 | 🔵 Low | `/ws/**` → `permitAll`; аутентификация проверяется позже в `ChatWebSocketHandler.afterConnectionEstablished()`, но соединение уже установлено. |
 
-**Также:** Таблица `messages` имеет индекс только на `roomId`. Отсутствуют индексы на:
-- `timestamp` (используется в ORDER BY в каждом запросе истории)
-- `disappears_at` (используется в `findExpiredDisappearingMessages` каждые 10 сек)
-- `sender` (используется в поиске непрочитанных)
-- `pinned` (используется в `findByRoomIdAndPinnedTrue`)
+**Рекомендации:** Bucket4j или Redis-based rate limiter; rate limit на upload/room/message; token blacklist через Redis или refresh tokens.
 
 ---
 
-### 🟡 3.4 MEDIUM — Поиск сообщений через LIKE '%query%'
+### `config/WebSocketConfig.java`
+**Назначение:** Регистрация WebSocket-эндпоинта `/ws/chat`.
 
-**Файл:** `MessageRepository.java`, строки 55–60
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🟠 High | **`setAllowedOrigins("*")`** — любой origin может открыть WS-соединение → Cross-Site WebSocket Hijacking (CSWSH). |
+| 2 | 🟡 Medium | 64 KB text buffer — мало для сообщений с Base64-thumbnails. |
 
-```sql
-WHERE LOWER(m.content) LIKE LOWER(CONCAT('%', :query, '%'))
-```
-
-`LIKE '%...'` **не может использовать B-tree индекс** → full table scan на каждый поиск.
-
-**Рекомендация:** Для PostgreSQL — `pg_trgm` + GIN-индекс:
-
-```sql
-CREATE INDEX idx_messages_content_trgm ON messages USING gin (content gin_trgm_ops);
-```
+**Рекомендация:** Ограничить origins реальными доменами.
 
 ---
 
-### 🟡 3.5 MEDIUM — Push-уведомления на `ForkJoinPool.commonPool()`
+### `config/GlobalExceptionHandler.java`
+**Назначение:** `@RestControllerAdvice` — перехват и форматирование ошибок.
 
-**Файл:** `WebPushService.java`, строки 154, 164
-
-```java
-CompletableFuture.runAsync(() -> sendPushToUser(...));
-```
-
-`runAsync()` без указания `Executor` использует `ForkJoinPool.commonPool()` — общий пул с количеством потоков = CPU cores - 1. При большом количестве push-уведомлений это блокирует другие задачи, использующие commonPool (параллельные стримы, и т.д.).
-
-**Рекомендация:** Выделенный `ExecutorService`:
-
-```java
-private static final ExecutorService PUSH_EXECUTOR = 
-    Executors.newFixedThreadPool(4, r -> new Thread(r, "push-sender"));
-
-CompletableFuture.runAsync(() -> sendPushToUser(...), PUSH_EXECUTOR);
-```
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | ⚪ Info | Русские сообщения об ошибках — не i18n-ready. |
+| 2 | ⚪ Info | Нет обработчиков для `AccessDeniedException`, `AuthenticationException`. |
 
 ---
 
-### 🟡 3.6 MEDIUM — `DisappearingMessageScheduler` каждые 10 секунд
+### `config/AdminUserInitializer.java`
+**Назначение:** `ApplicationRunner` — создаёт/сбрасывает admin-пользователя при каждом старте.
 
-**Файл:** `DisappearingMessageScheduler.java`, строка 38
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🔴 **CRITICAL** | **Хардкод пароля** `"BarsikAdmin2026!"` в исходном коде. Любой с доступом к репо знает пароль админа. Пароль **сбрасывается** на каждом перезапуске. |
+| 2 | 🟠 High | Admin-пароль перезаписывается при рестарте — смена через UI бесполезна. |
 
-```java
-@Scheduled(fixedRate = 10_000)
-```
-
-Запрос `findExpiredDisappearingMessages` выполняется **каждые 10 секунд** даже когда нет исчезающих сообщений. При отсутствии индекса на `disappears_at` — это full scan.
-
-**Рекомендация:**
-1. Добавить индекс на `disappears_at`
-2. Увеличить интервал до 30–60 секунд (пользователь не заметит разницу)
-3. Или использовать event-driven подход: планировать проверку только при создании disappearing-сообщения
+**Рекомендация:** Пароль из env-переменной `ADMIN_PASSWORD`. Создавать admin только если не существует, НИКОГДА не перезаписывать.
 
 ---
 
-### 🟡 3.7 MEDIUM — `findUserRooms` с LEFT JOIN
-
-**Файл:** `RoomRepository.java`, строка 13
-
-```java
-@Query("SELECT DISTINCT r FROM RoomEntity r LEFT JOIN r.members m WHERE ...")
-```
-
-LEFT JOIN загружает коллекцию `members` для каждой комнаты. При большом количестве комнат и участников — значительный объём данных.
+## 5. Controller Layer
 
 ---
 
-### 🟢 3.8 LOW — Нет code splitting / build оптимизаций в Vite
+### `controller/AuthController.java`
+**Назначение:** `/api/auth/register`, `/api/auth/login`.
 
-**Файл:** `vite.config.js`
-
-Конфигурация не содержит:
-- `build.rollupOptions.output.manualChunks` — нет code splitting
-- Нет отделения vendor-библиотек (react, react-dom, react-router)
-- Нет terser minification конфигурации
-
-**Рекомендация:**
-
-```js
-build: {
-  rollupOptions: {
-    output: {
-      manualChunks: {
-        vendor: ['react', 'react-dom', 'react-router-dom'],
-        query: ['@tanstack/react-query'],
-      }
-    }
-  }
-}
-```
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🟡 Medium | **Ручная валидация** (if/else) — нет `@Valid`/`@NotBlank`. |
+| 2 | 🟡 Medium | **User enumeration** — разные ошибки для "user not found" vs "wrong password". |
+| 3 | 🟡 Medium | Нет CAPTCHA/email-верификации при регистрации. |
+| 4 | 🔵 Low | `UserDto` содержит поле `password` — без `@JsonIgnore` и без отдельного DTO. |
 
 ---
 
-## 4. Проблемы конфигурации
+### `controller/ChatWebSocketHandler.java` (1 319 строк)
+**Назначение:** ЦЕНТРАЛЬНЫЙ ХАБ всего real-time — чат, typing, звонки, конференции, reactions, polls, pins, edits, deletes, scheduled messages, stories, group invites, presence.
 
-### 4.1 ⚠️ OSIV (Open Session In View) включён по умолчанию
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🔴 **CRITICAL** | **God class — 1 319 строк, 30+ типов сообщений** — нарушение SRP. Нетестируемо, неподдерживаемо. |
+| 2 | 🟠 High | **Всё состояние in-memory** (`ConcurrentHashMap`) — `userSessions`, `callOffers`, `activeCallParticipants`, `blockedPairs`. Рестарт = потеря всех активных звонков и сессий. |
+| 3 | 🟠 High | **Нет валидации WS-сообщений** — malformed JSON → NullPointerException или abuse. |
+| 4 | 🟠 High | **Нет rate limiting на WS** — клиент может флудить тысячами сообщений/сек. |
+| 5 | 🟡 Medium | `blockedPairs` загружается один раз при подключении — не обновляется при добавлении/удалении блока. |
+| 6 | 🟡 Medium | Push-отправка синхронна в `sendToUser()` — блокирует WS-поток. |
+| 7 | 🟡 Medium | Scheduled messages в `SchedulerService` (in-memory) — теряются при рестарте. |
+| 8 | 🔵 Low | JWT в URL query param — попадает в логи, browser history. |
 
-В `application.yml` **нет** `spring.jpa.open-in-view: false`. Spring Boot по умолчанию включает OSIV, что:
-- Держит Hibernate-сессию открытой на всё время HTTP-запроса
-- Разрешает lazy loading в контроллерах (маскирует N+1 проблемы)
-- Занимает пул соединений БД дольше необходимого
-
-**Рекомендация:** Добавить в `application.yml`:
-```yaml
-spring:
-  jpa:
-    open-in-view: false
-```
-
-### 4.2 ⚠️ HikariCP без валидации соединений
-
-Текущая конфигурация:
-```yaml
-hikari:
-  maximum-pool-size: 10
-  minimum-idle: 2
-  idle-timeout: 300000
-  connection-timeout: 20000
-  max-lifetime: 1200000
-```
-
-Отсутствует `connection-test-query` или `validation-timeout`. Если PostgreSQL разрывает idle-соединение (network timeout, DB restart), приложение получит `Connection is closed` ошибку.
-
-**Рекомендация:**
-```yaml
-hikari:
-  validation-timeout: 5000
-  leak-detection-threshold: 30000
-```
-
-### 4.3 ⚠️ Actuator только health
-
-Выставлен только `health` эндпоинт. Для мониторинга производительности полезно добавить:
-```yaml
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,metrics,prometheus
-```
+**Рекомендации:** Декомпозиция: `ChatMessageHandler`, `CallSignalingHandler`, `ConferenceHandler`, `PollHandler`, `ReactionHandler`. Диспетчер-паттерн. Redis для state. Per-user WS rate limiting.
 
 ---
 
-## 5. Рекомендации по улучшению
+### `controller/RoomController.java` (372 строки)
+**Назначение:** CRUD комнат, история, поиск, mute, disappearing messages, link preview, media stats.
 
-### Приоритет 1 — Критические (дают ощутимый прирост)
-
-| # | Задача | Оценка эффекта | Сложность |
-|---|---|---|---|
-| 1 | **Кэширование `RoomDto` в WS-обработчике** — загружать комнату 1 раз за сообщение | -80% запросов к rooms | Низкая |
-| 2 | **Исправить N+1 в `getContacts()`** — batch-запрос `findByUsernameIn()` | -95% запросов при 50 контактах | Низкая |
-| 3 | **Добавить индексы на таблицы** (см. п. 3.3) — Flyway-миграция | Ускорение SELECT'ов в 10–100x | Низкая |
-| 4 | **Отключить OSIV** — `open-in-view: false` | Раннее освобождение DB-соединений | Средняя* |
-
-\* Средняя сложность, т.к. могут появиться `LazyInitializationException` — потребуется проверить все контроллеры.
-
-### Приоритет 2 — Средние (улучшают стабильность)
-
-| # | Задача | Оценка эффекта | Сложность |
-|---|---|---|---|
-| 5 | **Выделенный Executor для push** — заменить `commonPool()` | Изоляция push от CPU-задач | Низкая |
-| 6 | **Увеличить интервал `DisappearingMessageScheduler`** до 30–60 сек | -66–83% холостых запросов | Низкая |
-| 7 | **HikariCP валидация** — добавить `validation-timeout` + `leak-detection` | Устойчивость к разрывам | Низкая |
-| 8 | **Full-text search** — `pg_trgm` + GIN для поиска сообщений | Поиск без full scan | Средняя |
-
-### Приоритет 3 — Очистка кода
-
-| # | Задача | Оценка эффекта | Сложность |
-|---|---|---|---|
-| 9 | **Удалить E2E-подсистему** (6 файлов + 10 колонок + Flyway-миграция) | Меньше кода, меньше размер messages | Средняя |
-| 10 | **Удалить мёртвые фронтенд-компоненты** (6 файлов + LandingPage import) | Чистота кодовой базы | Низкая |
-| 11 | **Удалить Capacitor зависимости** | Быстрее `npm install` | Низкая |
-| 12 | **Убрать react-query-devtools из прода** или добавить lazy import | Меньше бандл | Низкая |
-| 13 | **Удалить Lombok из pom.xml** | Чистота зависимостей | Низкая |
-
-### Приоритет 4 — Улучшения бандла
-
-| # | Задача | Оценка эффекта | Сложность |
-|---|---|---|---|
-| 14 | **Vite code splitting** — `manualChunks` для vendor-библиотек | Лучший кэшинг, меньший initial load | Низкая |
-| 15 | **Actuator metrics/prometheus** | Мониторинг | Низкая |
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🟡 Medium | **Нет проверки авторизации** — любой аутентифицированный пользователь может читать историю ЛЮБОЙ комнаты. |
+| 2 | 🟡 Medium | Pagination по string-timestamp — хрупко. |
 
 ---
 
-## 6. Сводная таблица
+### `controller/FileController.java`
+**Назначение:** Загрузка файлов/изображений.
 
-| Категория | Количество | Файлов затронуто |
-|---|---|---|
-| Мёртвый backend-код | 6 файлов E2E + 10 колонок + Lombok | 8 |
-| Мёртвый frontend-код | 6 компонентов + 3 npm пакета + devtools | 10 |
-| Критические проблемы производительности | 3 (WS N+5, Contacts N+1, индексы) | 3 |
-| Средние проблемы | 4 (push pool, scheduler, LIKE, JOIN) | 4 |
-| Проблемы конфигурации | 3 (OSIV, HikariCP, Actuator) | 1 |
-| **Итого рекомендаций** | **15** | — |
-
----
-
-### Пример Flyway-миграции для индексов (приоритет 1, задача 3)
-
-```sql
--- V__add_missing_indexes.sql
-
--- messages: ускорение ORDER BY, disappearing, pinned
-CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages (room_id, timestamp DESC);
-CREATE INDEX IF NOT EXISTS idx_messages_disappears_at ON messages (disappears_at) WHERE disappears_at IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_messages_pinned ON messages (room_id) WHERE pinned = true;
-CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages (sender);
-
--- reactions
-CREATE INDEX IF NOT EXISTS idx_reactions_message_id ON reactions (message_id);
-
--- polls & votes
-CREATE INDEX IF NOT EXISTS idx_polls_room_id ON polls (room_id);
-CREATE INDEX IF NOT EXISTS idx_polls_message_id ON polls (message_id);
-CREATE INDEX IF NOT EXISTS idx_poll_votes_poll_id ON poll_votes (poll_id, username);
-
--- contacts & blocks
-CREATE INDEX IF NOT EXISTS idx_user_contacts_owner ON user_contacts (owner);
-CREATE INDEX IF NOT EXISTS idx_blocked_users_blocker ON blocked_users (blocker);
-CREATE INDEX IF NOT EXISTS idx_blocked_users_blocked ON blocked_users (blocked);
-
--- read receipts
-CREATE INDEX IF NOT EXISTS idx_read_receipts_room_user ON read_receipts (room_id, username);
-
--- room mutes
-CREATE INDEX IF NOT EXISTS idx_room_mutes_username ON room_mutes (username, room_id);
-
--- news
-CREATE INDEX IF NOT EXISTS idx_news_created_at ON news (created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_news_comments_news_id ON news_comments (news_id);
-
--- tasks
-CREATE INDEX IF NOT EXISTS idx_tasks_room_id ON tasks (room_id);
-CREATE INDEX IF NOT EXISTS idx_tasks_assigned_to ON tasks (assigned_to);
-
--- folders
-CREATE INDEX IF NOT EXISTS idx_chat_folders_username ON chat_folders (username);
-```
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🟠 High | **Content-type по расширению** — .jpg с HTML/SVG payload будет отдан как image. Нет проверки magic bytes. |
+| 2 | 🟡 Medium | Path traversal check неполный (не проверяет URL-encoded варианты). UUID-rename смягчает. |
+| 3 | 🟡 Medium | Нет virus/malware scanning. |
+| 4 | 🔵 Low | Дублирование `getExtension()`/`detectContentType()` с `ProfileController`. |
 
 ---
 
-*Отчёт подготовлен на основе анализа исходного кода backend (`src/main/java`) и frontend (`src/`). Все выводы подтверждены прямым чтением файлов.*
+### `controller/ContactBlockController.java` (214 строк)
+**Назначение:** Контакты и блокировки.
+
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🟠 High | **Manual JWT extraction** из `Authorization` header — обходит Spring Security context. |
+| 2 | 🟡 Medium | `getUserProfile` — отдаёт данные без проверки блокировки. |
+| 3 | ⚪ Info | `addContact` не проверяет существование target user. |
+
+---
+
+### `controller/ProfileController.java`
+**Назначение:** Профиль пользователя, аватар.
+
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🔵 Low | Дублирование file-utility кода с `FileController`. |
+
+---
+
+### `controller/WebRtcController.java`
+**Назначение:** Генерация TURN-credentials (HMAC-SHA1, 24h TTL).
+
+✅ **Чистая реализация**, одна из лучших в проекте. Следует стандартному coturn-паттерну.
+
+---
+
+### `controller/TaskController.java`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🟡 Medium | **Нет авторизации** — любой может создать/удалить task в любой комнате. |
+| 2 | 🔵 Low | Task status — свободная строка, а не enum. |
+
+---
+
+### `controller/NewsController.java`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🟡 Medium | Push ВСЕМ подписчикам на каждую новость — нет opt-in/opt-out. |
+| 2 | 🔵 Low | Нет пагинации комментариев. |
+
+---
+
+### `controller/StoryController.java`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🔵 Low | Max 5 stories — hardcoded. |
+| 2 | ⚪ Info | `groupByAuthor` → `Map` без гарантии порядка. |
+
+---
+
+### `controller/PollController.java`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🟡 Medium | Нет проверки membership в комнате при голосовании. |
+
+---
+
+### `controller/PushController.java`
+✅ Чисто, без замечаний.
+
+---
+
+### `controller/ReactionController.java`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🟡 Medium | N+1 в `getReactionsForMessages` — см. Service layer. |
+
+---
+
+### `controller/CallLogController.java`
+✅ Чисто. Использует `Pageable`.
+
+---
+
+### `controller/ConferenceController.java`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🟡 Medium | Всё состояние in-memory — теряется при рестарте. |
+
+---
+
+### `controller/ChatFolderController.java`
+✅ Чисто. Max 20 folders.
+
+---
+
+### `controller/ChatController.java`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🟠 High | **`/api/chat/history` отдаёт ВСЕ сообщения** из БД без фильтра по комнате и без пагинации — утечка данных + performance bomb. |
+| 2 | 🟡 Medium | Online users endpoint показывает всех подключённых пользователей. |
+
+---
+
+### `controller/AdminController.java`
+✅ Чисто. Защищён `hasRole('ADMIN')`.
+
+---
+
+## 6. Service Layer
+
+---
+
+### `service/ChatService.java`
+**Назначение:** Сообщения, пользователи, online-tracking.
+
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🟡 Medium | **`getAllUsers()` загружает ВСЮ таблицу** — без пагинации. |
+| 2 | 🟡 Medium | Online-tracking in-memory — не шарится между инстансами. |
+| 3 | 🔵 Low | Timestamps как `String` (`Instant.now().toString()` → VARCHAR). |
+
+---
+
+### `service/JwtService.java`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🟡 Medium | **Deprecated API** — `SignatureAlgorithm.HS256` (jjwt 0.11.x). |
+| 2 | 🟡 Medium | Единый signing key без ротации. |
+| 3 | 🔵 Low | `extractRole()` молча возвращает `"USER"` при любой ошибке. |
+
+---
+
+### `service/RoomService.java`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🟡 Medium | **Нет лимита участников** — группы без ограничения → broadcast storms. |
+| 2 | 🔵 Low | Private room ID содержит usernames → утечка информации. |
+
+---
+
+### `service/ConferenceService.java`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🟠 High | **Всё в памяти** — конференции теряются при рестарте. |
+| 2 | 🟡 Medium | Нет cleanup для orphaned conferences. |
+
+---
+
+### `service/SchedulerService.java`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🟠 High | **In-memory scheduling** — scheduled messages теряются при рестарте. |
+| 2 | 🔵 Low | Всего 2 потока — bottleneck при нагрузке. |
+
+---
+
+### `service/WebPushService.java` (397 строк)
+**Назначение:** Web Push (RFC 8291 + VAPID) — кастомная реализация без библиотеки.
+
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🟡 Medium | **Кастомная криптография** — RFC-compliant, но одна ошибка в ECDH/HKDF/AES-GCM pipeline → всё ломается. Рассмотреть `web-push` библиотеку. |
+| 2 | 🔵 Low | Push executor 4 потока — достаточно для текущего масштаба. |
+
+---
+
+### `service/LinkPreviewService.java`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🔴 **CRITICAL** | **SSRF уязвимость** — `fetchPreview(url)` принимает любой URL без валидации. Можно обратиться к `http://169.254.169.254/latest/meta-data/` (AWS), `http://localhost:8080/api/admin/stats`, `http://10.0.0.1/internal-api`. |
+| 2 | 🟡 Medium | **Unbounded cache** — `ConcurrentHashMap` растёт без ограничений. |
+| 3 | 🔵 Low | Нет лимита redirect-ов — SSRF через redirect chains. |
+
+**Рекомендация:** НЕМЕДЛЕННО: блокировать private IP (10.x, 172.16-31.x, 192.168.x, 169.254.x, 127.x), проверять resolved IP, Caffeine cache с max size + TTL.
+
+---
+
+### `service/StoryService.java`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🔵 Low | Удаление файла при истечении story — если файл используется ещё где-то → dangling reference. |
+
+---
+
+### `service/PollService.java`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🔵 Low | `@OneToMany(EAGER)` для options — обычно OK для polls. |
+
+---
+
+### `service/ReactionService.java`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🟡 Medium | **N+1 query** — `getReactionsForMessages` цикл по message IDs, отдельный запрос на каждый. Нужен `findByMessageIdIn()`. |
+
+---
+
+### `service/ReadReceiptService.java`
+✅ Чисто.
+
+---
+
+### `service/RoomMuteService.java`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🔵 Low | String-based сравнение timestamps для mute expiry. |
+
+---
+
+### `service/DisappearingMessageScheduler.java`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🟡 Medium | String-based timestamp comparison в `@Query`. |
+| 2 | 🔵 Low | Broadcast отдельных DELETE для каждого сообщения — не batch. |
+
+---
+
+### `service/TaskService.java`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🔵 Low | Hardcoded timezone `"Europe/Moscow"`. |
+
+---
+
+### `service/AdminService.java`, `NewsService.java`, `ChatFolderService.java`
+✅ Чисто, без серьёзных замечаний.
+
+---
+
+## 7. Entity Layer
+
+---
+
+### `entity/UserEntity.java`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🟡 Medium | **`password` без `@JsonIgnore`** — при случайной сериализации (лог, ошибка) утекает BCrypt hash. |
+| 2 | 🔵 Low | `lastSeen`, `createdAt` — String вместо `Instant`/`LocalDateTime`. |
+
+---
+
+### `entity/RoomEntity.java`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🟠 High | **`@ElementCollection(fetch = EAGER)` для `members`** — КАЖДАЯ загрузка RoomEntity → отдельный SELECT для всех members. Для комнат с сотнями участников — disaster. |
+| 2 | 🟡 Medium | `CopyOnWriteArraySet<String> members` — тяжело для JPA, каждая модификация создаёт копию. |
+
+---
+
+### `entity/MessageEntity.java`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🟡 Medium | **Денормализация** — `senderDisplayName`, `senderAvatarUrl` per message. При смене профиля — stale data в старых сообщениях. |
+| 2 | 🟡 Medium | `mentions` — JSON string в TEXT колонке, нет DB-level querying. |
+| 3 | 🔵 Low | `timestamp` — String. |
+
+---
+
+### `entity/TaskEntity.java`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🔵 Low | `status` — String, `deadline` — String. Должны быть enum и temporal type. |
+
+---
+
+### `entity/PollEntity.java`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🟡 Medium | `@OneToMany(fetch = EAGER)` для options. |
+
+---
+
+### Остальные entities:
+`ContactEntity`, `BlockedUserEntity`, `CallLogEntity`, `PollOptionEntity`, `PollVoteEntity`, `ReactionEntity`, `ReadReceiptEntity`, `RoomMuteEntity`, `ChatFolderEntity`, `NewsEntity`, `NewsCommentEntity`, `StoryEntity`, `StoryViewEntity`, `PushSubscriptionEntity` — **без критических замечаний**.
+
+---
+
+## 8. Repository Layer
+
+Все repositories — стандартные `JpaRepository`. Highlights:
+
+### `repository/MessageRepository.java`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🟡 Medium | **Search через `LIKE %query%`** — не может использовать B-tree index → full scan. V22 добавляет pg_trgm GIN, но JPA query использует `LIKE`, а не trgm операторы. |
+
+### `repository/RoomRepository.java`
+- `SELECT r FROM RoomEntity r WHERE :member MEMBER OF r.members` — subquery к element collection.
+
+Остальные 16 репозиториев — стандартные, без критических проблем.
+
+---
+
+## 9. DTO Layer
+
+---
+
+### `dto/UserDto.java`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🟡 Medium | **Содержит поле `password`** — DTO не должен переносить пароли. Нужен отдельный `RegisterRequest`. |
+| 2 | 🔵 Low | 5 конструкторов (telescoping pattern). |
+
+### `dto/AuthResponse.java`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🔵 Low | **6 telescoping конструкторов** — хрупко. Builder pattern. |
+
+### `dto/RoomDto.java`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🔵 Low | `CopyOnWriteArraySet<String> members` — overkill для DTO. |
+
+### `dto/MessageDto.java`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🔵 Low | **Java 21 доступна** — `record` типы для immutable DTOs. |
+| 2 | 🔵 Low | Нет `@NotBlank`/`@Size`/`@Valid` annotations. |
+
+### Остальные DTOs:
+`TaskDto`, `NewsDto`, `NewsCommentDto`, `StoryDto`, `AdminStatsDto` — чистые, без серьёзных замечаний.
+
+---
+
+## 10. Infrastructure
+
+---
+
+### `pom.xml`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🟡 Medium | **jjwt 0.11.5 устарел** — Latest 0.12.6. Deprecated API. |
+| 2 | 🔵 Low | Lombok dependency объявлена, но не используется — удалить. |
+
+### `application.yml`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🟡 Medium | **`max-pool-size: 10`** — может быть мало при WS + REST нагрузке. |
+| 2 | ⚪ Info | `logging.level.org.hibernate.SQL: DEBUG` — убрать в production. |
+| 3 | ✅ Good | `open-in-view: false` — корректно. |
+| 4 | ✅ Good | `ddl-auto: validate` — полагается на Flyway. |
+
+### `Dockerfile`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | ⚪ Info | Нет `HEALTHCHECK`. |
+| 2 | 🔵 Low | Нет JVM memory flags (`-Xmx`, `-XX:MaxRAMPercentage`). |
+| 3 | ✅ Good | Non-root user `appuser`. Multi-stage build. |
+
+### `docker-compose.yml`
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🟠 High | **`DDL_AUTO: update`** — опасно если случайно используется в production. |
+| 2 | 🟡 Medium | PostgreSQL пароль plaintext в compose файле. |
+
+### SQL Migrations (V1–V22)
+
+| Migration | Назначение | Заметки |
+|-----------|------------|---------|
+| V1 | Init schema | VARCHAR(30) для timestamps |
+| V2 | E2E key bundles | ❌ Удалено в V21 |
+| V3 | E2E message fields | ❌ Удалено в V21 |
+| V4 | Reply-to, mentions | |
+| V5 | User role | |
+| V6 | Last seen | |
+| V7 | Voice fields | |
+| V8 | Video circle | |
+| V9 | Avatar URL | |
+| V10 | Group encrypted | ❌ Удалено в V21 |
+| V11 | Profile fields | |
+| V12 | Call logs | |
+| V13 | Room description/avatar | |
+| V14 | Push subscriptions | |
+| V15 | Contacts & blocks | |
+| V16 | Stories | |
+| V17 | User tag (unique) | |
+| V18 | Pinned messages | |
+| V19 | Reactions, polls, folders, mutes, receipts, disappearing | **Крупнейшая** |
+| V20 | disappears_at + partial index | |
+| V21 | Drop E2E tables & columns | Cleanup V2/V3/V10 |
+| V22 | Missing indexes + pg_trgm GIN | |
+
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🟡 Medium | **Dead migrations** — V2/V3/V10 создают то, что V21 удаляет. На свежих установках — бесполезная работа. |
+| 2 | 🟡 Medium | **VARCHAR timestamps** — V1 использует `VARCHAR(30)` для дат. Не позволяет DB-level temporal операции. |
+| 3 | 🔵 Low | Нет foreign key между `messages` и `rooms` — orphaned messages возможны. |
+
+### Test Config (`application-test.yml`)
+| # | Severity | Проблема |
+|---|----------|----------|
+| 1 | 🟡 Medium | **H2 vs PostgreSQL** — SQL-различия (pg_trgm, ILIKE) не тестируются. Нужен Testcontainers. |
+| 2 | 🟡 Medium | **Flyway отключён** — миграции не тестируются. Schema drift возможен. |
+
+---
+
+## 11. 🔴 CRITICAL Security Issues
+
+### CRIT-1: Hardcoded Admin Password
+- **Файл:** `config/AdminUserInitializer.java`
+- **Пароль:** `"BarsikAdmin2026!"` — в source code, в Git
+- **Усугубление:** Пароль **сбрасывается** при каждом рестарте
+- **Impact:** Любой с доступом к репо → admin access
+- **Fix:** Env variable `ADMIN_PASSWORD`. Создавать ТОЛЬКО если не существует.
+
+### CRIT-2: SSRF в Link Preview
+- **Файл:** `service/LinkPreviewService.java`
+- **Проблема:** `fetchPreview(url)` → HTTP request к любому URL пользователя
+- **Exploits:** `http://169.254.169.254/`, `http://localhost:8080/api/admin/stats`, `http://10.0.0.1/internal`
+- **Impact:** Information disclosure, internal service scanning, potential RCE
+- **Fix:** Block private IPs, validate scheme, resolve DNS before connecting
+
+### CRIT-3: God Class WebSocket Handler
+- **Файл:** `controller/ChatWebSocketHandler.java` (1 319 строк)
+- **30+ типов сообщений** в одном классе
+- **Impact:** Невозможно безопасно вносить изменения, тестировать, ревьюить
+- **Fix:** Декомпозиция с dispatcher pattern
+
+---
+
+## 12. 🟠 Security Concerns
+
+| ID | Проблема | Файл | Fix |
+|----|----------|------|-----|
+| SEC-1 | WebSocket `*` origin | `WebSocketConfig.java` | Restrict to prod domains |
+| SEC-2 | No JWT revocation | `SecurityConfig`, `JwtService` | Redis blacklist / refresh tokens |
+| SEC-3 | Rate limiter unbounded + racy | `SecurityConfig.java` | Bucket4j / Redis |
+| SEC-4 | Manual JWT extraction | `ContactBlockController.java` | `Principal` / `@AuthenticationPrincipal` |
+| SEC-5 | No file content validation | `FileController.java` | Validate magic bytes |
+| SEC-6 | No room authorization | `RoomController.java` | Check membership |
+| SEC-7 | Global history endpoint | `ChatController.java` | Remove / restrict |
+| SEC-8 | User enumeration | `AuthController.java` | Generic "Invalid credentials" |
+
+---
+
+## 13. 🟡 Performance Issues
+
+| ID | Проблема | Файл | Fix |
+|----|----------|------|-----|
+| PERF-1 | `@ElementCollection(EAGER)` на members | `RoomEntity.java` | `LAZY` или join entity |
+| PERF-2 | N+1 в ReactionService | `ReactionService.java` | `findByMessageIdIn()` |
+| PERF-3 | `getAllUsers()` без пагинации | `ChatService.java` | `Pageable` |
+| PERF-4 | LinkPreview cache unbounded | `LinkPreviewService.java` | Caffeine + TTL |
+| PERF-5 | `LIKE %query%` search | `MessageRepository.java` | pg_trgm / full-text search |
+| PERF-6 | String timestamps | Все entities | Migrate to TIMESTAMP/Instant |
+| PERF-7 | HikariCP max 10 | `application.yml` | Monitor & tune |
+| PERF-8 | 5× `getRoomById()` per message | `ChatWebSocketHandler.java` | Cache room per message |
+| PERF-9 | N+1 в `getContacts()` | `ContactBlockController.java` | Batch query `findByUsernameIn()` |
+
+---
+
+## 14. 🔵 Architecture & Design Issues
+
+| ID | Проблема | Описание |
+|----|----------|----------|
+| ARCH-1 | All state in-memory | Sessions, conferences, calls, scheduled msgs — lost on restart, no horizontal scaling |
+| ARCH-2 | String timestamps | 19 entities use VARCHAR(30) for dates |
+| ARCH-3 | No DTO validation | Zero `@Valid` / `@NotBlank` annotations |
+| ARCH-4 | Monolithic WS handler | 1 319 lines in one class |
+| ARCH-5 | Mixed auth patterns | Some controllers use `Principal`, others manually parse JWT |
+| ARCH-6 | No domain events | Direct service coupling + WS broadcasts |
+| ARCH-7 | Denormalised sender info | `senderDisplayName`, `senderAvatarUrl` per message — stale on profile update |
+| ARCH-8 | Dead E2E migrations | V2/V3/V10 create → V21 drops |
+
+---
+
+## 15. ⚪ Code Quality
+
+| ID | Проблема | Файл(ы) |
+|----|----------|---------|
+| CQ-1 | Telescoping constructors (5–6) | `AuthResponse`, `UserDto` |
+| CQ-2 | Duplicate `getExtension()`/`detectContentType()` | `FileController`, `ProfileController` |
+| CQ-3 | No Lombok or records for DTOs | All DTOs — verbose POJOs |
+| CQ-4 | `CopyOnWriteArraySet` in DTOs | `RoomDto` |
+| CQ-5 | String task status | `TaskEntity` |
+| CQ-6 | Hardcoded "Europe/Moscow" | `TaskService` |
+| CQ-7 | `password` field in UserDto | Leak risk |
+| CQ-8 | Russian error messages hardcoded | `GlobalExceptionHandler` |
+| CQ-9 | `extractRole()` silent fallback | `JwtService` |
+| CQ-10 | Package `com.example.webrtcchat` | Default — rename to org/company |
+
+---
+
+## 16. Testing Gaps
+
+- **H2 vs PostgreSQL** — SQL-специфика production не тестируется
+- **Flyway отключён в тестах** — миграции не покрыты
+- **ChatWebSocketHandler** — god class практически нетестируем
+- **Нет integration tests с реальной БД** — Testcontainers решит
+- **Нет load/stress tests** (кроме ручного `ultimate-load-test.js`)
+- **Нет security testing** (OWASP ZAP, dependency scanning)
+
+---
+
+## 17. Scalability Concerns
+
+| Concern | Детали | Решение |
+|---------|--------|---------|
+| Horizontal scaling невозможно | In-memory state | Redis |
+| DB bottleneck | 10 connections, no read replicas, no cache | Redis cache, increase pool, read replica |
+| WS single-node | All connections on one server | Redis Pub/Sub для cross-node |
+| File storage local | Container filesystem | S3/MinIO + CDN |
+| No message queue | Synchronous processing | RabbitMQ/Kafka для async |
+| Search | LIKE %% = O(n) | Elasticsearch / PG full-text |
+
+---
+
+## 18. Приоритизированные рекомендации
+
+### 🔴 P0 — Исправить немедленно (безопасность)
+
+1. **Убрать hardcoded admin password** → env var `ADMIN_PASSWORD`. Создавать только если не существует.
+2. **Исправить SSRF в LinkPreviewService** → блокировать private IPs, validate scheme, resolve DNS.
+3. **Ограничить WebSocket origins** → заменить `"*"` на реальные домены.
+
+### 🟠 P1 — Исправить скоро (безопасность & надёжность)
+
+4. **Room authorization** — проверка membership.
+5. **Убрать/ограничить `/api/chat/history`**.
+6. **Заменить rate limiter** → Bucket4j или Redis.
+7. **JWT revocation** — short-lived access tokens + refresh, или Redis blacklist.
+8. **DDL_AUTO: validate** в docker-compose.yml.
+9. **Стандартизировать auth** — `Principal` / `@AuthenticationPrincipal` везде.
+10. **Generic login errors** — убрать user enumeration.
+
+### 🟡 P2 — Следующий спринт (performance & quality)
+
+11. **Декомпозиция ChatWebSocketHandler** — Chat, Call, Conference, Poll, Reaction handlers.
+12. **Fix N+1 в ReactionService** → `findByMessageIdIn()`.
+13. **RoomEntity members → LAZY**.
+14. **DTO validation** → Jakarta `@Valid`, `@NotBlank`, `@Size`.
+15. **LinkPreview cache** → Caffeine с max size + TTL.
+16. **Paginate `getAllUsers()`**.
+17. **Upgrade jjwt → 0.12+**.
+18. **Testcontainers** для тестов с PostgreSQL.
+
+### 🔵 P3 — Постепенно (архитектура & масштабируемость)
+
+19. **Timestamps → `TIMESTAMP WITH TIME ZONE`** — миграция VARCHAR → temporal.
+20. **In-memory state → Redis** — sessions, conferences, calls, scheduled messages.
+21. **Extract file utility** — общий `FileUtils` class.
+22. **Java records для DTOs** (Java 21).
+23. **WS message rate limiting** — per-user throttling.
+24. **File content validation** — magic bytes.
+25. **Object storage (S3/MinIO)** для файлов.
+26. **Full-text search** — PG tsvector или Elasticsearch.
+27. **Domain events** → `ApplicationEventPublisher`.
+28. **Rename package** `com.example.webrtcchat` → proper domain.
+
+---
+
+## 19. Предыдущий аудит (v1.0.4)
+
+Предыдущий аудит выявил следующие проблемы (для reference):
+
+- Мёртвый код E2E (6 файлов) — **подтверждено**: V21 уже удалил таблицы, но entity/controller/service всё ещё в кодовой базе если не удалены
+- N+1 в `getContacts()` — **подтверждено**, по-прежнему актуально
+- 5× `getRoomById()` per WS message — **подтверждено**, по-прежнему актуально
+- Отсутствие индексов — **частично исправлено**: V22 добавил индексы, но не все
+- Мёртвый фронтенд-код — **не в scope этого аудита** (backend only)
+- Lombok в pom.xml без использования — **подтверждено**
+
+---
+
+## Приложение: Полный инвентарь файлов
+
+<details>
+<summary>Все 88+ main Java файлов</summary>
+
+### Config (4)
+1. `config/SecurityConfig.java`
+2. `config/WebSocketConfig.java`
+3. `config/GlobalExceptionHandler.java`
+4. `config/AdminUserInitializer.java`
+
+### Controllers (18)
+5. `controller/AuthController.java`
+6. `controller/ChatWebSocketHandler.java`
+7. `controller/RoomController.java`
+8. `controller/FileController.java`
+9. `controller/ContactBlockController.java`
+10. `controller/ProfileController.java`
+11. `controller/WebRtcController.java`
+12. `controller/TaskController.java`
+13. `controller/NewsController.java`
+14. `controller/StoryController.java`
+15. `controller/PollController.java`
+16. `controller/PushController.java`
+17. `controller/ReactionController.java`
+18. `controller/CallLogController.java`
+19. `controller/ConferenceController.java`
+20. `controller/ChatFolderController.java`
+21. `controller/ChatController.java`
+22. `controller/AdminController.java`
+
+### Services (17)
+23. `service/ChatService.java`
+24. `service/JwtService.java`
+25. `service/RoomService.java`
+26. `service/ConferenceService.java`
+27. `service/SchedulerService.java`
+28. `service/WebPushService.java`
+29. `service/LinkPreviewService.java`
+30. `service/StoryService.java`
+31. `service/PollService.java`
+32. `service/ReactionService.java`
+33. `service/ReadReceiptService.java`
+34. `service/RoomMuteService.java`
+35. `service/DisappearingMessageScheduler.java`
+36. `service/TaskService.java`
+37. `service/AdminService.java`
+38. `service/NewsService.java`
+39. `service/ChatFolderService.java`
+
+### Entities (19)
+40. `entity/UserEntity.java`
+41. `entity/RoomEntity.java`
+42. `entity/MessageEntity.java`
+43. `entity/ContactEntity.java`
+44. `entity/BlockedUserEntity.java`
+45. `entity/TaskEntity.java`
+46. `entity/CallLogEntity.java`
+47. `entity/PollEntity.java`
+48. `entity/PollOptionEntity.java`
+49. `entity/PollVoteEntity.java`
+50. `entity/ReactionEntity.java`
+51. `entity/ReadReceiptEntity.java`
+52. `entity/RoomMuteEntity.java`
+53. `entity/ChatFolderEntity.java`
+54. `entity/NewsEntity.java`
+55. `entity/NewsCommentEntity.java`
+56. `entity/StoryEntity.java`
+57. `entity/StoryViewEntity.java`
+58. `entity/PushSubscriptionEntity.java`
+
+### Repositories (18)
+59. `repository/UserRepository.java`
+60. `repository/RoomRepository.java`
+61. `repository/MessageRepository.java`
+62. `repository/ContactRepository.java`
+63. `repository/BlockedUserRepository.java`
+64. `repository/TaskRepository.java`
+65. `repository/CallLogRepository.java`
+66. `repository/PollRepository.java`
+67. `repository/PollOptionRepository.java`
+68. `repository/PollVoteRepository.java`
+69. `repository/ReactionRepository.java`
+70. `repository/ReadReceiptRepository.java`
+71. `repository/RoomMuteRepository.java`
+72. `repository/ChatFolderRepository.java`
+73. `repository/NewsRepository.java`
+74. `repository/NewsCommentRepository.java`
+75. `repository/StoryRepository.java`
+76. `repository/StoryViewRepository.java`
+77. `repository/PushSubscriptionRepository.java`
+
+### DTOs (9 + inner classes)
+78. `dto/MessageDto.java`
+79. `dto/UserDto.java`
+80. `dto/RoomDto.java`
+81. `dto/AuthResponse.java`
+82. `dto/TaskDto.java`
+83. `dto/NewsDto.java`
+84. `dto/NewsCommentDto.java`
+85. `dto/StoryDto.java` (+ inner `StoryViewDto`)
+86. `dto/AdminStatsDto.java`
+
+### Types (2)
+87. `types/MessageType.java`
+88. `types/RoomType.java`
+
+### Main (1)
+89. `WebrtcChatBackendApplication.java`
+
+</details>
+
+---
+
+*Отчёт v2.0 — полный файл-по-файлу аудит backend-кодовой базы. Все выводы подтверждены прямым чтением исходного кода.*

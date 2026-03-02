@@ -38,8 +38,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "spring.flyway.enabled=false",
         "jwt.secret=test-jwt-secret-key-for-unit-tests-min-32-chars!!",
         "jwt.expiration=3600000",
+        "jwt.refresh-expiration=604800000",
         "cors.allowed-origins=http://localhost:*",
-        "upload.dir=${java.io.tmpdir}/barsik-test-uploads"
+        "upload.dir=${java.io.tmpdir}/barsik-test-uploads",
+        "rate-limit.max-requests=1000",
+        "rate-limit.window-ms=1000"
 })
 class IntegrationTest {
 
