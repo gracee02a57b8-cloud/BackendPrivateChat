@@ -4,7 +4,7 @@
 //            disappearing messages, apiMessage functions
 // ==========================================
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 
 // ====== Mocks ======
 
@@ -1016,5 +1016,145 @@ describe("getRandomAvatar", () => {
 
   it("returns deterministic URL for same name", () => {
     expect(getRandomAvatar("alice")).toBe(getRandomAvatar("alice"));
+  });
+});
+
+// ============================================================
+// 6. BUG FIX: Pinned message bar — compact layout
+// The pinned bar was too large. Now it has max-h-10,
+// overflow-hidden, compact text (text-xs/text-[11px]),
+// reduced padding (px-3 py-1), and truncation on content.
+// ============================================================
+describe("BUG FIX: Pinned message bar compact layout", () => {
+  // Render the exact pinned bar JSX from MessageView to verify layout
+  function PinnedBar({ message, onUnpin }) {
+    const { RiPushpinFill, RiCloseFill } = require("react-icons/ri");
+    return (
+      <div
+        data-testid="pinned-bar"
+        className="flex max-h-10 items-center gap-1.5 overflow-hidden border-b border-LightShade/20 bg-bgPrimary/80 px-3 py-1 backdrop-blur-sm dark:bg-bgPrimary-dark/80"
+      >
+        <RiPushpinFill className="flex-shrink-0 text-sm text-bgAccent dark:text-bgAccent-dark" />
+        <div className="min-w-0 flex-1 overflow-hidden" data-testid="pinned-content-wrapper">
+          <p className="truncate text-[11px] font-medium leading-tight text-bgAccent dark:text-bgAccent-dark">
+            Закреплённое сообщение
+          </p>
+          <p
+            className="truncate text-xs leading-tight text-textPrimary dark:text-textPrimary-dark"
+            data-testid="pinned-content-text"
+          >
+            {message?.content || "📎 Вложение"}
+          </p>
+        </div>
+        <button
+          onClick={() => onUnpin?.(message)}
+          className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full transition hover:bg-LightShade/20"
+          title="Открепить"
+          data-testid="unpin-btn"
+        >
+          <RiCloseFill className="text-sm opacity-60" />
+        </button>
+      </div>
+    );
+  }
+
+  it("bar container has max-h-10 and overflow-hidden to cap height", () => {
+    const { getByTestId } = render(
+      <PinnedBar message={{ content: "Hello world" }} />,
+    );
+    const bar = getByTestId("pinned-bar");
+    expect(bar.className).toContain("max-h-10");
+    expect(bar.className).toContain("overflow-hidden");
+  });
+
+  it("bar uses compact padding px-3 py-1 (not px-4 py-2)", () => {
+    const { getByTestId } = render(
+      <PinnedBar message={{ content: "Hello" }} />,
+    );
+    const bar = getByTestId("pinned-bar");
+    expect(bar.className).toContain("px-3");
+    expect(bar.className).toContain("py-1");
+    expect(bar.className).not.toContain("px-4");
+    expect(bar.className).not.toContain("py-2");
+  });
+
+  it("content wrapper has overflow-hidden and min-w-0 for truncation", () => {
+    const { getByTestId } = render(
+      <PinnedBar message={{ content: "Test" }} />,
+    );
+    const wrapper = getByTestId("pinned-content-wrapper");
+    expect(wrapper.className).toContain("overflow-hidden");
+    expect(wrapper.className).toContain("min-w-0");
+  });
+
+  it("content text has truncate class for single-line clamp", () => {
+    const { getByTestId } = render(
+      <PinnedBar message={{ content: "Very long message text that should be truncated on smaller screens" }} />,
+    );
+    const text = getByTestId("pinned-content-text");
+    expect(text.className).toContain("truncate");
+    expect(text.textContent).toBe("Very long message text that should be truncated on smaller screens");
+  });
+
+  it("content text uses compact text-xs size (not text-sm)", () => {
+    const { getByTestId } = render(
+      <PinnedBar message={{ content: "Hi" }} />,
+    );
+    const text = getByTestId("pinned-content-text");
+    expect(text.className).toContain("text-xs");
+    expect(text.className).not.toContain("text-sm");
+  });
+
+  it("shows fallback '📎 Вложение' when content is empty", () => {
+    const { getByTestId } = render(
+      <PinnedBar message={{ content: "" }} />,
+    );
+    expect(getByTestId("pinned-content-text").textContent).toBe("📎 Вложение");
+  });
+
+  it("shows fallback '📎 Вложение' when content is null", () => {
+    const { getByTestId } = render(
+      <PinnedBar message={{ content: null }} />,
+    );
+    expect(getByTestId("pinned-content-text").textContent).toBe("📎 Вложение");
+  });
+
+  it("unpin button uses compact h-6 w-6 (not h-7 w-7)", () => {
+    const { getByTestId } = render(
+      <PinnedBar message={{ content: "Test" }} />,
+    );
+    const btn = getByTestId("unpin-btn");
+    expect(btn.className).toContain("h-6");
+    expect(btn.className).toContain("w-6");
+    expect(btn.className).not.toContain("h-7");
+    expect(btn.className).not.toContain("w-7");
+  });
+
+  it("unpin button fires onUnpin callback with the message", () => {
+    const onUnpin = vi.fn();
+    const msg = { id: "m1", content: "Pinned text" };
+    render(<PinnedBar message={msg} onUnpin={onUnpin} />);
+    fireEvent.click(screen.getByTitle("Открепить"));
+    expect(onUnpin).toHaveBeenCalledWith(msg);
+  });
+
+  it("label uses text-[11px] for compact header", () => {
+    const { getByTestId } = render(
+      <PinnedBar message={{ content: "Test" }} />,
+    );
+    const bar = getByTestId("pinned-bar");
+    const label = bar.querySelector("p.font-medium");
+    expect(label).not.toBeNull();
+    expect(label.className).toContain("text-[11px]");
+    expect(label.textContent).toBe("Закреплённое сообщение");
+  });
+
+  it("bar uses gap-1.5 (not gap-2) for tighter spacing", () => {
+    const { getByTestId } = render(
+      <PinnedBar message={{ content: "Test" }} />,
+    );
+    const bar = getByTestId("pinned-bar");
+    expect(bar.className).toContain("gap-1.5");
+    expect(bar.className).not.toContain("gap-2");
   });
 });

@@ -295,22 +295,22 @@ function MessageView() {
 
       {/* Pinned message bar */}
       {lastPinned && (
-        <div className="flex items-center gap-2 border-b border-LightShade/20 bg-bgPrimary/80 px-4 py-2 backdrop-blur-sm dark:bg-bgPrimary-dark/80">
-          <RiPushpinFill className="flex-shrink-0 text-base text-bgAccent dark:text-bgAccent-dark" />
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-bgAccent dark:text-bgAccent-dark">
+        <div className="flex max-h-10 items-center gap-1.5 overflow-hidden border-b border-LightShade/20 bg-bgPrimary/80 px-3 py-1 backdrop-blur-sm dark:bg-bgPrimary-dark/80">
+          <RiPushpinFill className="flex-shrink-0 text-sm text-bgAccent dark:text-bgAccent-dark" />
+          <div className="min-w-0 flex-1 overflow-hidden">
+            <p className="truncate text-[11px] font-medium leading-tight text-bgAccent dark:text-bgAccent-dark">
               Закреплённое сообщение
             </p>
-            <p className="truncate text-sm text-textPrimary dark:text-textPrimary-dark">
+            <p className="truncate text-xs leading-tight text-textPrimary dark:text-textPrimary-dark">
               {lastPinned.content || "📎 Вложение"}
             </p>
           </div>
           <button
             onClick={() => handleUnpin(lastPinned)}
-            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full transition hover:bg-LightShade/20"
+            className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full transition hover:bg-LightShade/20"
             title="Открепить"
           >
-            <RiCloseFill className="text-base opacity-60" />
+            <RiCloseFill className="text-sm opacity-60" />
           </button>
         </div>
       )}

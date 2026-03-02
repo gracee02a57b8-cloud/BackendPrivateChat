@@ -422,4 +422,77 @@ describe("ConferenceOverlay", () => {
       expect(screen.getByText("Z")).toBeInTheDocument();
     });
   });
+
+  // ------------------------------------------
+  // BUG FIX: Conference controls visibility
+  // Controls were pushed off-screen because video grid
+  // lacked min-h-0 and controls lacked flex-shrink-0
+  // ------------------------------------------
+  describe("BUG FIX: conference controls always visible (flex layout)", () => {
+    beforeEach(() => {
+      confCtxMock.confState = "active";
+      confCtxMock.localStream = mkStream();
+      confCtxMock.participants = ["Alice"];
+      confCtxMock.peerStreams = { Alice: mkStream() };
+    });
+
+    it("header has flex-shrink-0 so it never collapses", () => {
+      const { container } = render(<ConferenceOverlay />);
+      const header = container.querySelector(".flex.flex-shrink-0.items-center.justify-between");
+      expect(header).not.toBeNull();
+      expect(header.textContent).toContain("Конференция");
+    });
+
+    it("video grid has min-h-0 to prevent flex overflow", () => {
+      const { container } = render(<ConferenceOverlay />);
+      const grid = container.querySelector(".grid.min-h-0.flex-1");
+      expect(grid).not.toBeNull();
+    });
+
+    it("video grid has overflow-hidden to clip overflowing videos", () => {
+      const { container } = render(<ConferenceOverlay />);
+      const grid = container.querySelector(".grid.min-h-0.flex-1.overflow-hidden");
+      expect(grid).not.toBeNull();
+    });
+
+    it("controls bar has flex-shrink-0 so it never gets pushed off-screen", () => {
+      const { container } = render(<ConferenceOverlay />);
+      // Controls bar: flex flex-shrink-0 items-center justify-center
+      const controls = container.querySelector(".flex.flex-shrink-0.items-center.justify-center");
+      expect(controls).not.toBeNull();
+      // Must contain the leave button
+      const leaveBtn = screen.getByTitle("Покинуть конференцию");
+      expect(controls.contains(leaveBtn)).toBe(true);
+    });
+
+    it("fullscreen container uses flex-col to stack header/grid/controls vertically", () => {
+      const { container } = render(<ConferenceOverlay />);
+      const overlay = container.querySelector(".fixed.inset-0");
+      expect(overlay.className).toContain("flex");
+      expect(overlay.className).toContain("flex-col");
+    });
+
+    it("all 3 sections present: header, grid, controls", () => {
+      const { container } = render(<ConferenceOverlay />);
+      const overlay = container.querySelector(".fixed.inset-0");
+      const children = overlay.children;
+      // At least: header, grid, controls (invite modal may be absent)
+      const flexShrinkChildren = overlay.querySelectorAll(":scope > .flex-shrink-0");
+      expect(flexShrinkChildren.length).toBe(2); // header + controls
+      const gridChild = overlay.querySelector(":scope > .grid.flex-1");
+      expect(gridChild).not.toBeNull();
+    });
+
+    it("controls remain visible with many peers (5 tiles)", () => {
+      confCtxMock.peerStreams = {
+        A: mkStream(), B: mkStream(), C: mkStream(), D: mkStream(),
+      };
+      confCtxMock.participants = ["A", "B", "C", "D"];
+      render(<ConferenceOverlay />);
+      expect(screen.getByTitle("Покинуть конференцию")).toBeInTheDocument();
+      expect(screen.getByTitle("Свернуть конференцию")).toBeInTheDocument();
+      expect(screen.getByTitle("Выключить микрофон")).toBeInTheDocument();
+      expect(screen.getByTitle("Выключить камеру")).toBeInTheDocument();
+    });
+  });
 });

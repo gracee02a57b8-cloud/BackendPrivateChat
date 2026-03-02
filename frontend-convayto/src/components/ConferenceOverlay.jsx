@@ -204,7 +204,7 @@ function ConferenceOverlay() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3">
+      <div className="flex flex-shrink-0 items-center justify-between px-4 py-3">
         <h2 className="text-lg font-semibold">
           Конференция • {participants.length + 1}/{MAX_PARTICIPANTS}
         </h2>
@@ -227,7 +227,7 @@ function ConferenceOverlay() {
 
       {/* Video grid */}
       <div
-        className={`grid flex-1 gap-2 p-2 ${gridCols}`}
+        className={`grid min-h-0 flex-1 gap-2 overflow-hidden p-2 ${gridCols}`}
         style={{ gridAutoRows: "1fr" }}
       >
         {/* Local */}
@@ -240,7 +240,7 @@ function ConferenceOverlay() {
       </div>
 
       {/* Controls */}
-      <div className="flex items-center justify-center gap-6 pb-8 pt-4">
+      <div className="flex flex-shrink-0 items-center justify-center gap-6 pb-8 pt-4">
         <button
           onClick={toggleAudio}
           className={`flex h-14 w-14 items-center justify-center rounded-full text-2xl shadow-lg transition active:scale-95 ${
