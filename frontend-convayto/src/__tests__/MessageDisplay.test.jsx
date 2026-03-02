@@ -476,13 +476,13 @@ describe("Cleanup effect (page truncation)", () => {
     qc = makeQueryClient();
   });
 
+  // Updated to match new cleanup logic — always trim to page 0 when there are 2+ pages
   function simulateCleanup(friendUserId) {
     qc.setQueryData(["friend", friendUserId], (prev) => {
-      if (!prev || !prev.pages[1]?.length) return;
-      return {
-        pages: prev.pages.slice(0, 1),
-        pageParams: prev.pageParams.slice(0, 1),
-      };
+      if (!prev || prev.pages.length <= 1) return;
+      const trimmed = prev.pages.slice(0, 1);
+      const params = prev.pageParams.slice(0, 1);
+      return { pages: trimmed, pageParams: params };
     });
   }
 
@@ -517,15 +517,195 @@ describe("Cleanup effect (page truncation)", () => {
     expect(after.pages[0]).toEqual([makeMsg("new1")]);
   });
 
-  it("does nothing if second page is empty", () => {
+  it("removes empty trailing pages (the bug fix)", () => {
     const data = { pages: [[makeMsg("m1")], []], pageParams: [0, 1] };
     qc.setQueryData(["friend", "bob"], data);
 
     simulateCleanup("bob");
 
     const after = qc.getQueryData(["friend", "bob"]);
-    // No truncation because pages[1] is empty
-    expect(after.pages).toHaveLength(2);
+    // Now truncates to page 0 — removing the empty trailing page
+    expect(after.pages).toHaveLength(1);
+    expect(after.pages[0]).toHaveLength(1);
+    expect(after.pages[0][0].id).toBe("m1");
+  });
+});
+
+// ============================================================
+// 5b. Pagination & select reversal — the "disappearing messages" bug
+// ============================================================
+describe("Pagination: getNextPageParam and select reversal", () => {
+  const MAX = 25; // MAX_MESSAGES_PER_PAGE
+
+  describe("getNextPageParam", () => {
+    // Matches the production logic in useMessages
+    function getNextPageParam(lastPage, _allPages, lastPageParam) {
+      if (!lastPage || lastPage.length < MAX) return undefined;
+      return lastPageParam + 1;
+    }
+
+    it("returns undefined for empty page", () => {
+      expect(getNextPageParam([], [], 0)).toBeUndefined();
+    });
+
+    it("returns undefined for null page", () => {
+      expect(getNextPageParam(null, [], 0)).toBeUndefined();
+    });
+
+    it("returns undefined for partial page (< MAX_MESSAGES_PER_PAGE)", () => {
+      const partialPage = Array.from({ length: 4 }, (_, i) => makeMsg(`m${i}`));
+      expect(getNextPageParam(partialPage, [], 0)).toBeUndefined();
+    });
+
+    it("returns undefined for page with exactly 24 messages", () => {
+      const page = Array.from({ length: 24 }, (_, i) => makeMsg(`m${i}`));
+      expect(getNextPageParam(page, [], 0)).toBeUndefined();
+    });
+
+    it("returns next pageParam for full page (25 messages)", () => {
+      const fullPage = Array.from({ length: 25 }, (_, i) => makeMsg(`m${i}`));
+      expect(getNextPageParam(fullPage, [], 0)).toBe(1);
+    });
+
+    it("returns next pageParam for subsequent full pages", () => {
+      const fullPage = Array.from({ length: 25 }, (_, i) => makeMsg(`m${i}`));
+      expect(getNextPageParam(fullPage, [], 2)).toBe(3);
+    });
+  });
+
+  describe("select function (page reversal with empty-page filtering)", () => {
+    // Matches the production logic in useMessages
+    function selectFn(data) {
+      if (!data || data.pages.length < 2) return data;
+      let pages = [...data.pages];
+      let params = [...data.pageParams];
+      while (pages.length > 1 && pages[pages.length - 1]?.length === 0) {
+        pages.pop();
+        params.pop();
+      }
+      if (pages.length < 2) return { ...data, pages, pageParams: params };
+      return { pages: pages.reverse(), pageParams: params.reverse() };
+    }
+
+    it("returns data unchanged for single page", () => {
+      const data = makeMsgPage(makeMsg("m1"));
+      expect(selectFn(data)).toBe(data);
+    });
+
+    it("returns null/undefined unchanged", () => {
+      expect(selectFn(null)).toBeNull();
+      expect(selectFn(undefined)).toBeUndefined();
+    });
+
+    it("reverses two non-empty pages", () => {
+      const data = {
+        pages: [[makeMsg("new")], [makeMsg("old")]],
+        pageParams: [0, 1],
+      };
+      const result = selectFn(data);
+      expect(result.pages[0][0].id).toBe("old");
+      expect(result.pages[1][0].id).toBe("new");
+    });
+
+    it("BUG FIX: filters empty trailing page before reversal", () => {
+      // This is the exact scenario that caused messages to disappear:
+      // page 0 has 4 messages, page 1 is empty (fetched past the end).
+      const data = {
+        pages: [[makeMsg("m1"), makeMsg("m2"), makeMsg("m3"), makeMsg("m4")], []],
+        pageParams: [0, 1],
+      };
+      const result = selectFn(data);
+      // After filtering the empty page, only 1 page remains → returned as-is (no reversal)
+      expect(result.pages).toHaveLength(1);
+      expect(result.pages[0]).toHaveLength(4);
+      expect(result.pages[0][0].id).toBe("m1");
+    });
+
+    it("BUG FIX: pages[0] is never empty after select", () => {
+      // Before fix: select would reverse [msgs, []] → [[], msgs], causing "Нет сообщений"
+      const data = {
+        pages: [[makeMsg("a"), makeMsg("b")], []],
+        pageParams: [0, 1],
+      };
+      const result = selectFn(data);
+      // pages[0] must have messages — never empty
+      expect(result.pages[0].length).toBeGreaterThan(0);
+    });
+
+    it("filters multiple empty trailing pages", () => {
+      const data = {
+        pages: [[makeMsg("m1")], [], []],
+        pageParams: [0, 1, 2],
+      };
+      const result = selectFn(data);
+      expect(result.pages).toHaveLength(1);
+      expect(result.pages[0][0].id).toBe("m1");
+    });
+
+    it("preserves non-empty pages and reverses correctly", () => {
+      // 3 pages: page 0 (newest), page 1 (middle), page 2 (oldest) — all non-empty
+      const data = {
+        pages: [
+          [makeMsg("c1"), makeMsg("c2")],
+          [makeMsg("b1"), makeMsg("b2")],
+          [makeMsg("a1"), makeMsg("a2")],
+        ],
+        pageParams: [0, 1, 2],
+      };
+      const result = selectFn(data);
+      // After reversal: oldest first
+      expect(result.pages[0][0].id).toBe("a1");
+      expect(result.pages[1][0].id).toBe("b1");
+      expect(result.pages[2][0].id).toBe("c1");
+    });
+
+    it("filters empty trailing page from 3 pages and still reverses remaining", () => {
+      const data = {
+        pages: [
+          [makeMsg("new1")],
+          [makeMsg("old1")],
+          [],
+        ],
+        pageParams: [0, 1, 2],
+      };
+      const result = selectFn(data);
+      // Empty page removed → 2 pages → reversed
+      expect(result.pages).toHaveLength(2);
+      expect(result.pages[0][0].id).toBe("old1");
+      expect(result.pages[1][0].id).toBe("new1");
+    });
+  });
+
+  describe("Messages component 'Нет сообщений' condition", () => {
+    // Matches the production logic in Messages.jsx
+    function hasAnyMessages(pages) {
+      return pages && pages.some((p) => p?.length > 0);
+    }
+
+    it("shows 'Нет сообщений' when pages is undefined", () => {
+      expect(hasAnyMessages(undefined)).toBeFalsy();
+    });
+
+    it("shows 'Нет сообщений' when all pages are empty", () => {
+      expect(hasAnyMessages([[]])).toBe(false);
+    });
+
+    it("shows 'Нет сообщений' when pages has multiple empty arrays", () => {
+      expect(hasAnyMessages([[], []])).toBe(false);
+    });
+
+    it("does NOT show 'Нет сообщений' when any page has messages", () => {
+      expect(hasAnyMessages([[], [makeMsg("m1")]])).toBe(true);
+    });
+
+    it("does NOT show 'Нет сообщений' for normal single page with messages", () => {
+      expect(hasAnyMessages([[makeMsg("m1"), makeMsg("m2")]])).toBe(true);
+    });
+
+    it("BUG FIX: does NOT show 'Нет сообщений' even if pages[0] is empty but pages[1] has messages", () => {
+      // Before fix: pages[0].length === 0 → showed "Нет сообщений" even though pages[1] had messages
+      expect(hasAnyMessages([[], [makeMsg("m1")]])).toBe(true);
+    });
   });
 });
 

@@ -7,15 +7,14 @@ export async function getConvInfoById({ myUserId, friendUserId }) {
   // Get friend profile
   const friend = await getUserById(friendUserId);
 
-  // Create or get private room for this friend
-  let room = null;
-  try {
-    room = await apiFetch(`/api/rooms/private/${encodeURIComponent(friendUserId)}`, {
-      method: "POST",
-    });
-  } catch {
-    // Room may not exist yet — that's okay
-  }
+  // Create or get private room for this friend.
+  // The backend creates the room on demand (getOrCreate), so any error
+  // here is a genuine failure (network/server). We let it propagate so
+  // React Query retries and — on background refetch — preserves the
+  // stale cache that already has the valid room ID.
+  const room = await apiFetch(`/api/rooms/private/${encodeURIComponent(friendUserId)}`, {
+    method: "POST",
+  });
 
   return {
     id: room?.id || null, // Room ID (e.g. "pm_alice_bob") — null if not created yet

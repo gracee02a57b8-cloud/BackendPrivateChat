@@ -21,10 +21,9 @@ function useMessageSubscription({ conversation_id, friendUserId }) {
 
       function callback(newData) {
         queryClient.setQueryData(["friend", friendUserId], (prevData) => {
-          if (!prevData) return prevData;
-
           // Handle DELETE — remove message
           if (newData.type === "DELETE" && newData.deleted) {
+            if (!prevData) return prevData;
             return {
               ...prevData,
               pages: prevData.pages.map((page) =>
@@ -35,6 +34,7 @@ function useMessageSubscription({ conversation_id, friendUserId }) {
 
           // Handle PIN / UNPIN — update pinned field on existing message
           if (newData.type === "PIN" || newData.type === "UNPIN") {
+            if (!prevData) return prevData;
             return {
               ...prevData,
               pages: prevData.pages.map((page) =>
@@ -49,6 +49,7 @@ function useMessageSubscription({ conversation_id, friendUserId }) {
 
           // Handle REACTION / REACTION_REMOVE — update reactions on existing message
           if (newData.type === "REACTION" || newData.type === "REACTION_REMOVE") {
+            if (!prevData) return prevData;
             const myUsername = localStorage.getItem("username");
             // Skip if this is our own reaction (already handled optimistically)
             if (newData.sender_id === myUsername) return prevData;
@@ -85,6 +86,7 @@ function useMessageSubscription({ conversation_id, friendUserId }) {
 
           // Handle POLL_VOTE / POLL_CLOSE — update poll data on existing message
           if (newData.type === "POLL_VOTE" || newData.type === "POLL_CLOSE") {
+            if (!prevData) return prevData;
             if (newData.pollData) {
               return {
                 ...prevData,
@@ -99,6 +101,12 @@ function useMessageSubscription({ conversation_id, friendUserId }) {
               };
             }
             return prevData;
+          }
+
+          // If no cached data yet (query still loading), bootstrap the cache
+          // so the message isn't lost.
+          if (!prevData) {
+            return { pages: [[newData]], pageParams: [0] };
           }
 
           // Check ALL pages for existing message (optimistic update or edit)

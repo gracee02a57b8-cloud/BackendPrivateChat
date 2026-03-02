@@ -3,6 +3,7 @@ import { getMessages } from "./apiMessage";
 import { useEffect } from "react";
 import useConvInfo from "./useConvInfo";
 import useMessageSubscription from "./useMessageSubscription";
+import { MAX_MESSAGES_PER_PAGE } from "../../config";
 
 export function useMessages() {
   const {
@@ -18,14 +19,15 @@ export function useMessages() {
 
   // Clear older pages when the user switches to a different chat.
   // Only friendUserId matters here — it identifies the chat.
+  // Also strips empty trailing pages left by exhausted pagination.
   useEffect(() => {
     queryClient.setQueryData(["friend", friendUserId], (prev) => {
-      if (!prev || !prev.pages[1]?.length) return;
+      if (!prev || prev.pages.length <= 1) return;
 
-      return {
-        pages: prev.pages.slice(0, 1),
-        pageParams: prev.pageParams.slice(0, 1),
-      };
+      // Always trim to page 0 + remove empty trailing pages
+      const trimmed = prev.pages.slice(0, 1);
+      const params = prev.pageParams.slice(0, 1);
+      return { pages: trimmed, pageParams: params };
     });
   }, [friendUserId, queryClient]);
 
@@ -44,18 +46,33 @@ export function useMessages() {
 
     select: (data) => {
       if (!data || data.pages.length < 2) return data;
+      // Filter out empty trailing pages so reversal never puts an empty
+      // page at index 0 (which would trigger "Нет сообщений").
+      let pages = [...data.pages];
+      let params = [...data.pageParams];
+      while (pages.length > 1 && pages[pages.length - 1]?.length === 0) {
+        pages.pop();
+        params.pop();
+      }
+      if (pages.length < 2) return { ...data, pages, pageParams: params };
       return {
-        pages: [...data.pages].reverse(),
-        pageParams: [...data.pageParams].reverse(),
+        pages: pages.reverse(),
+        pageParams: params.reverse(),
       };
     },
     getNextPageParam: (lastPage, _allPages, lastPageParam) => {
-      if (lastPage?.length === 0) return undefined;
+      // If the page is empty OR has fewer items than a full page,
+      // there are no more messages to load.
+      if (!lastPage || lastPage.length < MAX_MESSAGES_PER_PAGE) return undefined;
       return lastPageParam + 1;
     },
     initialPageParam: 0,
-    // it should depend and wait untill the conversation_id and friendUserId are available
-    enabled: !!friendUserId,
+    // Both IDs must be present: friendUserId for the cache key,
+    // conversation_id for the actual API call. They come from the same
+    // convInfo object but conversation_id can be null if the room POST
+    // in getConvInfoById failed — in that case we must NOT fetch
+    // (getMessages would return [] and poison the cache for 5 min).
+    enabled: !!friendUserId && !!conversation_id,
     staleTime: 5 * 60 * 1000, // 5 min — WS handles realtime updates
     refetchOnWindowFocus: false,
   });

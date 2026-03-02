@@ -109,11 +109,11 @@ function Messages({
         tabIndex={-1}
         className="mx-auto flex w-full max-w-3xl flex-col px-4"
       >
-        {pages && (!pages[0] || pages[0].length === 0) && (
+        {pages && !pages.some((p) => p?.length > 0) && (
           <ShortTextMessage>Нет сообщений</ShortTextMessage>
         )}
 
-        {pages && pages[0] && pages[0].length > 0 && (
+        {pages && pages.some((p) => p?.length > 0) && (
           <>
             {hasNextPage && (
               <span ref={topRef}>{isFetchingNextPage && <Loader />}</span>
