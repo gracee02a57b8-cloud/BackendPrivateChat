@@ -261,16 +261,22 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         }
         incoming.setRoomId(roomId);
 
+        // Load room ONCE and pass through the entire flow (audit 3.1)
+        RoomDto room = roomService.getRoomById(roomId);
+        if (room == null) {
+            log.warn("Room '{}' not found", roomId);
+            return;
+        }
+
         // Room membership check (C9)
-        if (!isUserInRoom(username, roomId)) {
+        if (!isUserInRoom(username, room)) {
             log.warn("User '{}' tried to send to room '{}' without membership", username, roomId);
             return;
         }
 
         // Block check for PRIVATE rooms
-        RoomDto senderRoom = roomService.getRoomById(roomId);
-        if (senderRoom != null && senderRoom.getType() == RoomType.PRIVATE) {
-            String otherUser = senderRoom.getMembers().stream()
+        if (room.getType() == RoomType.PRIVATE) {
+            String otherUser = room.getMembers().stream()
                     .filter(m -> !m.equals(username)).findFirst().orElse(null);
             if (otherUser != null && isBlocked(username, otherUser)) {
                 log.info("Message from '{}' to '{}' blocked (user block)", username, otherUser);
@@ -283,26 +289,14 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             }
         }
 
-        // Strip E2E encryption fields — encryption is disabled
-        incoming.setEncrypted(false);
-        incoming.setGroupEncrypted(false);
-        incoming.setEncryptedContent(null);
-        incoming.setIv(null);
-        incoming.setRatchetKey(null);
-        incoming.setMessageNumber(null);
-        incoming.setPreviousChainLength(null);
-        incoming.setEphemeralKey(null);
-        incoming.setSenderIdentityKey(null);
-        incoming.setOneTimeKeyId(null);
-
         chatService.send(roomId, incoming);
-        broadcastToRoom(roomId, incoming);
+        broadcastToRoom(room, incoming);
 
         // Check if any recipient is online → mark as DELIVERED
-        sendDeliveryStatus(username, incoming, roomId);
+        sendDeliveryStatus(username, incoming, room);
 
         // Push notifications to offline room members (not for GENERAL room — too noisy)
-        sendPushToOfflineMembers(username, roomId);
+        sendPushToOfflineMembers(username, room);
 
         // Send REPLY_NOTIFICATION to the original message author
         if (incoming.getReplyToSender() != null
@@ -322,6 +316,13 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
      */
     private boolean isUserInRoom(String username, String roomId) {
         RoomDto room = roomService.getRoomById(roomId);
+        return isUserInRoom(username, room);
+    }
+
+    /**
+     * Check if user is a member of the room using a pre-loaded RoomDto (audit 3.1).
+     */
+    private boolean isUserInRoom(String username, RoomDto room) {
         if (room == null) return false;
         if (room.getType() == RoomType.GENERAL) return true;
         return room.getMembers().contains(username);
@@ -1154,6 +1155,15 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     }
 
     private void broadcastToRoom(String roomId, MessageDto message) {
+        RoomDto room = roomService.getRoomById(roomId);
+        if (room == null) return;
+        broadcastToRoom(room, message);
+    }
+
+    /**
+     * Broadcast using a pre-loaded RoomDto (audit 3.1 — avoids redundant DB lookup).
+     */
+    private void broadcastToRoom(RoomDto room, MessageDto message) {
         String json;
         try {
             json = objectMapper.writeValueAsString(message);
@@ -1161,9 +1171,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             log.error("Failed to serialize message", e);
             return;
         }
-
-        RoomDto room = roomService.getRoomById(roomId);
-        if (room == null) return;
 
         if (room.getType() == RoomType.GENERAL) {
             userSessions.values().forEach(s -> sendSafe(s, json));
@@ -1182,14 +1189,21 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
      */
     private void sendPushToOfflineMembers(String senderUsername, String roomId) {
         RoomDto room = roomService.getRoomById(roomId);
-        if (room == null || room.getType() == RoomType.GENERAL) return;
+        if (room != null) sendPushToOfflineMembers(senderUsername, room);
+    }
+
+    /**
+     * Send push using a pre-loaded RoomDto (audit 3.1 — avoids redundant DB lookup).
+     */
+    private void sendPushToOfflineMembers(String senderUsername, RoomDto room) {
+        if (room.getType() == RoomType.GENERAL) return;
 
         for (String member : room.getMembers()) {
             if (member.equals(senderUsername)) continue;
             WebSocketSession s = userSessions.get(member);
             if (s == null || !s.isOpen()) {
                 webPushService.sendPushToUserAsync(member,
-                        senderUsername, "Новое сообщение", "message", roomId);
+                        senderUsername, "Новое сообщение", "message", room.getId());
             }
         }
     }
@@ -1230,6 +1244,13 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private void sendDeliveryStatus(String sender, MessageDto message, String roomId) {
         RoomDto room = roomService.getRoomById(roomId);
         if (room == null) return;
+        sendDeliveryStatus(sender, message, room);
+    }
+
+    /**
+     * Delivery status using a pre-loaded RoomDto (audit 3.1 — avoids redundant DB lookup).
+     */
+    private void sendDeliveryStatus(String sender, MessageDto message, RoomDto room) {
 
         boolean hasOnlineRecipient;
         if (room.getType() == RoomType.GENERAL) {
@@ -1250,7 +1271,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             update.setType(MessageType.STATUS_UPDATE);
             update.setId(message.getId());
             update.setStatus("DELIVERED");
-            update.setRoomId(roomId);
+            update.setRoomId(room.getId());
 
             WebSocketSession senderSession = userSessions.get(sender);
             if (senderSession != null) {

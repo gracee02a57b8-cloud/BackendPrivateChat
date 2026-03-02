@@ -48,36 +48,6 @@ public class MessageEntity {
     @Column(name = "disappears_at", length = 30)
     private String disappearsAt;
 
-    @Column(nullable = false)
-    private boolean encrypted;
-
-    @Column(name = "group_encrypted", nullable = false)
-    private boolean groupEncrypted;
-
-    @Column(name = "encrypted_content", columnDefinition = "TEXT")
-    private String encryptedContent;
-
-    @Column(length = 24)
-    private String iv;
-
-    @Column(name = "ratchet_key", columnDefinition = "TEXT")
-    private String ratchetKey;
-
-    @Column(name = "message_number")
-    private Integer messageNumber;
-
-    @Column(name = "previous_chain_length")
-    private Integer previousChainLength;
-
-    @Column(name = "ephemeral_key", columnDefinition = "TEXT")
-    private String ephemeralKey;
-
-    @Column(name = "sender_identity_key", columnDefinition = "TEXT")
-    private String senderIdentityKey;
-
-    @Column(name = "one_time_key_id")
-    private Integer oneTimeKeyId;
-
     @Column(name = "reply_to_id", length = 36)
     private String replyToId;
 
@@ -152,36 +122,6 @@ public class MessageEntity {
 
     public String getDisappearsAt() { return disappearsAt; }
     public void setDisappearsAt(String disappearsAt) { this.disappearsAt = disappearsAt; }
-
-    public boolean isEncrypted() { return encrypted; }
-    public void setEncrypted(boolean encrypted) { this.encrypted = encrypted; }
-
-    public boolean isGroupEncrypted() { return groupEncrypted; }
-    public void setGroupEncrypted(boolean groupEncrypted) { this.groupEncrypted = groupEncrypted; }
-
-    public String getEncryptedContent() { return encryptedContent; }
-    public void setEncryptedContent(String encryptedContent) { this.encryptedContent = encryptedContent; }
-
-    public String getIv() { return iv; }
-    public void setIv(String iv) { this.iv = iv; }
-
-    public String getRatchetKey() { return ratchetKey; }
-    public void setRatchetKey(String ratchetKey) { this.ratchetKey = ratchetKey; }
-
-    public Integer getMessageNumber() { return messageNumber; }
-    public void setMessageNumber(Integer messageNumber) { this.messageNumber = messageNumber; }
-
-    public Integer getPreviousChainLength() { return previousChainLength; }
-    public void setPreviousChainLength(Integer previousChainLength) { this.previousChainLength = previousChainLength; }
-
-    public String getEphemeralKey() { return ephemeralKey; }
-    public void setEphemeralKey(String ephemeralKey) { this.ephemeralKey = ephemeralKey; }
-
-    public String getSenderIdentityKey() { return senderIdentityKey; }
-    public void setSenderIdentityKey(String senderIdentityKey) { this.senderIdentityKey = senderIdentityKey; }
-
-    public Integer getOneTimeKeyId() { return oneTimeKeyId; }
-    public void setOneTimeKeyId(Integer oneTimeKeyId) { this.oneTimeKeyId = oneTimeKeyId; }
 
     public Long getSeqId() { return seqId; }
 

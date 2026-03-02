@@ -159,7 +159,7 @@ class ContactBlockControllerTest {
     class GetContacts {
 
         @Test
-        @DisplayName("returns enriched contact list")
+        @DisplayName("returns enriched contact list using batch load (audit 3.2)")
         void getContacts_success() throws Exception {
             mockAuth("alice");
             ContactEntity c = new ContactEntity("alice", "bob", "2026-01-01 12:00:00");
@@ -169,7 +169,8 @@ class ContactBlockControllerTest {
             bobUser.setFirstName("Bob");
             bobUser.setLastName("Smith");
             bobUser.setTag("#dev");
-            when(userRepository.findByUsername("bob")).thenReturn(Optional.of(bobUser));
+            // batch load via findByUsernameIn (audit 3.2 — N+1 fix)
+            when(userRepository.findByUsernameIn(List.of("bob"))).thenReturn(List.of(bobUser));
             when(chatService.isUserOnline("bob")).thenReturn(true);
             when(chatService.getLastSeen("bob")).thenReturn("2026-01-01 12:00:00");
 
@@ -180,6 +181,39 @@ class ContactBlockControllerTest {
                     .andExpect(jsonPath("$[0].lastName").value("Smith"))
                     .andExpect(jsonPath("$[0].tag").value("#dev"))
                     .andExpect(jsonPath("$[0].online").value(true));
+
+            // Must use batch method, NOT individual findByUsername
+            verify(userRepository).findByUsernameIn(List.of("bob"));
+            verify(userRepository, never()).findByUsername("bob");
+        }
+
+        @Test
+        @DisplayName("multiple contacts — batch loads all in one query (audit 3.2)")
+        void getContacts_batchLoadsMultiple() throws Exception {
+            mockAuth("alice");
+            ContactEntity c1 = new ContactEntity("alice", "bob", "2026-01-01 12:00:00");
+            ContactEntity c2 = new ContactEntity("alice", "charlie", "2026-01-01 13:00:00");
+            when(contactRepository.findByOwner("alice")).thenReturn(List.of(c1, c2));
+
+            UserEntity bobUser = new UserEntity("bob", "pwd", "now");
+            bobUser.setFirstName("Bob");
+            UserEntity charlieUser = new UserEntity("charlie", "pwd", "now");
+            charlieUser.setFirstName("Charlie");
+            when(userRepository.findByUsernameIn(List.of("bob", "charlie")))
+                    .thenReturn(List.of(bobUser, charlieUser));
+            when(chatService.isUserOnline(anyString())).thenReturn(false);
+            when(chatService.getLastSeen(anyString())).thenReturn("2026-01-01 12:00:00");
+
+            mockMvc.perform(get("/api/contacts").header("Authorization", AUTH))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].contact").value("bob"))
+                    .andExpect(jsonPath("$[0].firstName").value("Bob"))
+                    .andExpect(jsonPath("$[1].contact").value("charlie"))
+                    .andExpect(jsonPath("$[1].firstName").value("Charlie"));
+
+            // Exactly ONE batch call, zero individual calls
+            verify(userRepository, times(1)).findByUsernameIn(anyList());
+            verify(userRepository, never()).findByUsername(anyString());
         }
 
         @Test
@@ -192,6 +226,9 @@ class ContactBlockControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$").isArray())
                     .andExpect(jsonPath("$").isEmpty());
+
+            // No batch call when there are no contacts
+            verify(userRepository, never()).findByUsernameIn(anyList());
         }
     }
 

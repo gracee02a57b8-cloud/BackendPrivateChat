@@ -245,17 +245,6 @@ public class ChatService {
         e.setStatus(dto.getStatus());
         e.setEdited(dto.isEdited());
         e.setScheduledAt(dto.getScheduledAt());
-        // E2E encryption fields
-        e.setEncrypted(dto.isEncrypted());
-        e.setGroupEncrypted(dto.isGroupEncrypted());
-        e.setEncryptedContent(dto.getEncryptedContent());
-        e.setIv(dto.getIv());
-        e.setRatchetKey(dto.getRatchetKey());
-        e.setMessageNumber(dto.getMessageNumber());
-        e.setPreviousChainLength(dto.getPreviousChainLength());
-        e.setEphemeralKey(dto.getEphemeralKey());
-        e.setSenderIdentityKey(dto.getSenderIdentityKey());
-        e.setOneTimeKeyId(dto.getOneTimeKeyId());
         // Reply fields
         e.setReplyToId(dto.getReplyToId());
         e.setReplyToSender(dto.getReplyToSender());
@@ -287,17 +276,6 @@ public class ChatService {
         dto.setStatus(e.getStatus());
         dto.setEdited(e.isEdited());
         dto.setScheduledAt(e.getScheduledAt());
-        // E2E encryption fields
-        dto.setEncrypted(e.isEncrypted());
-        dto.setGroupEncrypted(e.isGroupEncrypted());
-        dto.setEncryptedContent(e.getEncryptedContent());
-        dto.setIv(e.getIv());
-        dto.setRatchetKey(e.getRatchetKey());
-        dto.setMessageNumber(e.getMessageNumber());
-        dto.setPreviousChainLength(e.getPreviousChainLength());
-        dto.setEphemeralKey(e.getEphemeralKey());
-        dto.setSenderIdentityKey(e.getSenderIdentityKey());
-        dto.setOneTimeKeyId(e.getOneTimeKeyId());
         // Reply fields
         dto.setReplyToId(e.getReplyToId());
         dto.setReplyToSender(e.getReplyToSender());

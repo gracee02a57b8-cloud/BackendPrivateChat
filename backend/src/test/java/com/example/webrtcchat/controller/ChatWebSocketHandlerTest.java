@@ -544,48 +544,6 @@ class ChatWebSocketHandlerTest {
         }));
     }
 
-    // === E2E Field Propagation via WebSocket ===
-
-    @Test
-    @DisplayName("handleTextMessage - E2E encryption fields are stripped (encryption disabled)")
-    void handleMessage_e2eFieldsBroadcast() throws Exception {
-        setupConnectedSession("session1", "alice");
-
-        RoomDto room = createRoom("general", RoomType.GENERAL);
-        when(roomService.getRoomById("general")).thenReturn(room);
-
-        MessageDto encrypted = new MessageDto();
-        encrypted.setType(MessageType.CHAT);
-        encrypted.setContent("[encrypted]");
-        encrypted.setRoomId("general");
-        encrypted.setEncrypted(true);
-        encrypted.setEncryptedContent("cipher-base64");
-        encrypted.setIv("iv-base64");
-        encrypted.setRatchetKey("ratchet-key-base64");
-        encrypted.setMessageNumber(1);
-        encrypted.setPreviousChainLength(0);
-        encrypted.setEphemeralKey("eph-key-base64");
-        encrypted.setSenderIdentityKey("sender-ik-base64");
-        encrypted.setOneTimeKeyId(5);
-
-        handler.handleTextMessage(session, new TextMessage(objectMapper.writeValueAsString(encrypted)));
-
-        // Verify E2E fields are stripped (encryption is disabled)
-        ArgumentCaptor<MessageDto> captor = ArgumentCaptor.forClass(MessageDto.class);
-        verify(chatService).send(eq("general"), captor.capture());
-        MessageDto saved = captor.getValue();
-
-        assertFalse(saved.isEncrypted());
-        assertNull(saved.getEncryptedContent());
-        assertNull(saved.getIv());
-        assertNull(saved.getRatchetKey());
-        assertNull(saved.getMessageNumber());
-        assertNull(saved.getPreviousChainLength());
-        assertNull(saved.getEphemeralKey());
-        assertNull(saved.getSenderIdentityKey());
-        assertNull(saved.getOneTimeKeyId());
-    }
-
     // === Disconnect ===
 
     // === VOICE message type preservation ===
@@ -1085,43 +1043,6 @@ class ChatWebSocketHandlerTest {
 
         // Should not throw
         handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(groupKeyMsg)));
-    }
-
-    @Test
-    @DisplayName("GROUP_KEY - E2E fields are stripped during CHAT processing (encryption disabled)")
-    void groupKey_preservesE2eFields() throws Exception {
-        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
-        WebSocketSession bobSession = connectUser("s2", "bob", "token-b");
-
-        // GROUP_KEY with E2E fields falls through to CHAT processing
-        MessageDto groupKeyMsg = new MessageDto();
-        groupKeyMsg.setType(MessageType.GROUP_KEY);
-        groupKeyMsg.setRoomId("general");
-        groupKeyMsg.setContent("group-key-payload");
-        Map<String, String> extra = new HashMap<>();
-        extra.put("target", "bob");
-        extra.put("roomId", "general");
-        groupKeyMsg.setExtra(extra);
-        groupKeyMsg.setEncryptedContent("enc-payload");
-        groupKeyMsg.setIv("iv-data");
-        groupKeyMsg.setRatchetKey("rk-data");
-        groupKeyMsg.setMessageNumber(5);
-        groupKeyMsg.setPreviousChainLength(2);
-        groupKeyMsg.setEphemeralKey("ek-data");
-        groupKeyMsg.setSenderIdentityKey("sik-data");
-
-        RoomDto room = createRoom("general", RoomType.GENERAL);
-        when(roomService.getRoomById("general")).thenReturn(room);
-
-        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(groupKeyMsg)));
-
-        // Verify E2E fields are stripped
-        ArgumentCaptor<MessageDto> captor = ArgumentCaptor.forClass(MessageDto.class);
-        verify(chatService).send(eq("general"), captor.capture());
-        MessageDto saved = captor.getValue();
-        assertNull(saved.getEncryptedContent());
-        assertNull(saved.getIv());
-        assertNull(saved.getRatchetKey());
     }
 
     @Test
@@ -1717,5 +1638,69 @@ class ChatWebSocketHandlerTest {
             return payload.contains("\"type\":\"CONF_JOIN\"")
                     && payload.contains("\"sender\":\"charlie\"");
         }));
+    }
+
+    // === Audit 3.1 — Single room load per CHAT message ===
+
+    @Test
+    @DisplayName("Audit 3.1 — getRoomById called exactly once for CHAT (was 5× before fix)")
+    void chatMessage_loadsRoomOnce() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+        connectUser("s2", "bob", "token-b");
+
+        RoomDto room = new RoomDto("room1", "Room", RoomType.PRIVATE, "alice", "2026-01-01 12:00:00");
+        room.setMembers(new CopyOnWriteArraySet<>(Set.of("alice", "bob")));
+        when(roomService.getRoomById("room1")).thenReturn(room);
+
+        MessageDto msg = new MessageDto();
+        msg.setContent("Hello");
+        msg.setRoomId("room1");
+        msg.setType(MessageType.CHAT);
+
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(msg)));
+
+        // CRITICAL: getRoomById must be invoked exactly 1 time, not 5
+        verify(roomService, times(1)).getRoomById("room1");
+    }
+
+    @Test
+    @DisplayName("Audit 3.1 — GENERAL room CHAT also loads room only once")
+    void chatMessage_generalRoom_loadsOnce() throws Exception {
+        WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
+
+        RoomDto room = new RoomDto("general", "General", RoomType.GENERAL, "system", "2026-01-01 12:00:00");
+        room.setMembers(new CopyOnWriteArraySet<>(Set.of("alice")));
+        when(roomService.getRoomById("general")).thenReturn(room);
+
+        MessageDto msg = new MessageDto();
+        msg.setContent("Hi all");
+        msg.setRoomId("general");
+        msg.setType(MessageType.CHAT);
+
+        handler.handleTextMessage(aliceSession, new TextMessage(objectMapper.writeValueAsString(msg)));
+
+        verify(roomService, times(1)).getRoomById("general");
+        verify(chatService).send(eq("general"), any(MessageDto.class));
+    }
+
+    @Test
+    @DisplayName("Audit 3.1 — non-member rejected with single room load")
+    void chatMessage_nonMember_rejectedSingleLoad() throws Exception {
+        WebSocketSession charlieSession = connectUser("s3", "charlie", "token-c");
+
+        RoomDto room = new RoomDto("room1", "Room", RoomType.PRIVATE, "alice", "2026-01-01 12:00:00");
+        room.setMembers(new CopyOnWriteArraySet<>(Set.of("alice", "bob")));
+        when(roomService.getRoomById("room1")).thenReturn(room);
+
+        MessageDto msg = new MessageDto();
+        msg.setContent("Intruder");
+        msg.setRoomId("room1");
+        msg.setType(MessageType.CHAT);
+
+        handler.handleTextMessage(charlieSession, new TextMessage(objectMapper.writeValueAsString(msg)));
+
+        verify(chatService, never()).send(anyString(), any(MessageDto.class));
+        // Still only 1 room load even when rejected
+        verify(roomService, times(1)).getRoomById("room1");
     }
 }

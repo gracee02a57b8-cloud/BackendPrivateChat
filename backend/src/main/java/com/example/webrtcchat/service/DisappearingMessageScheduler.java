@@ -34,7 +34,7 @@ public class DisappearingMessageScheduler {
         this.wsHandler = wsHandler;
     }
 
-    @Scheduled(fixedRate = 10_000)
+    @Scheduled(fixedRate = 30_000)
     @Transactional
     public void deleteExpiredMessages() {
         String now = LocalDateTime.now().format(FORMATTER);

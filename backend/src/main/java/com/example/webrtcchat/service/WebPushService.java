@@ -35,6 +35,8 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * WebPushService — implements RFC 8291 (Web Push Message Encryption)
@@ -47,6 +49,10 @@ public class WebPushService {
     private static final Logger log = LoggerFactory.getLogger(WebPushService.class);
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final ObjectMapper mapper = new ObjectMapper();
+
+    // Dedicated thread pool for push notifications (audit 3.5 — avoids ForkJoinPool.commonPool())
+    private static final ExecutorService PUSH_EXECUTOR =
+            Executors.newFixedThreadPool(4, r -> { Thread t = new Thread(r, "push-sender"); t.setDaemon(true); return t; });
 
     private final PushSubscriptionRepository repo;
 
@@ -151,7 +157,7 @@ public class WebPushService {
     public void sendPushToUserAsync(String username, String title, String body,
                                      String type, String roomId) {
         if (!isEnabled()) return;
-        CompletableFuture.runAsync(() -> sendPushToUser(username, title, body, type, roomId));
+        CompletableFuture.runAsync(() -> sendPushToUser(username, title, body, type, roomId), PUSH_EXECUTOR);
     }
 
     /**
@@ -167,7 +173,7 @@ public class WebPushService {
                 if (sub.getUsername().equals(excludeUser)) continue;
                 sendPushToSubscription(sub, title, body, type, roomId);
             }
-        });
+        }, PUSH_EXECUTOR);
     }
 
     private void sendPushToUser(String username, String title, String body,

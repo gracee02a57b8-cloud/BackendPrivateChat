@@ -13,7 +13,10 @@ spring:
       idle-timeout: 300000
       connection-timeout: 20000
       max-lifetime: 1200000
+      validation-timeout: 5000
+      leak-detection-threshold: 30000
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: ${DDL_AUTO:validate}
     show-sql: false
@@ -62,7 +65,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: health,metrics,info
   endpoint:
     health:
       show-details: never

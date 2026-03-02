@@ -53,17 +53,27 @@ public class ContactBlockController {
         if (username == null) return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
 
         List<ContactEntity> contacts = contactRepository.findByOwner(username);
+
+        // Batch-load all contact user entities in one query (audit 3.2 — fixes N+1)
+        List<String> contactUsernames = contacts.stream()
+                .map(ContactEntity::getContact).collect(Collectors.toList());
+        Map<String, UserEntity> usersMap = contactUsernames.isEmpty()
+                ? Map.of()
+                : userRepository.findByUsernameIn(contactUsernames).stream()
+                        .collect(Collectors.toMap(UserEntity::getUsername, u -> u));
+
         List<Map<String, Object>> result = contacts.stream().map(c -> {
             Map<String, Object> map = new HashMap<>();
             map.put("contact", c.getContact());
             map.put("createdAt", c.getCreatedAt());
-            // Enrich with user info
-            userRepository.findByUsername(c.getContact()).ifPresent(u -> {
+            // Enrich with user info from pre-loaded map
+            UserEntity u = usersMap.get(c.getContact());
+            if (u != null) {
                 map.put("avatarUrl", u.getAvatarUrl() != null ? u.getAvatarUrl() : "");
                 map.put("firstName", u.getFirstName() != null ? u.getFirstName() : "");
                 map.put("lastName", u.getLastName() != null ? u.getLastName() : "");
                 map.put("tag", u.getTag() != null ? u.getTag() : "");
-            });
+            }
             map.put("online", chatService.isUserOnline(c.getContact()));
             map.put("lastSeen", chatService.getLastSeen(c.getContact()));
             return map;
