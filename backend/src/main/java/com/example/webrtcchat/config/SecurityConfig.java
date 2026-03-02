@@ -22,6 +22,8 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.io.IOException;
@@ -35,6 +37,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
+
     private final JwtService jwtService;
     private final List<String> corsOrigins;
 
@@ -46,7 +50,19 @@ public class SecurityConfig {
     public SecurityConfig(JwtService jwtService,
                           @Value("${cors.allowed-origins:http://localhost:*}") String origins) {
         this.jwtService = jwtService;
-        this.corsOrigins = Arrays.asList(origins.split(","));
+        this.corsOrigins = Arrays.stream(origins.split(","))
+                .map(String::trim)
+                .filter(o -> !o.isEmpty())
+                .filter(o -> {
+                    if ("*".equals(o)) {
+                        log.warn("CORS origin wildcard '*' rejected — configure explicit origins via CORS_ORIGINS env var");
+                        return false;
+                    }
+                    return true;
+                })
+                .toList();
+
+        log.info("REST CORS allowed origin patterns: {}", this.corsOrigins);
     }
 
     @Bean

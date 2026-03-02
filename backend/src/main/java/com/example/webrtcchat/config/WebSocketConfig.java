@@ -1,7 +1,8 @@
 package com.example.webrtcchat.config;
 
 import com.example.webrtcchat.controller.ChatWebSocketHandler;
-import jakarta.websocket.server.ServerContainer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,6 +18,8 @@ import java.util.Arrays;
 @EnableWebSocket
 public class WebSocketConfig implements WebSocketConfigurer {
 
+    private static final Logger log = LoggerFactory.getLogger(WebSocketConfig.class);
+
     private final ChatWebSocketHandler chatWebSocketHandler;
     private final String[] allowedOrigins;
 
@@ -25,7 +28,21 @@ public class WebSocketConfig implements WebSocketConfigurer {
         this.chatWebSocketHandler = chatWebSocketHandler;
         this.allowedOrigins = Arrays.stream(origins.split(","))
                 .map(String::trim)
+                .filter(o -> !o.isEmpty())
+                .filter(o -> {
+                    if ("*".equals(o)) {
+                        log.warn("WebSocket origin wildcard '*' rejected — configure explicit origins via CORS_ORIGINS env var");
+                        return false;
+                    }
+                    return true;
+                })
                 .toArray(String[]::new);
+
+        log.info("WebSocket allowed origin patterns: {}", Arrays.toString(this.allowedOrigins));
+
+        if (this.allowedOrigins.length == 0) {
+            log.warn("No WebSocket origins configured! All connections will be rejected. Set CORS_ORIGINS env var.");
+        }
     }
 
     @Override
