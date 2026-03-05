@@ -12,4 +12,6 @@ public interface ReadReceiptRepository extends JpaRepository<ReadReceiptEntity, 
     List<ReadReceiptEntity> findByRoomIdAndUsername(String roomId, String username);
 
     boolean existsByMessageIdAndUsername(String messageId, String username);
+
+    long countByMessageId(String messageId);
 }

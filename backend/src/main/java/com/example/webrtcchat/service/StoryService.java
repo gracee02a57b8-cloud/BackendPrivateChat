@@ -81,13 +81,18 @@ public class StoryService {
     public List<StoryDto> getAllActiveStories(String requestingUser) {
         String currentTime = now();
         List<StoryEntity> stories = storyRepository.findAllActive(currentTime);
+        if (stories.isEmpty()) return List.of();
 
         // Preload viewed story IDs for the requesting user
         Set<String> viewedIds = new HashSet<>(storyViewRepository.findViewedStoryIdsByViewer(requestingUser));
 
+        // Batch load view counts in one query (eliminates N+1)
+        List<String> storyIds = stories.stream().map(StoryEntity::getId).toList();
+        Map<String, Long> viewCounts = storyViewRepository.countByStoryIds(storyIds);
+
         return stories.stream().map(s -> {
             StoryDto dto = toDto(s, requestingUser);
-            dto.setViewCount(storyViewRepository.countByStoryId(s.getId()));
+            dto.setViewCount(viewCounts.getOrDefault(s.getId(), 0L).intValue());
             dto.setViewedByMe(s.getAuthor().equals(requestingUser) || viewedIds.contains(s.getId()));
             return dto;
         }).collect(Collectors.toList());

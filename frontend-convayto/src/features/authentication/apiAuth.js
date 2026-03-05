@@ -55,16 +55,15 @@ export async function signin({ username, password, rememberMe = false }) {
   localStorage.setItem("avatarUrl", loginData.avatarUrl || "");
   localStorage.setItem("tag", loginData.tag || "");  localStorage.setItem("email", loginData.email || "");
 
-  // Remember me: persist credentials for auto-login
+  // Remember me: persist flag for auto-login via refresh token (no password stored)
   if (rememberMe) {
     localStorage.setItem("rememberMe", "true");
-    localStorage.setItem("savedUsername", username.trim());
-    localStorage.setItem("savedPassword", btoa(password));
   } else {
     localStorage.removeItem("rememberMe");
-    localStorage.removeItem("savedUsername");
-    localStorage.removeItem("savedPassword");
   }
+  // Clean up any legacy saved credentials
+  localStorage.removeItem("savedUsername");
+  localStorage.removeItem("savedPassword");
 
   // Connect WebSocket after login
   connectWebSocket();
@@ -148,15 +147,35 @@ export async function signout() {
 
 async function tryAutoLogin() {
   const savedRemember = localStorage.getItem("rememberMe");
-  const savedUser = localStorage.getItem("savedUsername");
-  const savedPass = localStorage.getItem("savedPassword");
+  const refreshToken = localStorage.getItem("refreshToken");
 
-  if (savedRemember === "true" && savedUser && savedPass) {
+  // Clean up any legacy plaintext password storage
+  localStorage.removeItem("savedPassword");
+  localStorage.removeItem("savedUsername");
+
+  if (savedRemember === "true" && refreshToken) {
     try {
-      const password = atob(savedPass);
-      return await signin({ username: savedUser, password, rememberMe: true });
+      const res = await fetch("/api/auth/refresh", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        localStorage.setItem("token", data.token);
+        if (data.refreshToken) localStorage.setItem("refreshToken", data.refreshToken);
+        // Reconnect WS with new token
+        connectWebSocket();
+        // Fetch user profile to build session
+        const username = localStorage.getItem("username");
+        const role = localStorage.getItem("role") || "USER";
+        const avatarUrl = localStorage.getItem("avatarUrl") || "";
+        const tag = localStorage.getItem("tag") || "";
+        const email = localStorage.getItem("email") || "";
+        return buildSession(data.token, username, role, avatarUrl, tag, email);
+      }
     } catch {
-      // Saved credentials invalid — fall through to return null
+      // Refresh failed — fall through to return null
     }
   }
 

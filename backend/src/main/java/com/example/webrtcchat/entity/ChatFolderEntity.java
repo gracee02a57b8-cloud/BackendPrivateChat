@@ -22,7 +22,7 @@ public class ChatFolderEntity {
     @Column(name = "sort_order", nullable = false)
     private int sortOrder;
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "chat_folder_rooms", joinColumns = @JoinColumn(name = "folder_id"))
     @Column(name = "room_id", length = 100)
     private java.util.Set<String> roomIds = new java.util.HashSet<>();

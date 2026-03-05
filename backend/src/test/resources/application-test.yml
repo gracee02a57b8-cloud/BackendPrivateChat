@@ -32,6 +32,9 @@ cors:
 upload:
   dir: ${java.io.tmpdir}/barsik-test-uploads
 
+admin:
+  password: TestAdmin2026!
+
 webrtc:
   stun:
     url: stun:stun.l.google.com:19302

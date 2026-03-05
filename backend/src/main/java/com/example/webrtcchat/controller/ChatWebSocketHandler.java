@@ -26,6 +26,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import jakarta.annotation.PreDestroy;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -1040,6 +1041,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         extra.put("confId", confId);
         leaveMsg.setExtra(extra);
         handleConferenceLeave(username, leaveMsg);
+    }
+
+    @PreDestroy
+    public void shutdownExecutor() {
+        wsExecutor.shutdownNow();
+        log.info("WebSocket executor shut down");
     }
 
     @Override

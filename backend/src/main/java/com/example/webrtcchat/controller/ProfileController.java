@@ -3,7 +3,6 @@ package com.example.webrtcchat.controller;
 import com.example.webrtcchat.entity.UserEntity;
 import com.example.webrtcchat.repository.UserRepository;
 import com.example.webrtcchat.service.ChatService;
-import com.example.webrtcchat.service.JwtService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.security.Principal;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -32,23 +32,20 @@ public class ProfileController {
     );
 
     private final ChatService chatService;
-    private final JwtService jwtService;
     private final UserRepository userRepository;
     private final Path uploadDir;
 
-    public ProfileController(ChatService chatService, JwtService jwtService,
+    public ProfileController(ChatService chatService,
                              UserRepository userRepository,
                              @Value("${upload.dir:uploads}") String uploadDirPath) {
         this.chatService = chatService;
-        this.jwtService = jwtService;
         this.userRepository = userRepository;
         this.uploadDir = Paths.get(uploadDirPath).toAbsolutePath().normalize();
     }
 
     @GetMapping
-    public ResponseEntity<?> getProfile(@RequestHeader("Authorization") String authHeader) {
-        String username = extractUsername(authHeader);
-        if (username == null) return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+    public ResponseEntity<?> getProfile(Principal principal) {
+        String username = principal.getName();
 
         var userOpt = userRepository.findByUsername(username);
         if (userOpt.isEmpty()) return ResponseEntity.status(404).body(Map.of("error", "User not found"));
@@ -69,10 +66,9 @@ public class ProfileController {
     }
 
     @PutMapping
-    public ResponseEntity<?> updateProfile(@RequestHeader("Authorization") String authHeader,
+    public ResponseEntity<?> updateProfile(Principal principal,
                                            @RequestBody Map<String, String> body) {
-        String username = extractUsername(authHeader);
-        if (username == null) return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+        String username = principal.getName();
 
         var userOpt = userRepository.findByUsername(username);
         if (userOpt.isEmpty()) return ResponseEntity.status(404).body(Map.of("error", "User not found"));
@@ -132,10 +128,9 @@ public class ProfileController {
     }
 
     @PostMapping("/avatar")
-    public ResponseEntity<?> uploadAvatar(@RequestHeader("Authorization") String authHeader,
+    public ResponseEntity<?> uploadAvatar(Principal principal,
                                           @RequestParam("file") MultipartFile file) {
-        String username = extractUsername(authHeader);
-        if (username == null) return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+        String username = principal.getName();
 
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Файл пустой"));
@@ -178,9 +173,8 @@ public class ProfileController {
     }
 
     @DeleteMapping("/avatar")
-    public ResponseEntity<?> deleteAvatar(@RequestHeader("Authorization") String authHeader) {
-        String username = extractUsername(authHeader);
-        if (username == null) return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+    public ResponseEntity<?> deleteAvatar(Principal principal) {
+        String username = principal.getName();
 
         String oldAvatarUrl = chatService.getAvatarUrl(username);
         if (oldAvatarUrl != null && !oldAvatarUrl.isBlank()) {
@@ -202,13 +196,6 @@ public class ProfileController {
         } catch (IOException e) {
             log.warn("Failed to delete old avatar file: {}", avatarUrl, e);
         }
-    }
-
-    private String extractUsername(String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) return null;
-        String token = authHeader.substring(7);
-        if (!jwtService.isTokenValid(token)) return null;
-        return jwtService.extractUsername(token);
     }
 
     private String detectContentType(MultipartFile file) {

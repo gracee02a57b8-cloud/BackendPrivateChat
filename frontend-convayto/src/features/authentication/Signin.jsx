@@ -39,39 +39,20 @@ function Signin() {
     }
   }, [isAuthenticated, navigate]);
 
-  // Auto-login from saved credentials
+  // Auto-login from refresh token (remember-me)
   useEffect(() => {
     if (autoLoginAttempted.current) return;
     if (isAuthenticated) return;
     const saved = localStorage.getItem("rememberMe");
-    const savedUser = localStorage.getItem("savedUsername");
-    const savedPass = localStorage.getItem("savedPassword");
-    if (saved === "true" && savedUser && savedPass) {
+    const refreshToken = localStorage.getItem("refreshToken");
+    // Clean up legacy password storage
+    localStorage.removeItem("savedPassword");
+    localStorage.removeItem("savedUsername");
+    if (saved === "true" && refreshToken) {
       autoLoginAttempted.current = true;
-      try {
-        const password = atob(savedPass);
-        signin(
-          { username: savedUser, password, rememberMe: true },
-          {
-            onSuccess: () => {
-              const pendingConf = sessionStorage.getItem("pendingConference");
-              if (pendingConf) {
-                sessionStorage.removeItem("pendingConference");
-                navigate(`/conference/${pendingConf}`, { replace: true });
-              } else {
-                navigate("/chat", { replace: true });
-              }
-            },
-          },
-        );
-      } catch {
-        // Corrupted saved data — clear it
-        localStorage.removeItem("rememberMe");
-        localStorage.removeItem("savedUsername");
-        localStorage.removeItem("savedPassword");
-      }
+      // Auto-login happens via getCurrentUser -> tryAutoLogin using refresh token
     }
-  }, [isAuthenticated, signin, navigate]);
+  }, [isAuthenticated, navigate]);
 
   const onSubmit = (data) => {
     const { username, password } = data;

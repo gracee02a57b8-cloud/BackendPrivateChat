@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public interface StoryViewRepository extends JpaRepository<StoryViewEntity, Long> {
 
@@ -14,6 +16,15 @@ public interface StoryViewRepository extends JpaRepository<StoryViewEntity, Long
 
     /** Count views for a story */
     long countByStoryId(String storyId);
+
+    /** Batch count views for multiple stories in one query (eliminates N+1) */
+    @Query("SELECT v.storyId, COUNT(v) FROM StoryViewEntity v WHERE v.storyId IN :storyIds GROUP BY v.storyId")
+    List<Object[]> countByStoryIdsRaw(@Param("storyIds") List<String> storyIds);
+
+    default Map<String, Long> countByStoryIds(List<String> storyIds) {
+        return countByStoryIdsRaw(storyIds).stream()
+                .collect(Collectors.toMap(r -> (String) r[0], r -> (Long) r[1]));
+    }
 
     /** Check if a user already viewed a story */
     boolean existsByStoryIdAndViewer(String storyId, String viewer);

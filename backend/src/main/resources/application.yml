@@ -45,6 +45,9 @@ cors:
 upload:
   dir: ${UPLOAD_DIR:uploads}
 
+admin:
+  password: ${ADMIN_PASSWORD:}
+
 webrtc:
   stun:
     url: ${STUN_URL:stun:85.239.44.28:3478}

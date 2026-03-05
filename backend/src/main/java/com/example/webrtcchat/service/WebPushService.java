@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -73,6 +74,12 @@ public class WebPushService {
 
     public WebPushService(PushSubscriptionRepository repo) {
         this.repo = repo;
+    }
+
+    @PreDestroy
+    void shutdownPushExecutor() {
+        PUSH_EXECUTOR.shutdownNow();
+        log.info("[WebPush] Executor shut down");
     }
 
     @PostConstruct

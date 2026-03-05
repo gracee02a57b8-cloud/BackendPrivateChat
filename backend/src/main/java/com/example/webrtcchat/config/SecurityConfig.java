@@ -171,9 +171,21 @@ public class SecurityConfig {
     }
 
     private boolean isTrustedProxy(String ip) {
-        return ip != null && (ip.startsWith("127.") || ip.startsWith("10.")
-                || ip.startsWith("172.") || ip.startsWith("192.168.")
-                || "0:0:0:0:0:0:0:1".equals(ip));
+        if (ip == null) return false;
+        if (ip.startsWith("127.") || ip.startsWith("10.") || ip.startsWith("192.168.")
+                || "0:0:0:0:0:0:0:1".equals(ip)) {
+            return true;
+        }
+        // RFC 1918: only 172.16.0.0 – 172.31.255.255 are private
+        if (ip.startsWith("172.")) {
+            try {
+                int second = Integer.parseInt(ip.split("\\.")[1]);
+                return second >= 16 && second <= 31;
+            } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
+                return false;
+            }
+        }
+        return false;
     }
 
     @Bean

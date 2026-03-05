@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 
-function useIntersectionObserver(element, options = {}) {
+const DEFAULT_OPTIONS = {};
+
+function useIntersectionObserver(element, options = DEFAULT_OPTIONS) {
   const [isIntersecting, setIsIntersecting] = useState(false);
 
   useEffect(() => {

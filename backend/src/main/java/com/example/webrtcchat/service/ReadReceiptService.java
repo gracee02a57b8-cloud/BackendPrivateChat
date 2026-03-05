@@ -49,6 +49,6 @@ public class ReadReceiptService {
 
     @Transactional(readOnly = true)
     public int getReadCount(String messageId) {
-        return readReceiptRepository.findByMessageId(messageId).size();
+        return (int) readReceiptRepository.countByMessageId(messageId);
     }
 }
