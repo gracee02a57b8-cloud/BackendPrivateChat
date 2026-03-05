@@ -1,8 +1,8 @@
 function Copyright() {
   return (
-    <div className="bg-LightShade/20 p-2 text-xs">
-      <p className="text-center opacity-80">
-        © {new Date().getFullYear()} BarsikChat
+    <div className="border-t border-LightShade/[0.06] bg-LightShade/[0.03] px-3 py-2">
+      <p className="text-center text-[10px] font-medium tracking-wider text-LightShade/40">
+        © {new Date().getFullYear()} BARSIKCHAT
       </p>
     </div>
   );

@@ -61,6 +61,22 @@ public class RoomController {
         // Enrich with mute status
         java.util.Set<String> mutedIds = roomMuteService.getMutedRoomIds(username);
         rooms.forEach(r -> r.setMuted(mutedIds.contains(r.getId())));
+
+        // Perf F1: embed last message per room to avoid N+1 API calls from frontend
+        List<String> roomIds = rooms.stream().map(RoomDto::getId).toList();
+        if (!roomIds.isEmpty()) {
+            java.util.Map<String, Map<String, String>> lastMessages = new java.util.HashMap<>();
+            messageRepository.findLastMessagesByRoomIds(roomIds).forEach(m -> {
+                // Keep only first per room (in case of timestamp ties)
+                lastMessages.putIfAbsent(m.getRoomId(), Map.of(
+                        "content", m.getContent() != null ? m.getContent() : "",
+                        "created_at", m.getTimestamp() != null ? m.getTimestamp() : "",
+                        "sender_id", m.getSender() != null ? m.getSender() : ""
+                ));
+            });
+            rooms.forEach(r -> r.setLastMessage(lastMessages.get(r.getId())));
+        }
+
         return ResponseEntity.ok(rooms);
     }
 

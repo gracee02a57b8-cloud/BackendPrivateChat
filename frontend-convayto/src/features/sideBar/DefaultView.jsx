@@ -9,13 +9,15 @@ function DefaultView() {
   const { isSearchViewOpen } = useUi();
 
   return (
-    <div className="relative z-30 grid h-screen-safe select-none grid-cols-1 grid-rows-[auto_1fr] overflow-hidden">
-      <div className="px-2 py-4">
+    <div className="relative z-30 flex h-screen-safe select-none flex-col overflow-hidden">
+      {/* Glass header zone */}
+      <div className="glass-surface relative z-10 border-b border-LightShade/[0.06] bg-bgPrimary/80 px-3 pb-3 pt-4 dark:bg-bgPrimary-dark/80">
         <Header />
         <SearchBox />
       </div>
 
-      <div className="h-full overflow-auto">
+      {/* Content area */}
+      <div className="premium-scroll relative flex-1 overflow-auto">
         {isSearchViewOpen ? <SearchView /> : <UsersView />}
       </div>
 

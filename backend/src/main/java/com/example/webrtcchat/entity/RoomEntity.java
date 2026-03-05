@@ -35,7 +35,7 @@ public class RoomEntity {
     @Column(name = "disappearing_seconds")
     private int disappearingSeconds;
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "room_members", joinColumns = @JoinColumn(name = "room_id"))
     @Column(name = "username", length = 50)
     private Set<String> members = new HashSet<>();

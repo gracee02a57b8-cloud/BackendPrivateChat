@@ -12,35 +12,33 @@ export async function getConversationEntries() {
 
 export async function getConversations({ myUserId }) {
   const rooms = await getConversationEntries();
+  return deriveConversations(rooms, myUserId);
+}
 
+/**
+ * Perf F4: pure synchronous transform — can be used with React Query `select`
+ * to share the ["rooms"] cache between useConversations and useGroups.
+ */
+export function deriveConversations(rooms, myUserId) {
   // Включаем PRIVATE и ROOM (групповые) комнаты
-  const chatRooms = rooms.filter(
+  const chatRooms = (rooms || []).filter(
     (room) => room.type === "PRIVATE" || room.type === "ROOM",
   );
 
-  // Fetch last message for each room in parallel (1 message per room)
-  const conversations = await Promise.all(
-    chatRooms.map(async (room) => {
+  const conversations = chatRooms.map((room) => {
       const isGroup = room.type === "ROOM";
       const friendUsername = isGroup
         ? null
         : room.members?.find((m) => m !== myUserId) || "";
 
-      // Get last message from room history (page 0, size 1)
+      // Perf F1: use lastMessage embedded in /api/rooms response (no N+1 API calls)
       let lastMsg = null;
-      try {
-        const history = await apiFetch(
-          `/api/rooms/${encodeURIComponent(room.id)}/history?page=0&size=1`,
-        );
-        if (history && history.length > 0) {
-          lastMsg = {
-            content: history[0].content || "",
-            created_at: history[0].timestamp || room.createdAt,
-            sender_id: history[0].sender || "",
-          };
-        }
-      } catch {
-        // No messages yet
+      if (room.lastMessage) {
+        lastMsg = {
+          content: room.lastMessage.content || "",
+          created_at: room.lastMessage.created_at || room.createdAt,
+          sender_id: room.lastMessage.sender_id || "",
+        };
       }
 
       if (isGroup) {
@@ -76,8 +74,7 @@ export async function getConversations({ myUserId }) {
           bio: "",
         },
       };
-    }),
-  );
+  });
 
   // Sort: pinned chats first, then by last message time
   const pinned = getPinnedChats();

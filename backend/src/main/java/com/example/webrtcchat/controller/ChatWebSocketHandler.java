@@ -34,6 +34,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Component
 public class ChatWebSocketHandler extends TextWebSocketHandler {
@@ -44,6 +46,9 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
     private final Map<String, WebSocketSession> userSessions = new ConcurrentHashMap<>();
+
+    // Perf B3: virtual thread executor — offloads blocking DB I/O from WebSocket threads
+    private final ExecutorService wsExecutor = Executors.newVirtualThreadPerTaskExecutor();
     private final ChatService chatService;
     private final JwtService jwtService;
     private final RoomService roomService;
@@ -129,9 +134,44 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
+        String payload = message.getPayload();
+
+        // Fast-path: PING on WS thread (no DB, no blocking)
+        if (payload.contains("\"PING\"")) {
+            try {
+                MessageDto ping = objectMapper.readValue(payload, MessageDto.class);
+                if (ping.getType() == MessageType.PING) {
+                    session.sendMessage(new TextMessage("{\"type\":\"PONG\"}"));
+                    return;
+                }
+            } catch (Exception ignored) {}
+        }
+
+        // Perf B3: offload all blocking work to virtual thread
+        submitToExecutor(() -> processMessage(session, payload, username));
+    }
+
+    /**
+     * Submit a task to the virtual-thread executor. Protected so tests can override
+     * to run synchronously, avoiding Thread.sleep-based assertions.
+     */
+    protected void submitToExecutor(Runnable task) {
+        wsExecutor.submit(task);
+    }
+
+    /** Virtual-thread message processor (B3). */
+    private void processMessage(WebSocketSession session, String payload, String username) {
+        try {
+            processMessageInternal(session, payload, username);
+        } catch (Exception e) {
+            log.error("Error processing WS message from '{}': {}", username, e.getMessage(), e);
+        }
+    }
+
+    private void processMessageInternal(WebSocketSession session, String payload, String username) {
         MessageDto incoming;
         try {
-            incoming = objectMapper.readValue(message.getPayload(), MessageDto.class);
+            incoming = objectMapper.readValue(payload, MessageDto.class);
         } catch (Exception e) {
             log.warn("Invalid JSON from '{}': {}", username, e.getMessage());
             return;
@@ -140,14 +180,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         // Input validation (I8): limit content length
         if (incoming.getContent() != null && incoming.getContent().length() > MAX_MESSAGE_LENGTH) {
             incoming.setContent(incoming.getContent().substring(0, MAX_MESSAGE_LENGTH));
-        }
-
-        // Handle PING - client keepalive, respond with PONG
-        if (incoming.getType() == MessageType.PING) {
-            try {
-                session.sendMessage(new TextMessage("{\"type\":\"PONG\"}"));
-            } catch (Exception ignored) {}
-            return;
         }
 
         // Handle READ_RECEIPT

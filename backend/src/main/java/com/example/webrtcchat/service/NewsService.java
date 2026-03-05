@@ -11,7 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -28,12 +30,21 @@ public class NewsService {
 
     @Transactional(readOnly = true)
     public List<NewsDto> getAllNews() {
-        return newsRepository.findAllByOrderByCreatedAtDesc()
-                .stream().map(e -> {
-                    NewsDto dto = toDto(e);
-                    dto.setCommentCount(commentRepository.countByNewsId(e.getId()));
-                    return dto;
-                }).toList();
+        List<NewsEntity> entities = newsRepository.findAllByOrderByCreatedAtDesc();
+        if (entities.isEmpty()) return List.of();
+
+        // Perf B6: batch count comments for all news in one query instead of N+1
+        List<String> newsIds = entities.stream().map(NewsEntity::getId).toList();
+        Map<String, Long> commentCounts = new HashMap<>();
+        for (Object[] row : commentRepository.countByNewsIdIn(newsIds)) {
+            commentCounts.put((String) row[0], (Long) row[1]);
+        }
+
+        return entities.stream().map(e -> {
+            NewsDto dto = toDto(e);
+            dto.setCommentCount(commentCounts.getOrDefault(e.getId(), 0L));
+            return dto;
+        }).toList();
     }
 
     @Transactional

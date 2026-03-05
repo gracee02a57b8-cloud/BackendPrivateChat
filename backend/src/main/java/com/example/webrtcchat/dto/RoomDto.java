@@ -2,15 +2,18 @@ package com.example.webrtcchat.dto;
 
 import com.example.webrtcchat.types.RoomType;
 
+import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArraySet;
 
 public class RoomDto {
 
     private String id;
     private String name;
     private RoomType type;
-    private Set<String> members = new CopyOnWriteArraySet<>();
+    private Set<String> members = new LinkedHashSet<>();
+    // Perf F1: last message embedded in room listing to avoid N+1 API calls
+    private Map<String, String> lastMessage;
     private String createdBy;
     private String createdAt;
     private String description;
@@ -57,4 +60,7 @@ public class RoomDto {
 
     public boolean isMuted() { return muted; }
     public void setMuted(boolean muted) { this.muted = muted; }
+
+    public Map<String, String> getLastMessage() { return lastMessage; }
+    public void setLastMessage(Map<String, String> lastMessage) { this.lastMessage = lastMessage; }
 }

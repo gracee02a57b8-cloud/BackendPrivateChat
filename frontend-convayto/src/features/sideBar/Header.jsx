@@ -26,9 +26,9 @@ function Header() {
   }
 
   return (
-    <div className="mb-4 flex items-center justify-between gap-2">
+    <div className="mb-3 flex items-center justify-between gap-3">
       <div className="relative">
-        <IconButton onClick={handleMenuBtnClick}>
+        <IconButton onClick={handleMenuBtnClick} addClass="hover:bg-bgAccent/10 dark:hover:bg-bgAccent-dark/10 transition-colors duration-200">
           {isSearchViewOpen && <IconButton.Back />}
           {isMenuOpen && <IconButton.Close />}
           {!isSearchViewOpen && !isMenuOpen && <IconButton.Menu />}

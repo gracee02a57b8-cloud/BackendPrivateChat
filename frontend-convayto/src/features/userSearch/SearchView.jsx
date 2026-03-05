@@ -10,7 +10,14 @@ function SearchView() {
   const { closeSearchView, closeSidebar } = useUi();
 
   if (isShortQuery) {
-    return <ShortTextMessage>Поиск людей и групп</ShortTextMessage>;
+    return (
+      <div className="empty-state mt-12 flex flex-col items-center gap-3 px-4 text-center">
+        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-LightShade/[0.05] text-2xl">
+          🔍
+        </span>
+        <p className="text-sm opacity-35">Поиск людей и групп</p>
+      </div>
+    );
   }
 
   if (isLoading) {
@@ -29,15 +36,22 @@ function SearchView() {
   const hasGroups = groups?.length > 0;
 
   if (!hasUsers && !hasGroups) {
-    return <ShortTextMessage>Ничего не найдено</ShortTextMessage>;
+    return (
+      <div className="empty-state mt-12 flex flex-col items-center gap-3 px-4 text-center">
+        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-LightShade/[0.05] text-2xl">
+          🙅
+        </span>
+        <p className="text-sm opacity-35">Ничего не найдено</p>
+      </div>
+    );
   }
 
   return (
-    <div className="fadeIn p-2">
+    <div className="fadeIn px-2 pt-2 pb-4">
       {/* Users section */}
       {hasUsers && (
         <>
-          <p className="mb-1 px-2 text-xs font-semibold uppercase tracking-wider text-textPrimary/40 dark:text-textPrimary-dark/40">
+          <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-bgAccent/60 dark:text-bgAccent-dark/60">
             Люди
           </p>
           {users.map(({ id, avatar_url, fullname, username }) => (
@@ -57,7 +71,7 @@ function SearchView() {
       {/* Groups section */}
       {hasGroups && (
         <>
-          <p className="mb-1 mt-3 px-2 text-xs font-semibold uppercase tracking-wider text-textPrimary/40 dark:text-textPrimary-dark/40">
+          <p className="mb-2 mt-4 px-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-bgAccent/60 dark:text-bgAccent-dark/60">
             Группы
           </p>
           {groups.map((group) => (

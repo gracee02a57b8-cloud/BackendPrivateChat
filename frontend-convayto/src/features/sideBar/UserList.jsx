@@ -56,11 +56,16 @@ function UserList({ filter = "all", folderId = null }) {
 
   if (!filtered?.length)
     return (
-      <ShortTextMessage>
-        {filter === "private"
-          ? "Нет личных переписок. Найди собеседника через поиск!"
-          : "Нет чатов. Найди собеседника через поиск!"}
-      </ShortTextMessage>
+      <div className="empty-state mt-8 flex flex-col items-center gap-3 px-4 text-center">
+        <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-LightShade/[0.05] text-3xl">
+          💬
+        </span>
+        <p className="text-sm opacity-40">
+          {filter === "private"
+            ? "Нет личных переписок. Найди собеседника через поиск!"
+            : "Нет чатов. Найди собеседника через поиск!"}
+        </p>
+      </div>
     );
 
   return filtered.map((conv) => {

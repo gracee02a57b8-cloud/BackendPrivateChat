@@ -1,10 +1,9 @@
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import { lazy, Suspense } from "react";
 import "./styles/index.css";
 import AppLayout from "./components/AppLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import Signup from "./features/authentication/Signup";
-import Signin from "./features/authentication/Signin";
 import MessageView from "./features/messageArea/MessageView";
 import { UiProvider } from "./contexts/UiContext";
 import { CallProvider } from "./contexts/CallContext";
@@ -15,10 +14,14 @@ import ConferenceOverlay from "./components/ConferenceOverlay";
 import NotFound from "./components/NotFound";
 import { Toaster } from "react-hot-toast";
 import AllRoutesWrapper from "./components/AllRoutesWrapper";
-import AboutPage from "./components/AboutPage";
-import PrivacyPolicy from "./components/PrivacyPolicy";
-import TermsOfService from "./components/TermsOfService";
-import JoinConferencePage from "./components/JoinConferencePage";
+
+// Perf F2: lazy-load heavy route-level components
+const Signup = lazy(() => import("./features/authentication/Signup"));
+const Signin = lazy(() => import("./features/authentication/Signin"));
+const JoinConferencePage = lazy(() => import("./components/JoinConferencePage"));
+const AboutPage = lazy(() => import("./components/AboutPage"));
+const PrivacyPolicy = lazy(() => import("./components/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("./components/TermsOfService"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -83,15 +86,15 @@ function App() {
                 <Route path="/chat/:userId" element={<MessageView />} />
               </Route>
 
-              <Route path="signup" element={<Signup />} />
-              <Route path="signin" element={<Signin />} />
+              <Route path="signup" element={<Suspense fallback={null}><Signup /></Suspense>} />
+              <Route path="signin" element={<Suspense fallback={null}><Signin /></Suspense>} />
               <Route
                 path="conference/:confId"
-                element={<JoinConferencePage />}
+                element={<Suspense fallback={null}><JoinConferencePage /></Suspense>}
               />
-              <Route path="about" element={<AboutPage />} />
-              <Route path="privacy" element={<PrivacyPolicy />} />
-              <Route path="terms" element={<TermsOfService />} />
+              <Route path="about" element={<Suspense fallback={null}><AboutPage /></Suspense>} />
+              <Route path="privacy" element={<Suspense fallback={null}><PrivacyPolicy /></Suspense>} />
+              <Route path="terms" element={<Suspense fallback={null}><TermsOfService /></Suspense>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AllRoutesWrapper>

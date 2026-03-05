@@ -21,9 +21,12 @@ function ContactList() {
 
   if (!contacts?.length)
     return (
-      <ShortTextMessage>
-        Нет контактов. Добавь друзей через поиск!
-      </ShortTextMessage>
+      <div className="empty-state mt-8 flex flex-col items-center gap-3 px-4 text-center">
+        <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-LightShade/[0.05] text-3xl">
+          📇
+        </span>
+        <p className="text-sm opacity-40">Нет контактов. Добавь друзей через поиск!</p>
+      </div>
     );
 
   return contacts.map((contact) => (

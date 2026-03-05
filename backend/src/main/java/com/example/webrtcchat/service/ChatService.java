@@ -205,6 +205,26 @@ public class ChatService {
                 .orElse(null);
     }
 
+    /**
+     * Batch-load user info for multiple usernames in a single DB query (perf B1: eliminates N+1).
+     */
+    @Transactional(readOnly = true)
+    public List<com.example.webrtcchat.dto.UserDto> getUsersInfo(List<String> usernames) {
+        if (usernames == null || usernames.isEmpty()) return List.of();
+        Map<String, UserEntity> userMap = userRepository.findByUsernameIn(usernames)
+                .stream().collect(java.util.stream.Collectors.toMap(UserEntity::getUsername, u -> u, (a, b) -> a));
+        return usernames.stream().map(u -> {
+            UserEntity entity = userMap.get(u);
+            return new com.example.webrtcchat.dto.UserDto(
+                    u,
+                    onlineUsers.contains(u),
+                    entity != null ? entity.getLastSeen() : null,
+                    entity != null ? entity.getAvatarUrl() : null,
+                    entity != null ? entity.getTag() : null
+            );
+        }).toList();
+    }
+
     @Transactional
     public String updateAvatarUrl(String username, String avatarUrl) {
         return userRepository.findByUsername(username).map(user -> {

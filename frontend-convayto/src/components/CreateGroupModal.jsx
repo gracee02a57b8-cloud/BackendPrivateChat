@@ -48,8 +48,7 @@ function CreateGroupModal({ isOpen, onClose }) {
       });
 
       // Invalidate queries to refresh sidebar
-      queryClient.invalidateQueries({ queryKey: ["groups"] });
-      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      queryClient.invalidateQueries({ queryKey: ["rooms"] });
 
       toast.success("Группа создана!");
       onClose();

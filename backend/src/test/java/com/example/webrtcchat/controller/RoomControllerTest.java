@@ -19,7 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.LinkedHashSet;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -308,7 +308,7 @@ class RoomControllerTest {
 
     private RoomDto createRoomDto(String id, String name, RoomType type, Set<String> members) {
         RoomDto dto = new RoomDto(id, name, type, "system", "2026-01-01 12:00:00");
-        dto.setMembers(new CopyOnWriteArraySet<>(members));
+        dto.setMembers(new LinkedHashSet<>(members));
         return dto;
     }
 }

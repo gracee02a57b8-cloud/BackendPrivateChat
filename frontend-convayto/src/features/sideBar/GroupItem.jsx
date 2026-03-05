@@ -45,8 +45,7 @@ function GroupItem({ group, handler }) {
   function handleTogglePin() {
     togglePinChat(group.id);
     setCtxMenu(null);
-    queryClient.invalidateQueries({ queryKey: ["conversations"] });
-    queryClient.invalidateQueries({ queryKey: ["groups"] });
+    queryClient.invalidateQueries({ queryKey: ["rooms"] });
   }
 
   const handleKeyDown = useEnterKeyPress(handleClick);
@@ -62,11 +61,11 @@ function GroupItem({ group, handler }) {
   return (
     <>
       <div
-        className={`${
+        className={`chat-item-premium ${
           isActive
-            ? "pointer-events-none bg-gradient-to-r text-textPrimary-dark sm:from-bgAccentDim sm:to-bgAccent dark:sm:from-bgAccentDim-dark dark:sm:to-bgAccent-dark"
-            : "hover:bg-LightShade/20"
-        } flex cursor-pointer select-none items-center gap-2 rounded-lg p-2`}
+            ? "chat-item-active-glow pointer-events-none rounded-xl bg-gradient-to-r from-bgAccent/90 to-bgAccent text-white dark:from-bgAccent-dark/90 dark:to-bgAccent-dark"
+            : "rounded-xl"
+        } relative flex cursor-pointer select-none items-center gap-3 px-3 py-2.5`}
         onClick={handleClick}
         onContextMenu={handleContextMenu}
         onTouchStart={handleTouchStart}
@@ -76,20 +75,24 @@ function GroupItem({ group, handler }) {
         role="button"
         tabIndex={0}
       >
-        <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-full">
+        {/* Avatar */}
+        <span className="flex h-[3rem] w-[3rem] flex-shrink-0 items-center justify-center overflow-hidden rounded-full ring-2 ring-LightShade/[0.06]">
           <img
             src={group.avatarUrl || getRandomAvatar(group.name || group.id)}
             alt={group.name}
-            className="pointer-events-none h-full w-full object-cover"
+            className="avatar-ring pointer-events-none h-full w-full object-cover"
           />
         </span>
 
+        {/* Content */}
         <span className="flex flex-1 flex-col overflow-hidden">
-          <span className="flex items-center gap-1 truncate font-bold">
-            {pinned && <RiPushpinLine className="flex-shrink-0 text-xs text-bgAccent dark:text-bgAccent-dark" />}
-            {group.name}
+          <span className="flex items-center gap-1.5">
+            <span className="truncate text-[14px] font-semibold leading-tight">
+              {pinned && <RiPushpinLine className="mr-1 inline-flex flex-shrink-0 text-[11px] text-bgAccent dark:text-bgAccent-dark" />}
+              {group.name}
+            </span>
           </span>
-          <span className="truncate text-sm opacity-70">
+          <span className={`truncate text-[12.5px] leading-snug ${isActive ? "opacity-80" : "opacity-45"}`}>
             {group.description || membersText}
           </span>
         </span>
@@ -100,14 +103,14 @@ function GroupItem({ group, handler }) {
         <>
           <div className="fixed inset-0 z-[8000]" onClick={() => setCtxMenu(null)} />
           <div
-            className="fixed z-[8001] min-w-[180px] rounded-xl border border-LightShade/20 bg-bgPrimary p-1 shadow-2xl dark:bg-bgPrimary-dark"
+            className="ctx-menu-premium fixed z-[8001] min-w-[200px] rounded-2xl bg-bgPrimary/90 p-1.5 dark:bg-bgPrimary-dark/90"
             style={{ top: ctxMenu.y, left: ctxMenu.x }}
           >
             <button
               onClick={handleTogglePin}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-LightShade/20"
+              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-colors hover:bg-LightShade/10"
             >
-              {pinned ? <RiUnpinLine className="text-base" /> : <RiPushpinLine className="text-base" />}
+              {pinned ? <RiUnpinLine className="text-base opacity-70" /> : <RiPushpinLine className="text-base opacity-70" />}
               {pinned ? "Открепить чат" : "Закрепить чат"}
             </button>
           </div>

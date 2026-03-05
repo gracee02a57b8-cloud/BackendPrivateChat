@@ -26,16 +26,21 @@ function GroupList() {
       {/* Create group button */}
       <button
         onClick={() => setShowCreate(true)}
-        className="mb-2 flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-bgAccent transition hover:bg-LightShade/10 dark:text-bgAccent-dark"
+        className="create-btn-premium mb-3 flex w-full items-center gap-3 rounded-xl border border-dashed border-bgAccent/20 px-3 py-3 text-sm font-medium text-bgAccent dark:border-bgAccent-dark/20 dark:text-bgAccent-dark"
       >
-        <RiAddLine className="text-lg" />
-        Создать группу
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-bgAccent/10 dark:bg-bgAccent-dark/10">
+          <RiAddLine className="text-lg" />
+        </span>
+        <span>Создать группу</span>
       </button>
 
       {!groups?.length ? (
-        <ShortTextMessage>
-          Нет групп. Создай или вступи в группу!
-        </ShortTextMessage>
+        <div className="empty-state mt-8 flex flex-col items-center gap-3 px-4 text-center">
+          <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-LightShade/[0.05] text-3xl">
+            👥
+          </span>
+          <p className="text-sm opacity-40">Нет групп. Создай или вступи в группу!</p>
+        </div>
       ) : (
         groups.map((group) => (
           <GroupItem key={group.id} group={group} handler={closeSidebar} />

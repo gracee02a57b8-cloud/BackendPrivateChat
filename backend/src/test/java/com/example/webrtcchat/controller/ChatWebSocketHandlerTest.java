@@ -26,7 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.LinkedHashSet;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -54,7 +54,12 @@ class ChatWebSocketHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new ChatWebSocketHandler(chatService, jwtService, roomService, schedulerService, taskService, conferenceService, callLogRepository, webPushService, blockedUserRepository, storyService, reactionService);
+        handler = new ChatWebSocketHandler(chatService, jwtService, roomService, schedulerService, taskService, conferenceService, callLogRepository, webPushService, blockedUserRepository, storyService, reactionService) {
+            @Override
+            protected void submitToExecutor(Runnable task) {
+                task.run(); // run synchronously in tests to avoid Thread.sleep
+            }
+        };
     }
 
     // === Connection ===
@@ -181,7 +186,7 @@ class ChatWebSocketHandlerTest {
         setupConnectedSession("session1", "alice");
 
         RoomDto room = createRoom("room1", RoomType.ROOM);
-        room.setMembers(new CopyOnWriteArraySet<>(Set.of("bob"))); // alice is NOT a member
+        room.setMembers(new LinkedHashSet<>(Set.of("bob"))); // alice is NOT a member
         when(roomService.getRoomById("room1")).thenReturn(room);
 
         MessageDto incoming = new MessageDto();
@@ -297,7 +302,7 @@ class ChatWebSocketHandlerTest {
         setupConnectedSession("session1", "alice");
 
         RoomDto room = createRoom("room1", RoomType.ROOM);
-        room.setMembers(new CopyOnWriteArraySet<>(Set.of("alice", "bob")));
+        room.setMembers(new LinkedHashSet<>(Set.of("alice", "bob")));
         when(roomService.getRoomById("room1")).thenReturn(room);
 
         // Bob's session must exist for broadcast
@@ -659,7 +664,7 @@ class ChatWebSocketHandlerTest {
 
     private RoomDto createRoom(String id, RoomType type) {
         RoomDto room = new RoomDto(id, "Room", type, "system", "2026-01-01 12:00:00");
-        room.setMembers(new CopyOnWriteArraySet<>(Set.of("alice", "bob")));
+        room.setMembers(new LinkedHashSet<>(Set.of("alice", "bob")));
         return room;
     }
 
@@ -1649,7 +1654,7 @@ class ChatWebSocketHandlerTest {
         connectUser("s2", "bob", "token-b");
 
         RoomDto room = new RoomDto("room1", "Room", RoomType.PRIVATE, "alice", "2026-01-01 12:00:00");
-        room.setMembers(new CopyOnWriteArraySet<>(Set.of("alice", "bob")));
+        room.setMembers(new LinkedHashSet<>(Set.of("alice", "bob")));
         when(roomService.getRoomById("room1")).thenReturn(room);
 
         MessageDto msg = new MessageDto();
@@ -1669,7 +1674,7 @@ class ChatWebSocketHandlerTest {
         WebSocketSession aliceSession = connectUser("s1", "alice", "token-a");
 
         RoomDto room = new RoomDto("general", "General", RoomType.GENERAL, "system", "2026-01-01 12:00:00");
-        room.setMembers(new CopyOnWriteArraySet<>(Set.of("alice")));
+        room.setMembers(new LinkedHashSet<>(Set.of("alice")));
         when(roomService.getRoomById("general")).thenReturn(room);
 
         MessageDto msg = new MessageDto();
@@ -1689,7 +1694,7 @@ class ChatWebSocketHandlerTest {
         WebSocketSession charlieSession = connectUser("s3", "charlie", "token-c");
 
         RoomDto room = new RoomDto("room1", "Room", RoomType.PRIVATE, "alice", "2026-01-01 12:00:00");
-        room.setMembers(new CopyOnWriteArraySet<>(Set.of("alice", "bob")));
+        room.setMembers(new LinkedHashSet<>(Set.of("alice", "bob")));
         when(roomService.getRoomById("room1")).thenReturn(room);
 
         MessageDto msg = new MessageDto();

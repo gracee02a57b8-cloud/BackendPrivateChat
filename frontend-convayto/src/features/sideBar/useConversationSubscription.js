@@ -11,27 +11,33 @@ const useConversationSubscription = (myUserId) => {
       if (!myUserId || subscriptionConversationRef.current) return;
 
       const callback = (payload) => {
-        queryClient.setQueryData(["conversations", myUserId], (prevData) => {
-          if (!prevData) return prevData;
+        // Perf F4: update shared ["rooms"] cache so derived conversations & groups auto-update
+        queryClient.setQueryData(["rooms"], (prevRooms) => {
+          if (!prevRooms) return prevRooms;
+
+          if (payload?.eventType === "UPDATE") {
+            return prevRooms.map((room) => {
+              if (room.id === payload.new.id) {
+                return {
+                  ...room,
+                  lastMessage: payload.new.last_message
+                    ? {
+                        content: payload.new.last_message.content || "",
+                        created_at: payload.new.last_message.created_at || "",
+                        sender_id: payload.new.last_message.sender_id || "",
+                      }
+                    : room.lastMessage,
+                };
+              }
+              return room;
+            });
+          }
 
           if (payload?.eventType === "INSERT") {
-            // Insert the new entry at the beginning of the array
-            return [payload.new, ...prevData];
-          } else if (payload?.eventType === "UPDATE") {
-            // Find the updated conversation and update it
-            const updatedConversation = prevData.find(
-              (conversation) => conversation.id === payload.new.id,
-            );
-            const otherConversations = prevData.filter(
-              (conversation) => conversation.id !== payload.new.id,
-            );
-
-            // Return the updated conversation at the beginning of the array
-            return [
-              { ...updatedConversation, ...payload.new },
-              ...otherConversations,
-            ];
+            return [payload.new, ...prevRooms];
           }
+
+          return prevRooms;
         });
       };
 

@@ -66,12 +66,30 @@ public class ReactionService {
 
     @Transactional(readOnly = true)
     public Map<String, List<Map<String, Object>>> getReactionsForMessages(List<String> messageIds) {
+        if (messageIds == null || messageIds.isEmpty()) return new HashMap<>();
+
+        // Perf B5: single batch query instead of N+1
+        List<ReactionEntity> allReactions = reactionRepository.findByMessageIdIn(messageIds);
+
+        // Group by messageId, then by emoji
         Map<String, List<Map<String, Object>>> result = new HashMap<>();
-        for (String msgId : messageIds) {
-            List<Map<String, Object>> reactions = getReactionsForMessage(msgId);
-            if (!reactions.isEmpty()) {
-                result.put(msgId, reactions);
+        Map<String, List<ReactionEntity>> byMessage = allReactions.stream()
+                .collect(Collectors.groupingBy(ReactionEntity::getMessageId));
+
+        for (Map.Entry<String, List<ReactionEntity>> entry : byMessage.entrySet()) {
+            Map<String, List<String>> grouped = entry.getValue().stream()
+                    .collect(Collectors.groupingBy(ReactionEntity::getEmoji,
+                            Collectors.mapping(ReactionEntity::getUsername, Collectors.toList())));
+
+            List<Map<String, Object>> reactionList = new ArrayList<>();
+            for (Map.Entry<String, List<String>> ge : grouped.entrySet()) {
+                Map<String, Object> r = new LinkedHashMap<>();
+                r.put("emoji", ge.getKey());
+                r.put("users", ge.getValue());
+                r.put("count", ge.getValue().size());
+                reactionList.add(r);
             }
+            result.put(entry.getKey(), reactionList);
         }
         return result;
     }

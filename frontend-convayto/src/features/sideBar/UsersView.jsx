@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import UserList from "./UserList";
 import GroupList from "./GroupList";
 import ContactList from "./ContactList";
@@ -20,6 +20,8 @@ function UsersView() {
   const [showFolderInput, setShowFolderInput] = useState(false);
   const [folderName, setFolderName] = useState("");
   const navigate = useNavigate();
+  const tabsRef = useRef([]);
+  const indicatorRef = useRef(null);
 
   // Load folders
   useEffect(() => {
@@ -27,6 +29,18 @@ function UsersView() {
       if (Array.isArray(data)) setFolders(data);
     }).catch(() => {});
   }, []);
+
+  // Animate tab pill indicator
+  useEffect(() => {
+    const idx = TABS.findIndex((t) => t.key === activeTab);
+    const el = tabsRef.current[idx];
+    const indicator = indicatorRef.current;
+    if (el && indicator) {
+      const { offsetLeft, offsetWidth } = el;
+      indicator.style.transform = `translateX(${offsetLeft}px)`;
+      indicator.style.width = `${offsetWidth}px`;
+    }
+  }, [activeTab]);
 
   async function handleSavedMessages() {
     try {
@@ -65,79 +79,95 @@ function UsersView() {
   }
 
   return (
-    <div className="grid h-full grid-rows-[auto_auto_1fr]">
-      {/* Main Tabs */}
-      <div className="flex border-b border-t border-LightShade/20">
-        {TABS.map((tab) => {
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.key}
-              onClick={() => { setActiveTab(tab.key); setActiveFolder(null); }}
-              className={`flex flex-1 items-center justify-center gap-1 px-1.5 py-2.5 text-xs font-medium transition-colors ${
-                activeTab === tab.key && !activeFolder
-                  ? "border-b-2 border-bgAccent text-bgAccent dark:border-bgAccent-dark dark:text-bgAccent-dark"
-                  : "text-textPrimary/60 hover:text-textPrimary dark:text-textPrimary-dark/60 dark:hover:text-textPrimary-dark"
-              }`}
-            >
-              <Icon className="text-base" />
-              {tab.label}
-            </button>
-          );
-        })}
+    <div className="flex h-full flex-col">
+      {/* ── Premium Pill Tabs ── */}
+      <div className="px-3 pt-3 pb-1">
+        <div className="relative flex rounded-xl bg-LightShade/[0.06] p-1">
+          {/* Animated pill background */}
+          <div
+            ref={indicatorRef}
+            className="tab-pill-bg absolute top-1 bottom-1 left-0 rounded-lg bg-gradient-to-r from-bgAccent to-bgAccent/80 dark:from-bgAccent-dark dark:to-bgAccent-dark/80"
+            style={{ width: 0 }}
+          />
+          {TABS.map((tab, i) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.key && !activeFolder;
+            return (
+              <button
+                key={tab.key}
+                ref={(el) => (tabsRef.current[i] = el)}
+                onClick={() => { setActiveTab(tab.key); setActiveFolder(null); }}
+                className={`tab-pill flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-xs font-medium transition-colors duration-250 ${
+                  isActive
+                    ? "tab-pill-active"
+                    : "text-textPrimary/50 hover:text-textPrimary/80 dark:text-textPrimary-dark/50 dark:hover:text-textPrimary-dark/80"
+                }`}
+              >
+                <Icon className="text-[15px]" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Folder chips + Saved Messages */}
-      <div className="flex flex-wrap items-center gap-1 border-b border-LightShade/10 px-2 py-1.5">
+      {/* ── Premium Folder Strip ── */}
+      <div className="folder-scroll flex items-center gap-1.5 overflow-x-auto px-3 py-2">
+        {/* Saved messages */}
         <button
           onClick={handleSavedMessages}
-          className="flex items-center gap-1 rounded-full bg-bgAccent/10 px-2.5 py-1 text-xs font-medium text-bgAccent transition hover:bg-bgAccent/20 dark:text-bgAccent-dark"
+          className="folder-chip flex flex-shrink-0 items-center gap-1.5 rounded-full border border-bgAccent/20 bg-bgAccent/[0.07] px-3 py-1.5 text-xs font-medium text-bgAccent transition-all hover:border-bgAccent/30 hover:bg-bgAccent/[0.12] dark:text-bgAccent-dark dark:border-bgAccent-dark/20 dark:bg-bgAccent-dark/[0.07] dark:hover:bg-bgAccent-dark/[0.12]"
         >
           <RiBookmarkLine className="text-sm" /> Избранное
         </button>
+
+        {/* Folder chips */}
         {folders.map((f) => (
           <button
             key={f.id}
             onClick={() => { setActiveFolder(f.id === activeFolder ? null : f.id); setActiveTab("private"); }}
-            className={`group flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition ${
+            className={`folder-chip group flex flex-shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
               activeFolder === f.id
-                ? "bg-bgAccent text-textPrimary-dark dark:bg-bgAccent-dark"
-                : "bg-LightShade/10 hover:bg-LightShade/20"
+                ? "border-bgAccent/40 bg-bgAccent text-white shadow-lg shadow-bgAccent/20 dark:border-bgAccent-dark/40 dark:bg-bgAccent-dark dark:shadow-bgAccent-dark/20"
+                : "border-LightShade/[0.08] bg-LightShade/[0.04] hover:border-LightShade/[0.15] hover:bg-LightShade/[0.08]"
             }`}
           >
-            <span>{f.emoji || "📁"}</span> {f.name}
+            <span className="text-sm">{f.emoji || "📁"}</span>
+            <span>{f.name}</span>
             <span
               onClick={(e) => { e.stopPropagation(); handleDeleteFolder(f.id); }}
-              className="ml-0.5 hidden cursor-pointer text-xs opacity-60 hover:opacity-100 group-hover:inline"
+              className="ml-0.5 hidden cursor-pointer rounded-full p-0.5 text-[10px] opacity-50 transition-all hover:bg-white/20 hover:opacity-100 group-hover:inline-flex"
             >
-              ×
+              <RiCloseLine />
             </span>
           </button>
         ))}
+
+        {/* Add folder */}
         {showFolderInput ? (
-          <form onSubmit={(e) => { e.preventDefault(); handleCreateFolder(); }} className="flex items-center gap-1">
+          <form onSubmit={(e) => { e.preventDefault(); handleCreateFolder(); }} className="flex flex-shrink-0 items-center gap-1.5">
             <input
               value={folderName}
               onChange={(e) => setFolderName(e.target.value)}
               placeholder="Имя папки"
               autoFocus
-              className="w-20 rounded bg-transparent px-1 text-xs outline-none ring-1 ring-LightShade/30"
+              className="w-24 rounded-full border border-LightShade/[0.12] bg-transparent px-3 py-1 text-xs outline-none transition-all focus:border-bgAccent/40 focus:ring-1 focus:ring-bgAccent/20"
             />
-            <button type="submit" className="text-xs text-bgAccent dark:text-bgAccent-dark">✓</button>
-            <button type="button" onClick={() => setShowFolderInput(false)} className="text-xs opacity-50">✕</button>
+            <button type="submit" className="flex h-6 w-6 items-center justify-center rounded-full bg-bgAccent/20 text-xs text-bgAccent transition hover:bg-bgAccent/30 dark:text-bgAccent-dark">✓</button>
+            <button type="button" onClick={() => setShowFolderInput(false)} className="flex h-6 w-6 items-center justify-center rounded-full bg-LightShade/10 text-xs opacity-60 transition hover:opacity-100">✕</button>
           </form>
         ) : (
           <button
             onClick={() => setShowFolderInput(true)}
-            className="flex items-center gap-0.5 rounded-full bg-LightShade/10 px-2 py-1 text-xs opacity-60 transition hover:opacity-100"
+            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border border-dashed border-LightShade/[0.12] text-sm opacity-40 transition-all hover:border-bgAccent/30 hover:text-bgAccent hover:opacity-80 dark:hover:text-bgAccent-dark"
           >
-            <RiAddLine className="text-sm" />
+            <RiAddLine />
           </button>
         )}
       </div>
 
-      {/* Tab content */}
-      <div tabIndex={-1} className="h-full overflow-auto p-2">
+      {/* ── Tab Content ── */}
+      <div tabIndex={-1} className="premium-scroll flex-1 overflow-auto px-2 pb-2">
         {activeTab === "private" && <UserList filter="private" folderId={activeFolder} />}
         {activeTab === "groups" && <GroupList />}
         {activeTab === "contacts" && <ContactList />}

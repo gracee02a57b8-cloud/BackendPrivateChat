@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiFetch } from "../../services/apiHelper";
+import { getConversationEntries } from "./apiConversation";
 
-async function getGroups() {
-  const rooms = await apiFetch("/api/rooms");
+// Perf F4: reuse shared "rooms" query to avoid duplicate /api/rooms fetches
+function extractGroups(rooms) {
   if (!rooms || !Array.isArray(rooms)) return [];
 
   // Фильтруем только групповые комнаты (type === "ROOM")
@@ -21,9 +21,10 @@ async function getGroups() {
 
 export function useGroups() {
   const { data, isPending, error } = useQuery({
-    queryKey: ["groups"],
-    queryFn: getGroups,
+    queryKey: ["rooms"],
+    queryFn: getConversationEntries,
     staleTime: 60_000,
+    select: extractGroups,
   });
 
   return { groups: data, isPending, error };

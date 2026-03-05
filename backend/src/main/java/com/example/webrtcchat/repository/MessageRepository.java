@@ -56,4 +56,10 @@ public interface MessageRepository extends JpaRepository<MessageEntity, String> 
 
     @Query("SELECT m FROM MessageEntity m WHERE m.roomId IN :roomIds AND LOWER(m.content) LIKE LOWER(CONCAT('%', :query, '%')) ORDER BY m.timestamp DESC")
     List<MessageEntity> searchMessagesGlobal(@Param("roomIds") java.util.Collection<String> roomIds, @Param("query") String query, Pageable pageable);
+
+    // Perf F1: batch load last message per room in one query (avoids N+1 API calls from frontend)
+    @Query("SELECT m FROM MessageEntity m WHERE m.timestamp = " +
+           "(SELECT MAX(m2.timestamp) FROM MessageEntity m2 WHERE m2.roomId = m.roomId) " +
+           "AND m.roomId IN :roomIds")
+    List<MessageEntity> findLastMessagesByRoomIds(@Param("roomIds") java.util.Collection<String> roomIds);
 }

@@ -1,8 +1,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getConversations } from "./apiConversation";
+import { getConversationEntries, deriveConversations } from "./apiConversation";
 import { getMessages } from "../messageArea/apiMessage";
 import { useUser } from "../authentication/useUser";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { MAX_PREFETCHED_CONVERSATIONS } from "../../config";
 import { getConvInfoById, getGroupConvInfo } from "../messageArea/apiConvInfo";
 import useConversationSubscription from "./useConversationSubscription";
@@ -12,11 +12,19 @@ export function useConversations() {
   const { user } = useUser();
   const myUserId = user?.id;
 
-  const { data, isPending, error } = useQuery({
-    queryKey: ["conversations", myUserId],
-    queryFn: () => getConversations({ myUserId }),
+  // Perf F4: share ["rooms"] cache with useGroups — single /api/rooms fetch
+  const { data: rooms, isPending, error } = useQuery({
+    queryKey: ["rooms"],
+    queryFn: getConversationEntries,
     enabled: !!myUserId,
+    staleTime: 60_000,
   });
+
+  // Derive conversations from rooms (synchronous — no extra API calls after F1)
+  const data = useMemo(
+    () => (rooms ? deriveConversations(rooms, myUserId) : undefined),
+    [rooms, myUserId],
+  );
 
   // Realtime Subscription
   useConversationSubscription(myUserId);

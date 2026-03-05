@@ -27,20 +27,16 @@ public class ChatController {
     public ResponseEntity<?> getOnlineUsers(@RequestParam(required = false) String search,
                                             Principal principal) {
         if (search != null && !search.isBlank()) {
-            List<UserDto> results = chatService.searchUsers(search).stream()
-                    .map(u -> new UserDto(u, chatService.isUserOnline(u), chatService.getLastSeen(u), chatService.getAvatarUrl(u), chatService.getUserTag(u)))
-                    .toList();
-            return ResponseEntity.ok(results);
+            List<String> usernames = chatService.searchUsers(search);
+            return ResponseEntity.ok(chatService.getUsersInfo(usernames));
         }
         return ResponseEntity.ok(chatService.getOnlineUsers());
     }
 
     @GetMapping("/contacts")
     public ResponseEntity<List<UserDto>> getAllContacts(Principal principal) {
-        List<UserDto> contacts = chatService.getAllUsers().stream()
-                .map(u -> new UserDto(u, chatService.isUserOnline(u), chatService.getLastSeen(u), chatService.getAvatarUrl(u), chatService.getUserTag(u)))
-                .toList();
-        return ResponseEntity.ok(contacts);
+        List<String> usernames = chatService.getAllUsers();
+        return ResponseEntity.ok(chatService.getUsersInfo(usernames));
     }
 
     @GetMapping("/online")

@@ -12,7 +12,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CopyOnWriteArraySet;
 
 @Service
 public class RoomService {
@@ -147,7 +146,7 @@ public class RoomService {
         dto.setDescription(entity.getDescription());
         dto.setAvatarUrl(entity.getAvatarUrl());
         dto.setDisappearingSeconds(entity.getDisappearingSeconds());
-        dto.setMembers(new CopyOnWriteArraySet<>(entity.getMembers()));
+        dto.setMembers(new java.util.LinkedHashSet<>(entity.getMembers()));
         return dto;
     }
 }
