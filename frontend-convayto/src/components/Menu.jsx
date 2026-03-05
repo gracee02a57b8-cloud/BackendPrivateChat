@@ -1,7 +1,7 @@
 // Compund component for the menu
 
 import { Link } from "react-router-dom";
-import { APP_NAME, APP_VERSION } from "../config";
+import { RiFlaskLine } from "react-icons/ri";
 
 function Menu({ children }) {
   return (
@@ -103,20 +103,17 @@ function TogglerItem({ children, toggler, isChecked }) {
   );
 }
 
-function Footer() {
-  // footer will have the app name and version number
+function Footer({ onClick }) {
   return (
-    <div className="px-4 py-3">
-      <div className="flex items-center justify-center gap-2 truncate text-center text-xs">
-        <img
-          className="h-6 rounded-full border-2 border-LightShade/20"
-          src="/images/barsik-logo.svg"
-          alt="BarsikChat"
-        />
-        <span className=" opacity-60">
-          {APP_NAME} {APP_VERSION}
-        </span>
-      </div>
+    <div className="px-3 py-2">
+      <button
+        onClick={onClick}
+        className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-LightShade/10 active:scale-[0.98]"
+        data-testid="tricks-button"
+      >
+        <RiFlaskLine className="text-lg text-bgAccent dark:text-bgAccent-dark" />
+        <span className="font-medium">Фокусы</span>
+      </button>
     </div>
   );
 }

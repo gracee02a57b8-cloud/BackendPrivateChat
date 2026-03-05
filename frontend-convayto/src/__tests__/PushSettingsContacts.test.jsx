@@ -439,6 +439,12 @@ describe("DropdownMenu", () => {
     fireEvent.click(screen.getByText("Настройки"));
     expect(screen.getByText("Звук уведомлений")).toBeInTheDocument();
   });
+
+  it("renders Фокусы button in footer", () => {
+    render(<DropdownMenu />);
+    expect(screen.getByText("Фокусы")).toBeInTheDocument();
+    expect(screen.getByTestId("tricks-button")).toBeInTheDocument();
+  });
 });
 
 // ================================================================

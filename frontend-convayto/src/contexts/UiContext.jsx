@@ -6,6 +6,7 @@ const UiContext = createContext();
 const InitialState = {
   isSidebarOpen: false,
   isAccountViewOpen: false,
+  isTricksViewOpen: false,
   isSearchViewOpen: false,
   isDarkMode: true,
   isFriendsSidebarOpen: false,
@@ -38,6 +39,19 @@ function reducer(state, action) {
       return {
         ...state,
         isAccountViewOpen: false,
+      };
+
+    case "OPEN_TRICKS_VIEW":
+      return {
+        ...state,
+        isTricksViewOpen: true,
+        isMenuOpen: false,
+      };
+
+    case "CLOSE_TRICKS_VIEW":
+      return {
+        ...state,
+        isTricksViewOpen: false,
       };
 
     case "OPEN_SEARCH_VIEW":
@@ -99,6 +113,7 @@ function UiProvider({ children }) {
     {
       isSidebarOpen,
       isAccountViewOpen,
+      isTricksViewOpen,
       isSearchViewOpen,
       isDarkMode,
       isFriendsSidebarOpen,
@@ -134,6 +149,25 @@ function UiProvider({ children }) {
     dispatch({ type: "CLOSE_ACCOUNT_VIEW" });
     window.history.back();
     window.removeEventListener("popstate", popAccountViewBack);
+  }
+
+  ///////////////////
+  // Tricks View functions
+  function popTricksViewBack() {
+    dispatch({ type: "CLOSE_TRICKS_VIEW" });
+    window.removeEventListener("popstate", popTricksViewBack);
+  }
+
+  function openTricksView() {
+    dispatch({ type: "OPEN_TRICKS_VIEW" });
+    window.history.pushState(null, null, window.location.href);
+    window.addEventListener("popstate", popTricksViewBack);
+  }
+
+  function closeTricksView() {
+    dispatch({ type: "CLOSE_TRICKS_VIEW" });
+    window.history.back();
+    window.removeEventListener("popstate", popTricksViewBack);
   }
 
   ///////////////////
@@ -251,6 +285,10 @@ function UiProvider({ children }) {
     isAccountViewOpen,
     openAccountView,
     closeAccountView,
+
+    isTricksViewOpen,
+    openTricksView,
+    closeTricksView,
 
     isSidebarOpen,
     openSidebar,

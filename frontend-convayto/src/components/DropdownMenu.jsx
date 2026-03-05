@@ -5,6 +5,7 @@ import {
   RiUserLine,
   RiSettings2Line,
   RiLogoutCircleLine,
+  RiFlaskLine,
 } from "react-icons/ri";
 import { useSignout } from "../features/authentication/useSignout";
 import { useUi } from "../contexts/UiContext";
@@ -21,6 +22,7 @@ export default function DropdownMenu() {
   const email = user?.email || "";
   const {
     openAccountView,
+    openTricksView,
     isDarkMode,
     toggleDarkMode,
     isMenuOpen,
@@ -79,7 +81,7 @@ export default function DropdownMenu() {
             <div>Выход</div>
           </Menu.ButtonItem>
         </Menu.List>
-        <Menu.Footer />
+        <Menu.Footer onClick={openTricksView} />
       </Menu>
     </ToggleableContent>
 
