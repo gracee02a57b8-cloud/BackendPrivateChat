@@ -185,21 +185,18 @@ describe("Signin", () => {
   });
 
   // ------------------------------------------
-  // REMEMBER ME / AUTO-LOGIN
+  // REMEMBER ME / AUTO-LOGIN (refresh-token based)
   // ------------------------------------------
   describe("Remember me and auto-login", () => {
-    it("auto-logins when saved credentials exist", () => {
+    it("does not call signin when refresh token auto-login is available", () => {
+      // Auto-login now happens via tryAutoLogin/getCurrentUser, not via signin()
       localStorage.setItem("rememberMe", "true");
-      localStorage.setItem("savedUsername", "alice");
-      localStorage.setItem("savedPassword", btoa("secret123"));
+      localStorage.setItem("refreshToken", "some-refresh-token");
 
       render(<Signin />);
 
-      expect(signinMock).toHaveBeenCalledTimes(1);
-      const [args] = signinMock.mock.calls[0];
-      expect(args.username).toBe("alice");
-      expect(args.password).toBe("secret123");
-      expect(args.rememberMe).toBe(true);
+      // signin is NOT called — the auto-login path uses useUser/tryAutoLogin
+      expect(signinMock).not.toHaveBeenCalled();
     });
 
     it("does not auto-login when rememberMe is not set", () => {
@@ -207,54 +204,34 @@ describe("Signin", () => {
       expect(signinMock).not.toHaveBeenCalled();
     });
 
-    it("does not auto-login when savedUsername is missing", () => {
+    it("does not auto-login when refreshToken is missing", () => {
       localStorage.setItem("rememberMe", "true");
+
+      render(<Signin />);
+      expect(signinMock).not.toHaveBeenCalled();
+    });
+
+    it("cleans up legacy savedUsername and savedPassword from localStorage", () => {
+      localStorage.setItem("rememberMe", "true");
+      localStorage.setItem("refreshToken", "some-refresh-token");
+      localStorage.setItem("savedUsername", "alice");
       localStorage.setItem("savedPassword", btoa("secret123"));
 
       render(<Signin />);
-      expect(signinMock).not.toHaveBeenCalled();
-    });
 
-    it("does not auto-login when savedPassword is missing", () => {
-      localStorage.setItem("rememberMe", "true");
-      localStorage.setItem("savedUsername", "alice");
-
-      render(<Signin />);
-      expect(signinMock).not.toHaveBeenCalled();
-    });
-
-    it("clears corrupted saved credentials gracefully", () => {
-      localStorage.setItem("rememberMe", "true");
-      localStorage.setItem("savedUsername", "alice");
-      localStorage.setItem("savedPassword", "!!!invalid-base64");
-
-      // atob will throw on invalid base64 — component should handle it
-      // Mock atob to throw
-      const origAtob = globalThis.atob;
-      globalThis.atob = () => { throw new Error("Invalid base64"); };
-
-      render(<Signin />);
-
-      // Should not crash, should clear corrupted data
-      expect(localStorage.getItem("rememberMe")).toBeNull();
+      // Legacy keys must be removed
       expect(localStorage.getItem("savedUsername")).toBeNull();
       expect(localStorage.getItem("savedPassword")).toBeNull();
-
-      globalThis.atob = origAtob;
+      // rememberMe and refreshToken should remain
+      expect(localStorage.getItem("rememberMe")).toBe("true");
+      expect(localStorage.getItem("refreshToken")).toBe("some-refresh-token");
     });
 
-    it("auto-login navigates to /chat on success", async () => {
-      localStorage.setItem("rememberMe", "true");
-      localStorage.setItem("savedUsername", "alice");
-      localStorage.setItem("savedPassword", btoa("secret123"));
-
-      signinMock = vi.fn((args, opts) => opts?.onSuccess?.());
-
+    it("navigates to /chat when already authenticated", () => {
+      isAuthenticatedMock = true;
       render(<Signin />);
 
-      await waitFor(() => {
-        expect(navigateMock).toHaveBeenCalledWith("/chat", { replace: true });
-      });
+      expect(navigateMock).toHaveBeenCalledWith("/chat", { replace: true });
     });
   });
 

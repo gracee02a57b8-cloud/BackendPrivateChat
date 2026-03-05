@@ -184,24 +184,30 @@ describe("getCurrentUser — session persistence on reload", () => {
     expect(result.session).toBeNull();
   });
 
-  it("tries auto-login with saved credentials when token is expired (401)", async () => {
+  it("tries auto-login with refresh token when access token is expired (401)", async () => {
     store = {
       token: "expired-jwt",
       username: "bob",
       rememberMe: "true",
-      savedUsername: "bob",
-      savedPassword: btoa("password123"),
+      refreshToken: "refresh-token-bob",
     };
 
     // First call: profile check → 401
     fetchMock.mockResolvedValueOnce({ ok: false, status: 401 });
-    // Second call: auto-login → success
+    // Second call: refresh token → success
     fetchMock.mockResolvedValueOnce({
       ok: true, status: 200,
       json: async () => ({
         token: "new-jwt",
+        refreshToken: "new-refresh-token",
+      }),
+    });
+    // Third call: retry profile with new token → success
+    fetchMock.mockResolvedValueOnce({
+      ok: true, status: 200,
+      json: async () => ({
         username: "bob",
-        role: "USER",
+        firstName: "Bob",
         avatarUrl: "",
         tag: "@bob",
       }),
@@ -214,46 +220,43 @@ describe("getCurrentUser — session persistence on reload", () => {
     expect(store.token).toBe("new-jwt");
   });
 
-  it("tries auto-login when no token at all but rememberMe is set", async () => {
+  it("tries auto-login via refresh token when no access token but rememberMe is set", async () => {
     store = {
       rememberMe: "true",
-      savedUsername: "carol",
-      savedPassword: btoa("pass456"),
+      refreshToken: "carol-refresh-token",
+      username: "carol",
     };
 
-    // Login call → success
+    // Refresh token call → success
     fetchMock.mockResolvedValueOnce({
       ok: true, status: 200,
       json: async () => ({
         token: "carol-jwt",
-        username: "carol",
-        role: "USER",
-        avatarUrl: "",
-        tag: "@carol",
+        refreshToken: "carol-new-refresh",
       }),
     });
 
     const result = await getCurrentUser();
     expect(result.session).not.toBeNull();
-    expect(result.session.user.id).toBe("carol");
+    // Session built from localStorage values + new token
+    expect(store.token).toBe("carol-jwt");
   });
 
-  it("returns null when auto-login fails (wrong saved password)", async () => {
+  it("returns null when refresh token is expired/invalid", async () => {
     store = {
       token: "expired-jwt",
       username: "dan",
       rememberMe: "true",
-      savedUsername: "dan",
-      savedPassword: btoa("wrongpass"),
+      refreshToken: "expired-refresh-token",
     };
 
     // Profile check → 401
     fetchMock.mockResolvedValueOnce({ ok: false, status: 401 });
-    // Auto-login → 401
-    fetchMock.mockResolvedValueOnce({
-      ok: false, status: 401,
-      json: async () => ({ error: "Неверные учетные данные" }),
-    });
+    // Refresh token → 401 (expired)
+    fetchMock.mockResolvedValueOnce({ ok: false, status: 401 });
+    // tryAutoLogin also fails — refreshToken same expired one
+    // tryAutoLogin: refresh call also fails
+    fetchMock.mockResolvedValueOnce({ ok: false, status: 401 });
 
     const result = await getCurrentUser();
     expect(result.session).toBeNull();
@@ -412,11 +415,12 @@ describe("signin — stores auth data for session persistence", () => {
     expect(result.session.user.role).toBe("authenticated");
   });
 
-  it("stores rememberMe credentials when checked", async () => {
+  it("stores rememberMe flag when checked (no password stored)", async () => {
     fetchMock.mockResolvedValueOnce({
       ok: true, status: 200,
       json: async () => ({
         token: "jwt-token-456",
+        refreshToken: "refresh-456",
         username: "bob",
         role: "USER",
         avatarUrl: "",
@@ -426,11 +430,13 @@ describe("signin — stores auth data for session persistence", () => {
 
     await signin({ username: "bob", password: "mypassword", rememberMe: true });
     expect(store.rememberMe).toBe("true");
-    expect(store.savedUsername).toBe("bob");
-    expect(store.savedPassword).toBe(btoa("mypassword"));
+    expect(store.refreshToken).toBe("refresh-456");
+    // Password must NOT be stored
+    expect(store.savedUsername).toBeUndefined();
+    expect(store.savedPassword).toBeUndefined();
   });
 
-  it("removes rememberMe credentials when unchecked", async () => {
+  it("removes rememberMe flag and cleans legacy credentials when unchecked", async () => {
     store.rememberMe = "true";
     store.savedUsername = "bob";
     store.savedPassword = btoa("oldpass");
@@ -448,6 +454,7 @@ describe("signin — stores auth data for session persistence", () => {
 
     await signin({ username: "bob", password: "newpass", rememberMe: false });
     expect(store.rememberMe).toBeUndefined();
+    // Legacy credentials cleaned up
     expect(store.savedUsername).toBeUndefined();
     expect(store.savedPassword).toBeUndefined();
   });
@@ -461,6 +468,7 @@ describe("signout — clears all session data", () => {
     vi.resetModules();
     store = {
       token: "jwt",
+      refreshToken: "refresh-jwt",
       username: "user",
       role: "USER",
       avatarUrl: "/img.png",
@@ -472,6 +480,9 @@ describe("signout — clears all session data", () => {
     };
     localStorageMock.getItem.mockImplementation((key) => store[key] ?? null);
     localStorageMock.removeItem.mockImplementation((key) => { delete store[key]; });
+    fetchMock.mockReset();
+    // logout endpoint — best effort
+    fetchMock.mockResolvedValue({ ok: true, status: 200 });
     globalThis.unsubscribePush = vi.fn().mockResolvedValue(undefined);
 
     vi.mock("../services/wsService", () => ({
@@ -486,9 +497,11 @@ describe("signout — clears all session data", () => {
   it("removes all auth keys from localStorage", async () => {
     await signout();
     expect(store.token).toBeUndefined();
+    expect(store.refreshToken).toBeUndefined();
     expect(store.username).toBeUndefined();
     expect(store.role).toBeUndefined();
     expect(store.rememberMe).toBeUndefined();
+    // Legacy keys also cleaned
     expect(store.savedUsername).toBeUndefined();
     expect(store.savedPassword).toBeUndefined();
   });
