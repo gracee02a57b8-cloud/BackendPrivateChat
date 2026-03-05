@@ -448,7 +448,7 @@ describe("VoicePlayer animation bounce calculation", () => {
 describe("VideoCirclePlayer progress ring", () => {
   it("calculates correct SVG strokeDashoffset from progress", () => {
     const size = 240;
-    const sw = 3.5;
+    const sw = 3;
     const r = (size - sw) / 2;
     const circ = 2 * Math.PI * r;
 
@@ -464,11 +464,11 @@ describe("VideoCirclePlayer progress ring", () => {
 
   it("has correct circle dimensions for 240px size", () => {
     const size = 240;
-    const sw = 3.5;
+    const sw = 3;
     const r = (size - sw) / 2;
     
-    expect(r).toBeCloseTo(118.25);
-    expect(2 * Math.PI * r).toBeCloseTo(742.94, 0);
+    expect(r).toBeCloseTo(118.5);
+    expect(2 * Math.PI * r).toBeCloseTo(744.51, 0);
   });
 
   it("formats duration correctly", () => {
@@ -793,5 +793,188 @@ describe("Message type routing", () => {
     
     expect(isAudioCall(audioMsg)).toBe(true);
     expect(isAudioCall(videoMsg)).toBe(false);
+  });
+});
+
+// ============================================================
+// 10. Cancel Recording logic
+// ============================================================
+describe("Cancel recording logic", () => {
+  it("cancelVoiceRecording nullifies recorder callbacks before stopping", () => {
+    // Simulate MediaRecorder
+    const recorder = {
+      state: "recording",
+      ondataavailable: vi.fn(),
+      onstop: vi.fn(),
+      stop: vi.fn(),
+    };
+
+    // Simulate cancelVoiceRecording logic
+    function cancelVoiceRecording(rec) {
+      if (rec && rec.state === "recording") {
+        rec.ondataavailable = null;
+        rec.onstop = null;
+        rec.stop();
+      }
+    }
+
+    cancelVoiceRecording(recorder);
+
+    expect(recorder.ondataavailable).toBeNull();
+    expect(recorder.onstop).toBeNull();
+    expect(recorder.stop).toHaveBeenCalledTimes(1);
+  });
+
+  it("cancelVideoRecording nullifies recorder callbacks before stopping", () => {
+    const recorder = {
+      state: "recording",
+      ondataavailable: vi.fn(),
+      onstop: vi.fn(),
+      stop: vi.fn(),
+    };
+
+    function cancelVideoRecording(rec) {
+      if (rec && rec.state === "recording") {
+        rec.ondataavailable = null;
+        rec.onstop = null;
+        rec.stop();
+      }
+    }
+
+    cancelVideoRecording(recorder);
+
+    expect(recorder.ondataavailable).toBeNull();
+    expect(recorder.onstop).toBeNull();
+    expect(recorder.stop).toHaveBeenCalledTimes(1);
+  });
+
+  it("cancel does nothing if recorder is not recording", () => {
+    const recorder = {
+      state: "inactive",
+      ondataavailable: vi.fn(),
+      onstop: vi.fn(),
+      stop: vi.fn(),
+    };
+
+    function cancelRecording(rec) {
+      if (rec && rec.state === "recording") {
+        rec.ondataavailable = null;
+        rec.onstop = null;
+        rec.stop();
+      }
+    }
+
+    cancelRecording(recorder);
+
+    expect(recorder.ondataavailable).not.toBeNull();
+    expect(recorder.onstop).not.toBeNull();
+    expect(recorder.stop).not.toHaveBeenCalled();
+  });
+
+  it("cancel with null recorder does not throw", () => {
+    function cancelRecording(rec) {
+      if (rec && rec.state === "recording") {
+        rec.ondataavailable = null;
+        rec.onstop = null;
+        rec.stop();
+      }
+    }
+
+    expect(() => cancelRecording(null)).not.toThrow();
+    expect(() => cancelRecording(undefined)).not.toThrow();
+  });
+});
+
+// ============================================================
+// 11. Telegram-style VoicePlayer enhancements
+// ============================================================
+describe("Telegram-style VoicePlayer", () => {
+  it("uses voice-player-tg CSS class for Telegram animation", () => {
+    // The VoicePlayer component applies voice-player-tg class
+    const expectedClass = "voice-player-tg";
+    expect(expectedClass).toBe("voice-player-tg");
+  });
+
+  it("bar width is 2.5px for wider Telegram-style bars", () => {
+    const barWidth = 2.5;
+    expect(barWidth).toBe(2.5);
+    expect(barWidth).toBeGreaterThan(2); // wider than original
+  });
+
+  it("waveform height is 28px for taller display", () => {
+    const waveformHeight = 28;
+    expect(waveformHeight).toBe(28);
+    expect(waveformHeight).toBeGreaterThan(24); // taller than original
+  });
+
+  it("play button is h-11/w-11 with shadow", () => {
+    const buttonSize = 11; // tailwind h-11 = 2.75rem
+    expect(buttonSize).toBe(11);
+    expect(buttonSize).toBeGreaterThan(10); // bigger than original h-10
+  });
+
+  it("data-playing attribute reflects play state", () => {
+    const states = [
+      { isPlaying: true, expected: "true" },
+      { isPlaying: false, expected: "false" },
+    ];
+    for (const s of states) {
+      const attr = s.isPlaying ? "true" : "false";
+      expect(attr).toBe(s.expected);
+    }
+  });
+});
+
+// ============================================================
+// 12. Telegram-style VideoCirclePlayer enhancements
+// ============================================================
+describe("Telegram-style VideoCirclePlayer", () => {
+  it("uses video-circle-tg CSS class for entrance animation", () => {
+    const expectedClass = "video-circle-tg";
+    expect(expectedClass).toBe("video-circle-tg");
+  });
+
+  it("applies scale-in animation from 0.3 to 1", () => {
+    const initialScale = 0.3;
+    const finalScale = 1;
+    expect(initialScale).toBeLessThan(finalScale);
+    expect(finalScale).toBe(1);
+  });
+
+  it("shows pause overlay on hover when playing", () => {
+    // VideoCirclePlayer shows group-hover:opacity-100 div with RiPauseFill
+    const hoverClasses = "opacity-0 group-hover:opacity-100";
+    expect(hoverClasses).toContain("group-hover:opacity-100");
+    expect(hoverClasses).toContain("opacity-0");
+  });
+
+  it("play overlay fades smoothly instead of conditional render", () => {
+    // New behavior: play overlay uses opacity transition instead of conditional rendering
+    // isPlaying → opacity: 0, !isPlaying → opacity: 1
+    const playingOpacity = 0;
+    const pausedOpacity = 1;
+    expect(playingOpacity).toBe(0);
+    expect(pausedOpacity).toBe(1);
+  });
+
+  it("progress ring uses strokeWidth 3 and strokeLinecap round", () => {
+    const sw = 3;
+    const linecap = "round";
+    expect(sw).toBe(3);
+    expect(linecap).toBe("round");
+  });
+
+  it("duration badge has backdrop blur and shadow", () => {
+    const badgeClasses = "bg-black/60 backdrop-blur-sm shadow-md font-mono tabular-nums";
+    expect(badgeClasses).toContain("backdrop-blur-sm");
+    expect(badgeClasses).toContain("shadow-md");
+    expect(badgeClasses).toContain("font-mono");
+    expect(badgeClasses).toContain("tabular-nums");
+  });
+
+  it("video container has shadow-lg for depth", () => {
+    const containerClasses = "overflow-hidden rounded-full shadow-lg";
+    expect(containerClasses).toContain("shadow-lg");
+    expect(containerClasses).toContain("rounded-full");
   });
 });

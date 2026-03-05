@@ -89,45 +89,51 @@ function VoicePlayer({ fileUrl, duration, waveform, isOwn }) {
   const s = Math.floor(displaySec % 60);
 
   return (
-    <div className="flex items-center gap-2 min-w-[200px]">
+    <div className="voice-player-tg flex items-center gap-2.5 min-w-[220px]" data-testid="voice-player" data-playing={isPlaying ? "true" : "false"}>
       <audio ref={audioRef} src={fileUrl} preload="metadata" />
+      {/* Telegram-style play/pause circle */}
       <button
         onClick={toggle}
-        className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full transition active:scale-95 ${
-          isOwn ? "bg-white/20 hover:bg-white/30" : "bg-bgAccent/20 hover:bg-bgAccent/30 dark:bg-bgAccent-dark/20 dark:hover:bg-bgAccent-dark/30"
+        className={`voice-play-btn flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full transition-all duration-200 active:scale-90 ${
+          isOwn
+            ? "bg-white/25 hover:bg-white/35 shadow-[0_2px_8px_rgba(255,255,255,0.15)]"
+            : "bg-bgAccent/20 hover:bg-bgAccent/30 dark:bg-bgAccent-dark/20 dark:hover:bg-bgAccent-dark/30 shadow-[0_2px_8px_rgba(139,92,246,0.15)]"
         }`}
+        data-testid="voice-play-btn"
       >
         {isPlaying ? <RiPauseFill className="text-lg" /> : <RiPlayFill className="text-lg ml-0.5" />}
       </button>
       <div className="flex flex-1 flex-col gap-1 min-w-0">
+        {/* Waveform bars — Telegram-style */}
         <div
-          className="flex items-end gap-[2px] h-[24px] cursor-pointer"
+          className="flex items-end gap-[2px] h-[28px] cursor-pointer"
           onClick={handleSeek}
+          data-testid="voice-waveform"
         >
           {bars.map((h, i) => {
             const played = progress > 0 && i / bars.length <= progress;
-            // Animate bars near the playback cursor
             const barPos = i / bars.length;
             const nearCursor = isPlaying && Math.abs(barPos - progress) < 0.08;
-            const bounce = nearCursor ? 0.15 * Math.sin(animTick * 0.3 + i * 0.7) : 0;
-            const finalH = Math.max(Math.min((h + bounce) * 24, 24), 2);
+            const bounce = nearCursor ? 0.18 * Math.sin(animTick * 0.3 + i * 0.7) : 0;
+            const finalH = Math.max(Math.min((h + bounce) * 28, 28), 3);
             return (
               <div
                 key={i}
-                className={`w-[2px] rounded-full flex-shrink-0 ${
+                className={`rounded-full flex-shrink-0 ${
                   played
                     ? isOwn ? "bg-white" : "bg-bgAccent dark:bg-bgAccent-dark"
-                    : isOwn ? "bg-white/30" : "bg-LightShade/30"
+                    : isOwn ? "bg-white/30" : "bg-LightShade/25"
                 }`}
                 style={{
+                  width: "2.5px",
                   height: `${finalH}px`,
-                  transition: nearCursor ? "height 80ms ease" : "height 150ms ease, background-color 150ms",
+                  transition: nearCursor ? "height 60ms ease-out" : "height 120ms ease-out, background-color 120ms",
                 }}
               />
             );
           })}
         </div>
-        <span className="text-[10px] opacity-60 tabular-nums">{m}:{s.toString().padStart(2, "0")}</span>
+        <span className="text-[11px] opacity-60 tabular-nums font-mono">{m}:{s.toString().padStart(2, "0")}</span>
       </div>
     </div>
   );
@@ -139,6 +145,13 @@ function VideoCirclePlayer({ fileUrl, duration }) {
   const [progress, setProgress] = useState(0);
   const progressRef = useRef(0);
   const svgCircleRef = useRef(null);
+  const [appeared, setAppeared] = useState(false);
+
+  // Telegram-style scale-in entrance animation
+  useEffect(() => {
+    const timer = requestAnimationFrame(() => setAppeared(true));
+    return () => cancelAnimationFrame(timer);
+  }, []);
 
   function toggle() {
     if (!videoRef.current) return;
@@ -164,7 +177,7 @@ function VideoCirclePlayer({ fileUrl, duration }) {
         // Directly update SVG for silky-smooth ring
         if (svgCircleRef.current) {
           const size = 240;
-          const sw = 3.5;
+          const sw = 3;
           const r = (size - sw) / 2;
           const circ = 2 * Math.PI * r;
           svgCircleRef.current.style.strokeDashoffset = String(circ * (1 - p));
@@ -186,28 +199,37 @@ function VideoCirclePlayer({ fileUrl, duration }) {
   const ds = Math.floor(displayTime % 60);
 
   const size = 240;
-  const sw = 3.5;
+  const sw = 3;
   const r = (size - sw) / 2;
   const circ = 2 * Math.PI * r;
   const offset = circ * (1 - progress);
 
   return (
-    <div className="flex flex-col items-center">
-      <div className="relative cursor-pointer" style={{ width: size, height: size }} onClick={toggle}>
+    <div
+      className="video-circle-tg flex flex-col items-center"
+      data-testid="video-circle-player"
+      style={{
+        transform: appeared ? "scale(1)" : "scale(0.3)",
+        opacity: appeared ? 1 : 0,
+        transition: "transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease",
+      }}
+    >
+      <div className="relative cursor-pointer group" style={{ width: size, height: size }} onClick={toggle}>
         {/* Progress ring */}
         <svg className="absolute inset-0 -rotate-90" width={size} height={size}>
-          <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="currentColor" strokeWidth={sw} className="opacity-10" />
+          <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="currentColor" strokeWidth={sw} className="opacity-[0.07]" />
           <circle
             ref={svgCircleRef}
             cx={size/2} cy={size/2} r={r}
             fill="none" stroke="currentColor" strokeWidth={sw}
             strokeDasharray={circ} strokeDashoffset={offset}
             strokeLinecap="round"
-            className="text-bgAccent dark:text-bgAccent-dark"
+            className="text-bgAccent dark:text-bgAccent-dark drop-shadow-sm"
+            style={{ transition: "stroke-dashoffset 0.1s linear" }}
           />
         </svg>
-        {/* Video */}
-        <div className="absolute overflow-hidden rounded-full" style={{ inset: `${sw}px` }}>
+        {/* Video — perfectly round */}
+        <div className="absolute overflow-hidden rounded-full shadow-lg" style={{ inset: `${sw}px` }}>
           <video
             ref={videoRef}
             src={fileUrl}
@@ -216,14 +238,27 @@ function VideoCirclePlayer({ fileUrl, duration }) {
             className="h-full w-full object-cover"
           />
         </div>
-        {/* Play overlay */}
-        {!isPlaying && (
-          <div className="absolute flex items-center justify-center rounded-full bg-black/30" style={{ inset: `${sw}px` }}>
-            <RiPlayFill className="text-4xl text-white drop-shadow" />
+        {/* Play overlay with smooth fade */}
+        <div
+          className="absolute flex items-center justify-center rounded-full transition-opacity duration-200"
+          style={{
+            inset: `${sw}px`,
+            opacity: isPlaying ? 0 : 1,
+            backgroundColor: "rgba(0,0,0,0.35)",
+          }}
+        >
+          <RiPlayFill className="text-4xl text-white drop-shadow-lg" />
+        </div>
+        {/* Mute indicator on hover when playing */}
+        {isPlaying && (
+          <div className="absolute flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200" style={{ inset: `${sw}px` }}>
+            <div className="rounded-full bg-black/40 p-2">
+              <RiPauseFill className="text-2xl text-white" />
+            </div>
           </div>
         )}
-        {/* Duration badge */}
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-2.5 py-0.5 text-[11px] font-mono text-white tabular-nums">
+        {/* Duration badge — Telegram style bottom center */}
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-2.5 py-0.5 text-[11px] font-mono text-white tabular-nums shadow-md backdrop-blur-sm">
           {dm}:{ds.toString().padStart(2, "0")}
         </div>
       </div>

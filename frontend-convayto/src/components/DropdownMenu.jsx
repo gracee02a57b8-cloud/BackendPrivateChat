@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   RiMoonClearLine,
   RiContactsBookLine,
+  RiUserLine,
   RiSettings2Line,
   RiLogoutCircleLine,
 } from "react-icons/ri";
@@ -54,8 +55,8 @@ export default function DropdownMenu() {
 
         <Menu.List>
           <Menu.ButtonItem onClick={openAccountView}>
-            <RiSettings2Line />
-            <div>Мой аккаунт</div>
+            <RiUserLine />
+            <div>Мой профиль</div>
           </Menu.ButtonItem>
 
           <Menu.ButtonItem onClick={openContacts}>

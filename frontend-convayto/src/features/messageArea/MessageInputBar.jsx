@@ -303,6 +303,37 @@ function MessageInputBar({ replyTo, setReplyTo }) {
     videoRecorderRef.current?.stop();
   }
 
+  function cancelVideoRecording() {
+    // Stop the recorder without triggering onstop send logic
+    const recorder = videoRecorderRef.current;
+    if (recorder && recorder.state === "recording") {
+      recorder.ondataavailable = null;
+      recorder.onstop = null;
+      recorder.stop();
+    }
+    // Stop camera/mic tracks
+    videoStreamRef.current?.getTracks().forEach((t) => t.stop());
+    clearInterval(videoTimerRef.current);
+    setIsRecordingVideo(false);
+    setVideoDuration(0);
+    videoChunksRef.current = [];
+    toast("Запись отменена", { icon: "🗑️" });
+  }
+
+  function cancelVoiceRecording() {
+    const recorder = voiceRecorderRef.current;
+    if (recorder && recorder.state === "recording") {
+      recorder.ondataavailable = null;
+      recorder.onstop = null;
+      recorder.stop();
+    }
+    clearInterval(voiceTimerRef.current);
+    setIsRecordingVoice(false);
+    setVoiceDuration(0);
+    voiceChunksRef.current = [];
+    toast("Запись отменена", { icon: "🗑️" });
+  }
+
   function formatDuration(sec) {
     const m = Math.floor(sec / 60);
     const s = sec % 60;
@@ -333,15 +364,26 @@ function MessageInputBar({ replyTo, setReplyTo }) {
               </div>
             </div>
           </div>
-          <button
-            onClick={stopVideoRecording}
-            className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500 text-white shadow-lg transition hover:bg-red-600 active:scale-95"
-            title="Остановить запись"
-          >
-            <RiStopFill className="text-2xl" />
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={cancelVideoRecording}
+              className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-500 text-white shadow-lg transition hover:bg-gray-600 active:scale-95"
+              title="Отменить запись"
+              data-testid="cancel-video-recording"
+            >
+              <RiCloseLine className="text-2xl" />
+            </button>
+            <button
+              onClick={stopVideoRecording}
+              className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500 text-white shadow-lg transition hover:bg-red-600 active:scale-95"
+              title="Остановить и отправить"
+              data-testid="stop-video-recording"
+            >
+              <RiStopFill className="text-2xl" />
+            </button>
+          </div>
           <p className="text-xs text-textPrimary/50 dark:text-textPrimary-dark/50">
-            Макс. 60 сек. Нажмите стоп для отправки.
+            Макс. 60 сек. Стоп — отправить, ✕ — отменить.
           </p>
         </div>
       </div>
@@ -354,16 +396,25 @@ function MessageInputBar({ replyTo, setReplyTo }) {
       <div className="px-4 py-2">
         <div className="mx-auto flex max-w-3xl items-center gap-3 rounded-full border border-transparent bg-bgPrimary px-4 py-2 shadow-lg dark:border-LightShade/20 dark:bg-LightShade/20">
           <span className="h-3 w-3 animate-pulse rounded-full bg-red-500" />
-          <span className="font-mono text-sm">
+          <span className="font-mono text-sm tabular-nums">
             {formatDuration(voiceDuration)}
           </span>
           <span className="flex-1 text-sm text-textPrimary/50 dark:text-textPrimary-dark/50">
             Запись голосового...
           </span>
           <button
+            onClick={cancelVoiceRecording}
+            className="flex h-10 w-10 items-center justify-center rounded-full text-xl text-textPrimary/60 transition hover:bg-LightShade/20 active:scale-95 dark:text-textPrimary-dark/60"
+            title="Отменить запись"
+            data-testid="cancel-voice-recording"
+          >
+            <RiCloseLine />
+          </button>
+          <button
             onClick={stopVoiceRecording}
             className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500 text-white transition hover:bg-red-600 active:scale-95"
             title="Остановить и отправить"
+            data-testid="stop-voice-recording"
           >
             <RiStopFill className="text-xl" />
           </button>

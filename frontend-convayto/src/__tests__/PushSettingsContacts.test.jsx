@@ -412,9 +412,9 @@ describe("DropdownMenu", () => {
     vi.clearAllMocks();
   });
 
-  it("renders menu items: account, contacts, settings, dark theme, exit", () => {
+  it("renders menu items: profile, contacts, settings, dark theme, exit", () => {
     render(<DropdownMenu />);
-    expect(screen.getByText("Мой аккаунт")).toBeInTheDocument();
+    expect(screen.getByText("Мой профиль")).toBeInTheDocument();
     expect(screen.getByText("Контакты")).toBeInTheDocument();
     expect(screen.getByText("Настройки")).toBeInTheDocument();
     expect(screen.getByText("Тёмная тема")).toBeInTheDocument();
