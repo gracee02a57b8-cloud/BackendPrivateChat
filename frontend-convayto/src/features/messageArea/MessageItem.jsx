@@ -14,6 +14,8 @@ function VoicePlayer({ fileUrl, duration, waveform, isOwn }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
+  const animFrameRef = useRef(null);
+  const [animTick, setAnimTick] = useState(0);
 
   const NUM_BARS = 48;
   const bars = useMemo(() => {
@@ -31,7 +33,6 @@ function VoicePlayer({ fileUrl, duration, waveform, isOwn }) {
       }
       return result;
     }
-    // Generate pseudo-random waveform from fileUrl hash
     const result = [];
     let seed = 0;
     if (fileUrl) for (let i = 0; i < fileUrl.length; i++) seed += fileUrl.charCodeAt(i);
@@ -42,18 +43,28 @@ function VoicePlayer({ fileUrl, duration, waveform, isOwn }) {
     return result;
   }, [waveform, fileUrl]);
 
+  // Smooth animation loop for playback progress + bar animation
   useEffect(() => {
     const a = audioRef.current;
     if (!a) return;
-    const onTime = () => {
-      const d = a.duration || duration || 1;
-      setProgress(a.currentTime / d);
-      setCurrentTime(a.currentTime);
-    };
     const onEnd = () => { setIsPlaying(false); setProgress(0); setCurrentTime(0); };
-    a.addEventListener("timeupdate", onTime);
     a.addEventListener("ended", onEnd);
-    return () => { a.removeEventListener("timeupdate", onTime); a.removeEventListener("ended", onEnd); };
+
+    let raf;
+    function tick() {
+      if (a && !a.paused) {
+        const d = a.duration || duration || 1;
+        setProgress(a.currentTime / d);
+        setCurrentTime(a.currentTime);
+        setAnimTick((t) => t + 1);
+      }
+      raf = requestAnimationFrame(tick);
+    }
+    raf = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(raf);
+      a.removeEventListener("ended", onEnd);
+    };
   }, [duration]);
 
   function toggle() {
@@ -95,15 +106,23 @@ function VoicePlayer({ fileUrl, duration, waveform, isOwn }) {
         >
           {bars.map((h, i) => {
             const played = progress > 0 && i / bars.length <= progress;
+            // Animate bars near the playback cursor
+            const barPos = i / bars.length;
+            const nearCursor = isPlaying && Math.abs(barPos - progress) < 0.08;
+            const bounce = nearCursor ? 0.15 * Math.sin(animTick * 0.3 + i * 0.7) : 0;
+            const finalH = Math.max(Math.min((h + bounce) * 24, 24), 2);
             return (
               <div
                 key={i}
-                className={`w-[2px] rounded-full flex-shrink-0 transition-colors duration-150 ${
+                className={`w-[2px] rounded-full flex-shrink-0 ${
                   played
                     ? isOwn ? "bg-white" : "bg-bgAccent dark:bg-bgAccent-dark"
                     : isOwn ? "bg-white/30" : "bg-LightShade/30"
                 }`}
-                style={{ height: `${Math.max(h * 24, 2)}px` }}
+                style={{
+                  height: `${finalH}px`,
+                  transition: nearCursor ? "height 80ms ease" : "height 150ms ease, background-color 150ms",
+                }}
               />
             );
           })}
@@ -118,6 +137,8 @@ function VideoCirclePlayer({ fileUrl, duration }) {
   const videoRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const progressRef = useRef(0);
+  const svgCircleRef = useRef(null);
 
   function toggle() {
     if (!videoRef.current) return;
@@ -126,14 +147,36 @@ function VideoCirclePlayer({ fileUrl, duration }) {
     setIsPlaying(!isPlaying);
   }
 
+  // Smooth animation with requestAnimationFrame
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    const onTime = () => setProgress(v.currentTime / (v.duration || duration || 1));
-    const onEnd = () => { setIsPlaying(false); setProgress(0); };
-    v.addEventListener("timeupdate", onTime);
+    let raf;
+    const onEnd = () => { setIsPlaying(false); setProgress(0); progressRef.current = 0; };
     v.addEventListener("ended", onEnd);
-    return () => { v.removeEventListener("timeupdate", onTime); v.removeEventListener("ended", onEnd); };
+
+    function animate() {
+      if (v && !v.paused) {
+        const d = v.duration || duration || 1;
+        const p = v.currentTime / d;
+        progressRef.current = p;
+        setProgress(p);
+        // Directly update SVG for silky-smooth ring
+        if (svgCircleRef.current) {
+          const size = 240;
+          const sw = 3.5;
+          const r = (size - sw) / 2;
+          const circ = 2 * Math.PI * r;
+          svgCircleRef.current.style.strokeDashoffset = String(circ * (1 - p));
+        }
+      }
+      raf = requestAnimationFrame(animate);
+    }
+    raf = requestAnimationFrame(animate);
+    return () => {
+      cancelAnimationFrame(raf);
+      v.removeEventListener("ended", onEnd);
+    };
   }, [duration]);
 
   const dur = duration || 0;
@@ -143,7 +186,7 @@ function VideoCirclePlayer({ fileUrl, duration }) {
   const ds = Math.floor(displayTime % 60);
 
   const size = 240;
-  const sw = 3;
+  const sw = 3.5;
   const r = (size - sw) / 2;
   const circ = 2 * Math.PI * r;
   const offset = circ * (1 - progress);
@@ -155,11 +198,12 @@ function VideoCirclePlayer({ fileUrl, duration }) {
         <svg className="absolute inset-0 -rotate-90" width={size} height={size}>
           <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="currentColor" strokeWidth={sw} className="opacity-10" />
           <circle
+            ref={svgCircleRef}
             cx={size/2} cy={size/2} r={r}
             fill="none" stroke="currentColor" strokeWidth={sw}
             strokeDasharray={circ} strokeDashoffset={offset}
             strokeLinecap="round"
-            className="text-bgAccent dark:text-bgAccent-dark transition-all duration-200"
+            className="text-bgAccent dark:text-bgAccent-dark"
           />
         </svg>
         {/* Video */}

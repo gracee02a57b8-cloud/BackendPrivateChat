@@ -1,6 +1,6 @@
-import { RiSendPlaneFill, RiAttachmentLine, RiMicLine, RiStopFill, RiVideoChatLine, RiCloseLine, RiReplyLine, RiBarChartBoxLine } from "react-icons/ri";
+import { RiSendPlaneFill, RiAttachmentLine, RiMicLine, RiStopFill, RiCloseLine, RiReplyLine, RiBarChartBoxLine } from "react-icons/ri";
 import { useUser } from "../authentication/useUser";
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { useSendNewMessage } from "./useSendNewMessage";
 import { v4 as uuid } from "uuid";
 import Loader from "../../components/Loader";
@@ -47,6 +47,14 @@ function MessageInputBar({ replyTo, setReplyTo }) {
 
   // Uploading state
   const [isUploading, setIsUploading] = useState(false);
+
+  // Attach camera stream to preview element after recording UI renders
+  useEffect(() => {
+    if (isRecordingVideo && videoStreamRef.current && videoPreviewRef.current) {
+      videoPreviewRef.current.srcObject = videoStreamRef.current;
+      videoPreviewRef.current.play().catch(() => {});
+    }
+  }, [isRecordingVideo]);
 
   // Poll state
   const [showPollModal, setShowPollModal] = useState(false);
@@ -220,11 +228,6 @@ function MessageInputBar({ replyTo, setReplyTo }) {
       });
       videoStreamRef.current = stream;
 
-      if (videoPreviewRef.current) {
-        videoPreviewRef.current.srcObject = stream;
-        videoPreviewRef.current.play().catch(() => {});
-      }
-
       const recorder = new MediaRecorder(stream, { mimeType: getSupportedVideoMime() });
       videoChunksRef.current = [];
 
@@ -314,17 +317,20 @@ function MessageInputBar({ replyTo, setReplyTo }) {
       <div className="px-4 py-2">
         <div className="mx-auto flex max-w-3xl flex-col items-center gap-3 rounded-2xl border border-transparent bg-bgPrimary p-4 shadow-lg dark:border-LightShade/20 dark:bg-LightShade/20">
           {/* Round video preview */}
-          <div className="relative h-48 w-48 overflow-hidden rounded-full border-4 border-red-500 shadow-lg">
-            <video
-              ref={videoPreviewRef}
-              autoPlay
-              muted
-              playsInline
-              className="h-full w-full object-cover"
-              style={{ transform: "scaleX(-1)" }}
-            />
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-0.5 text-sm font-mono text-white">
-              {formatDuration(videoDuration)}
+          <div className="relative h-48 w-48">
+            <div className="absolute inset-0 animate-ping rounded-full border-2 border-red-400 opacity-30" />
+            <div className="relative h-full w-full overflow-hidden rounded-full border-4 border-red-500 shadow-lg">
+              <video
+                ref={videoPreviewRef}
+                autoPlay
+                muted
+                playsInline
+                className="h-full w-full object-cover"
+                style={{ transform: "scaleX(-1)" }}
+              />
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-0.5 text-sm font-mono text-white">
+                {formatDuration(videoDuration)}
+              </div>
             </div>
           </div>
           <button
@@ -450,7 +456,11 @@ function MessageInputBar({ replyTo, setReplyTo }) {
           className="flex h-10 w-10 items-center justify-center rounded-full text-xl text-textPrimary/60 transition hover:bg-LightShade/20 active:scale-95 disabled:opacity-40 dark:text-textPrimary-dark/60"
           title="Видеокружок"
         >
-          <RiVideoChatLine />
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <rect x="8" y="8.5" width="5.5" height="7" rx="1" />
+            <path d="M13.5 10.5l3-1.5v6l-3-1.5" />
+          </svg>
         </button>
 
         {/* Send button */}
