@@ -3,10 +3,12 @@ import { useUi } from "../../contexts/UiContext";
 import IconButton from "../../components/IconButton";
 import { RiFlaskLine, RiGamepadLine } from "react-icons/ri";
 import PacmanGame from "./PacmanGame";
+import RunnerGame from "./RunnerGame";
 
 function TricksView() {
   const { closeTricksView } = useUi();
   const [pacmanOpen, setPacmanOpen] = useState(false);
+  const [runnerOpen, setRunnerOpen] = useState(false);
 
   return (
     <div className="fadeIn grid h-screen-safe grid-rows-[auto_1fr] bg-bgPrimary dark:bg-bgPrimary-dark">
@@ -35,9 +37,25 @@ function TricksView() {
           </div>
           <RiGamepadLine className="ml-auto text-xl opacity-40" />
         </button>
+
+        <button
+          onClick={() => setRunnerOpen(true)}
+          className="flex w-full items-center gap-3 rounded-xl bg-LightShade/10 px-4 py-3 text-left transition-colors hover:bg-LightShade/20 active:scale-[0.98]"
+          data-testid="tricks-runner-btn"
+        >
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-cyan-400/20 text-xl">
+            🏃
+          </span>
+          <div>
+            <p className="font-semibold text-textPrimary dark:text-textPrimary-dark">Space Runner</p>
+            <p className="text-xs opacity-50">3D бесконечный бег в космосе</p>
+          </div>
+          <RiGamepadLine className="ml-auto text-xl opacity-40" />
+        </button>
       </div>
 
       {pacmanOpen && <PacmanGame onClose={() => setPacmanOpen(false)} />}
+      {runnerOpen && <RunnerGame onClose={() => setRunnerOpen(false)} />}
     </div>
   );
 }
