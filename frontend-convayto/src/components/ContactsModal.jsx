@@ -34,7 +34,7 @@ function ContactsModal({ isOpen, onClose }) {
     if (query.trim().length < 2) { setSearchResults([]); return; }
     setSearching(true);
     try {
-      const results = await apiFetch(`/api/profile/search?query=${encodeURIComponent(query.trim())}`);
+      const results = await apiFetch(`/api/chat/users?search=${encodeURIComponent(query.trim())}`);
       const myUsername = localStorage.getItem("username");
       setSearchResults((results || []).filter((u) => u.username !== myUsername));
     } catch {

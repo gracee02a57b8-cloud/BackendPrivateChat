@@ -54,8 +54,8 @@ export default function DropdownMenu() {
 
         <Menu.List>
           <Menu.ButtonItem onClick={openAccountView}>
-            <RiUserLine />
-            <div>Профиль</div>
+            <RiSettings2Line />
+            <div>Мой аккаунт</div>
           </Menu.ButtonItem>
 
           <Menu.ButtonItem onClick={openContacts}>

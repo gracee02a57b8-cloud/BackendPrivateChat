@@ -2,11 +2,38 @@ import toast from "react-hot-toast";
 import { getRandomAvatar } from "./avatarUtils";
 
 /**
+ * Play a short notification sound using the Web Audio API.
+ * Respects the soundEnabled localStorage preference.
+ */
+function playNotificationSound() {
+  try {
+    if (localStorage.getItem("soundEnabled") === "false") return;
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.type = "sine";
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.3);
+    osc.onended = () => ctx.close();
+  } catch {
+    // Ignore audio errors silently
+  }
+}
+
+/**
  * Show a rich notification toast for incoming messages.
  * Displays avatar, sender name, time, and message preview.
+ * Plays a notification sound if soundEnabled is not "false".
  */
 export function showMessageToast({ sender, content, timestamp, msgId, avatar }) {
   const preview = (content || "").substring(0, 60) || "📎 Вложение";
+
+  playNotificationSound();
 
   const time = timestamp
     ? new Date(timestamp).toLocaleTimeString("ru-RU", {
