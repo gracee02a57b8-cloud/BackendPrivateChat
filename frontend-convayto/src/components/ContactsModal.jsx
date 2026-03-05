@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { RiCloseLine, RiSearchLine, RiUserAddLine, RiCheckLine, RiGroupLine, RiMessage3Line, RiContactsBookLine } from "react-icons/ri";
 import { useContacts } from "../features/sideBar/useContacts";
 import { addContact } from "../services/apiContacts";
@@ -73,7 +74,7 @@ function ContactsModal({ isOpen, onClose }) {
 
   return (
     <>
-      {isOpen && (
+      {isOpen && createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={handleClose}>
       <div className="mx-4 w-full max-w-sm rounded-2xl bg-bgPrimary shadow-2xl dark:bg-bgPrimary-dark" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
@@ -221,7 +222,8 @@ function ContactsModal({ isOpen, onClose }) {
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
       )}
 
       <CreateGroupModal

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { RiCloseLine, RiVolumeUpLine, RiVolumeMuteLine, RiNotification3Line, RiNotificationOffLine } from "react-icons/ri";
 import { initPushNotifications, unsubscribePush } from "../services/pushService";
 import toast from "react-hot-toast";
@@ -48,7 +49,7 @@ function SettingsModal({ isOpen, onClose }) {
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
       <div className="mx-4 w-full max-w-sm rounded-2xl bg-bgPrimary shadow-2xl dark:bg-bgPrimary-dark" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
@@ -98,7 +99,8 @@ function SettingsModal({ isOpen, onClose }) {
           <p className="text-center text-xs opacity-30">Push-уведомления требуют разрешения браузера</p>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

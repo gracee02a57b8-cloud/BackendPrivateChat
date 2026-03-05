@@ -2,6 +2,7 @@
 // CreateGroupModal — create a new group chat
 // ==========================================
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { RiCloseFill, RiGroupLine } from "react-icons/ri";
 import { apiFetch } from "../services/apiHelper";
 import { useContacts } from "../features/sideBar/useContacts";
@@ -71,7 +72,7 @@ function CreateGroupModal({ isOpen, onClose }) {
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[9000] flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-md rounded-2xl bg-bgPrimary shadow-2xl dark:bg-bgPrimary-dark">
         {/* Header */}
@@ -166,7 +167,8 @@ function CreateGroupModal({ isOpen, onClose }) {
           </button>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
