@@ -3,51 +3,64 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Magicka — Convayto Games</title>
+<title>Magicka 3D — Convayto Games</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;overflow:hidden;background:#0a0a1a;font-family:'Segoe UI',system-ui,sans-serif;color:#e0e0e0}
 #game-container{width:100%;height:100%;position:relative}
 canvas{display:block;width:100%;height:100%}
-#hud{position:absolute;top:0;left:0;right:0;pointer-events:none;padding:12px 16px;display:flex;justify-content:space-between;align-items:flex-start}
+
+/* ── HUD ── */
+#hud{position:absolute;top:0;left:0;right:0;pointer-events:none;padding:12px 16px;display:flex;justify-content:space-between;align-items:flex-start;z-index:10}
 #hud *{pointer-events:auto}
-.hud-left,.hud-right{display:flex;flex-direction:column;gap:8px}
-.hp-bar-bg{width:200px;height:20px;background:rgba(0,0,0,0.6);border-radius:10px;border:2px solid rgba(255,255,255,0.15);overflow:hidden}
+.hud-left,.hud-right{display:flex;flex-direction:column;gap:6px}
+.hp-bar-bg{width:200px;height:20px;background:rgba(0,0,0,0.7);border-radius:10px;border:2px solid rgba(255,255,255,0.15);overflow:hidden}
 .hp-bar{height:100%;background:linear-gradient(90deg,#e53e3e,#fc8181);border-radius:8px;transition:width .3s}
-.mana-bar-bg{width:200px;height:14px;background:rgba(0,0,0,0.6);border-radius:7px;border:2px solid rgba(255,255,255,0.15);overflow:hidden}
+.mana-bar-bg{width:200px;height:14px;background:rgba(0,0,0,0.7);border-radius:7px;border:2px solid rgba(255,255,255,0.15);overflow:hidden}
 .mana-bar{height:100%;background:linear-gradient(90deg,#3182ce,#63b3ed);border-radius:5px;transition:width .3s}
 .score{font-size:18px;font-weight:700;color:#ffd700;text-shadow:0 0 10px rgba(255,215,0,0.5)}
 .wave{font-size:14px;color:#a0aec0}
-#element-queue{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);display:flex;gap:6px;padding:8px 16px;background:rgba(0,0,0,0.7);border-radius:20px;border:1px solid rgba(255,255,255,0.1)}
+
+/* ── Element Queue ── */
+#element-queue{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);display:flex;gap:6px;padding:8px 16px;background:rgba(0,0,0,0.75);border-radius:20px;border:1px solid rgba(255,255,255,0.1);z-index:10}
 .eq-slot{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;border:2px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.05);transition:all .15s}
 .eq-slot.filled{border-color:rgba(255,255,255,0.5);transform:scale(1.1);animation:popIn .2s}
 @keyframes popIn{0%{transform:scale(0.5)}50%{transform:scale(1.2)}100%{transform:scale(1.1)}}
-#controls{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:4px;padding:8px 12px;background:rgba(0,0,0,0.7);border-radius:16px;border:1px solid rgba(255,255,255,0.1)}
-.elem-key{width:44px;height:44px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;cursor:pointer;border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);transition:all .15s;user-select:none;-webkit-tap-highlight-color:transparent}
+
+/* ── Controls ── */
+#controls{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:4px;padding:8px 12px;background:rgba(0,0,0,0.75);border-radius:16px;border:1px solid rgba(255,255,255,0.1);z-index:10}
+.elem-key{width:44px;height:44px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);transition:all .15s;user-select:none;-webkit-tap-highlight-color:transparent}
 .elem-key:hover{background:rgba(255,255,255,0.12);transform:translateY(-2px)}
 .elem-key:active,.elem-key.pressed{transform:scale(0.92);background:rgba(255,255,255,0.2)}
 .elem-key .icon{font-size:18px}
 .elem-key .key{font-size:9px;opacity:0.5;margin-top:1px}
-#cast-btns{position:absolute;bottom:16px;right:16px;display:flex;flex-direction:column;gap:6px}
+
+#cast-btns{position:absolute;bottom:16px;right:16px;display:flex;flex-direction:column;gap:6px;z-index:10}
 .cast-btn{width:56px;height:56px;border-radius:50%;border:2px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;transition:all .15s;user-select:none}
 .cast-btn:hover{background:rgba(255,255,255,0.15);transform:scale(1.05)}
 .cast-btn:active{transform:scale(0.93)}
-#start-screen{position:absolute;inset:0;background:radial-gradient(ellipse at center,#1a1a3e 0%,#0a0a1a 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;gap:20px}
-#start-screen h1{font-size:48px;font-weight:900;background:linear-gradient(135deg,#667eea,#764ba2,#f093fb);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-shadow:none;letter-spacing:3px}
+
+/* ── Mobile D-Pad ── */
+#mobile-dpad{position:absolute;bottom:80px;left:16px;display:none;flex-direction:column;align-items:center;gap:2px;z-index:10}
+.dpad-row{display:flex;gap:2px}
+.dpad-btn{width:48px;height:48px;border-radius:10px;border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
+.dpad-btn:active{background:rgba(255,255,255,0.25)}
+
+/* ── Screens ── */
+#start-screen{position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(20,20,60,0.95) 0%,rgba(10,10,26,0.98) 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;gap:20px}
+#start-screen h1{font-size:48px;font-weight:900;background:linear-gradient(135deg,#667eea,#764ba2,#f093fb);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:3px}
 #start-screen .subtitle{font-size:16px;opacity:0.6;margin-top:-10px}
 #start-screen .start-btn{padding:14px 48px;font-size:18px;font-weight:700;border:none;border-radius:30px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;cursor:pointer;transition:all .2s;letter-spacing:1px}
 #start-screen .start-btn:hover{transform:scale(1.05);box-shadow:0 0 30px rgba(102,126,234,0.5)}
 .controls-hint{display:grid;grid-template-columns:auto auto;gap:4px 16px;font-size:13px;opacity:0.5;margin-top:10px}
 .controls-hint span:nth-child(odd){text-align:right;opacity:0.7}
+
 #death-screen{position:absolute;inset:0;background:rgba(10,10,26,0.92);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:100;gap:16px}
 #death-screen h2{font-size:36px;color:#e53e3e;font-weight:800}
 #death-screen .final-score{font-size:24px;color:#ffd700}
 #death-screen .restart-btn{padding:12px 40px;font-size:16px;font-weight:700;border:none;border-radius:25px;background:linear-gradient(135deg,#e53e3e,#fc8181);color:#fff;cursor:pointer;transition:all .2s}
 #death-screen .restart-btn:hover{transform:scale(1.05)}
-#mobile-dpad{position:absolute;bottom:80px;left:16px;display:none;flex-direction:column;align-items:center;gap:2px}
-.dpad-row{display:flex;gap:2px}
-.dpad-btn{width:48px;height:48px;border-radius:10px;border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
-.dpad-btn:active{background:rgba(255,255,255,0.25)}
+
 @media(max-width:768px){
   .hp-bar-bg{width:120px;height:16px}
   .mana-bar-bg{width:120px;height:10px}
@@ -56,21 +69,12 @@ canvas{display:block;width:100%;height:100%}
   .elem-key .icon{font-size:15px}
   .eq-slot{width:30px;height:30px;font-size:15px}
   #mobile-dpad{display:flex}
-  #start-screen h1{font-size:32px}
-}
-@media(max-width:480px){
-  .elem-key{width:30px;height:30px;border-radius:8px}
-  .elem-key .icon{font-size:13px}
-  .elem-key .key{display:none}
-  .eq-slot{width:26px;height:26px;font-size:13px}
-  .cast-btn{width:46px;height:46px;font-size:18px}
+  #start-screen h1{font-size:28px}
 }
 </style>
 </head>
 <body>
 <div id="game-container">
-  <canvas id="game"></canvas>
-
   <div id="hud">
     <div class="hud-left">
       <div class="hp-bar-bg"><div class="hp-bar" id="hp-bar" style="width:100%"></div></div>
@@ -102,9 +106,9 @@ canvas{display:block;width:100%;height:100%}
   </div>
 
   <div id="cast-btns">
-    <div class="cast-btn" id="cast-beam" title="Луч (ЛКМ / Space)">🔆</div>
-    <div class="cast-btn" id="cast-area" title="Область (Shift+ЛКМ)">💥</div>
-    <div class="cast-btn" id="cast-self" title="На себя (ПКМ / C)">🧙</div>
+    <div class="cast-btn" id="cast-beam" title="Луч (Space)">🔆</div>
+    <div class="cast-btn" id="cast-area" title="Область (Shift+Click)">💥</div>
+    <div class="cast-btn" id="cast-self" title="На себя (C)">🧙</div>
   </div>
 
   <div id="mobile-dpad">
@@ -117,11 +121,11 @@ canvas{display:block;width:100%;height:100%}
   </div>
 
   <div id="start-screen">
-    <h1>⚡ MAGICKA ⚡</h1>
-    <p class="subtitle">Комбинируй элементы. Уничтожай врагов.</p>
+    <h1>⚡ MAGICKA 3D ⚡</h1>
+    <p class="subtitle">Комбинируй элементы. Уничтожай врагов. Теперь в 3D.</p>
     <button class="start-btn" id="start-btn">НАЧАТЬ ИГРУ</button>
     <div class="controls-hint">
-      <span>Движение</span><span>WASD / Стрелки</span>
+      <span>Движение</span><span>Стрелки / IJKL</span>
       <span>Элементы</span><span>Q W E R A S D F</span>
       <span>Луч</span><span>ЛКМ / Space</span>
       <span>Область</span><span>Shift + ЛКМ</span>
@@ -137,831 +141,673 @@ canvas{display:block;width:100%;height:100%}
   </div>
 </div>
 
-<script>
-// ═══════════════════════════════════════════════════════════════
-// MAGICKA — Browser Game Engine
-// ═══════════════════════════════════════════════════════════════
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.163.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.163.0/examples/jsm/"
+  }
+}
+</script>
 
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
+<script type="module">
+import * as THREE from 'three';
 
-// ── Elements ──────────────────────────────────────────────────
-const ELEMENTS = {
-  water:     { emoji:'💧', color:'#3182ce', key:'q', opposite:'lightning' },
-  fire:      { emoji:'🔥', color:'#e53e3e', key:'w', opposite:'cold' },
-  earth:     { emoji:'🪨', color:'#8B6914', key:'e', opposite:'lightning' },
-  lightning: { emoji:'⚡', color:'#d69e2e', key:'r', opposite:'earth' },
-  cold:      { emoji:'❄️', color:'#90cdf4', key:'a', opposite:'fire' },
-  life:      { emoji:'💚', color:'#38a169', key:'s', opposite:'arcane' },
-  shield:    { emoji:'🛡️', color:'#a0aec0', key:'d', opposite:null },
-  arcane:    { emoji:'🔮', color:'#805ad5', key:'f', opposite:'life' },
-};
+// ═════════════════════════════════════════════════════════════
+//  MAGICKA 3D — Three.js Engine
+// ═════════════════════════════════════════════════════════════
 
-// ── Combinations ──────────────────────────────────────────────
-const COMBOS = {
-  'water+cold':      { name:'Лёд',        color:'#bee3f8', dmg:1.5, effect:'freeze',   emoji:'🧊' },
-  'fire+water':      { name:'Пар',        color:'#e2e8f0', dmg:1.2, effect:'blind',    emoji:'♨️' },
-  'fire+earth':      { name:'Лава',       color:'#f56500', dmg:2.0, effect:'burn',     emoji:'🌋' },
-  'lightning+water':  { name:'Шторм',     color:'#4299e1', dmg:2.5, effect:'chain',    emoji:'🌊' },
-  'lightning+fire':   { name:'Плазма',    color:'#fbb6ce', dmg:3.0, effect:'explode',  emoji:'✴️' },
-  'cold+arcane':      { name:'Заморозка', color:'#b794f4', dmg:2.0, effect:'shatter',  emoji:'💎' },
-  'life+fire':        { name:'Феникс',    color:'#f6ad55', dmg:1.8, effect:'heal_dmg', emoji:'🦅' },
-  'earth+shield':     { name:'Стена',     color:'#a0916a', dmg:0.5, effect:'wall',     emoji:'🧱' },
-  'arcane+lightning':  { name:'Нова',     color:'#9f7aea', dmg:3.5, effect:'nova',     emoji:'💫' },
-  'life+water':       { name:'Исцеление', color:'#68d391', dmg:0,   effect:'heal',     emoji:'✨' },
-  'fire+cold':        { name:'Взрыв',     color:'#fc8181', dmg:2.2, effect:'explode',  emoji:'💥' },
-  'shield+life':      { name:'Барьер',    color:'#90e0a0', dmg:0,   effect:'barrier',  emoji:'🔰' },
-  'arcane+fire':      { name:'Хаос',      color:'#d53f8c', dmg:2.8, effect:'chaos',    emoji:'🌀' },
-  'earth+cold':       { name:'Обломки',   color:'#718096', dmg:1.6, effect:'shards',   emoji:'💠' },
-  'shield+arcane':    { name:'Отражение', color:'#c4b5fd', dmg:0,   effect:'reflect',  emoji:'🪞' },
-};
+// ── Scene Setup ──────────────────────────────────────────────
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0a0a1a);
+scene.fog = new THREE.FogExp2(0x0a0a1a, 0.006);
 
-function getCombo(a, b) {
-  return COMBOS[a+'+'+b] || COMBOS[b+'+'+a] || null;
+const container = document.getElementById('game-container');
+const W = () => container.clientWidth;
+const H = () => container.clientHeight;
+
+const camera = new THREE.PerspectiveCamera(50, W() / H(), 0.1, 500);
+camera.position.set(0, 32, 22);
+camera.lookAt(0, 0, 0);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+renderer.setSize(W(), H());
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+container.insertBefore(renderer.domElement, container.firstChild);
+
+window.addEventListener('resize', () => {
+  camera.aspect = W() / H();
+  camera.updateProjectionMatrix();
+  renderer.setSize(W(), H());
+});
+
+// ── Lighting ─────────────────────────────────────────────────
+const ambientLight = new THREE.AmbientLight(0x334466, 0.8);
+scene.add(ambientLight);
+
+const dirLight = new THREE.DirectionalLight(0xffeedd, 1.2);
+dirLight.position.set(20, 40, 15);
+dirLight.castShadow = true;
+dirLight.shadow.mapSize.set(2048, 2048);
+dirLight.shadow.camera.left = -40;
+dirLight.shadow.camera.right = 40;
+dirLight.shadow.camera.top = 40;
+dirLight.shadow.camera.bottom = -40;
+dirLight.shadow.camera.near = 1;
+dirLight.shadow.camera.far = 100;
+scene.add(dirLight);
+
+const rimLight = new THREE.DirectionalLight(0x6644aa, 0.4);
+rimLight.position.set(-15, 10, -20);
+scene.add(rimLight);
+
+const playerLight = new THREE.PointLight(0x8866ff, 1.5, 20);
+playerLight.position.set(0, 3, 0);
+scene.add(playerLight);
+
+// ── Map / Ground ─────────────────────────────────────────────
+const MAP_SIZE = 60;
+
+const groundGeo = new THREE.PlaneGeometry(MAP_SIZE, MAP_SIZE, 60, 60);
+const posAttr = groundGeo.attributes.position;
+for (let i = 0; i < posAttr.count; i++) {
+  const x = posAttr.getX(i);
+  const y = posAttr.getY(i);
+  const noise = Math.sin(x * 0.3) * Math.cos(y * 0.3) * 0.3 +
+                Math.sin(x * 0.7 + 1) * Math.cos(y * 0.5 + 2) * 0.15;
+  posAttr.setZ(i, noise);
+}
+groundGeo.computeVertexNormals();
+
+const groundMat = new THREE.MeshStandardMaterial({ color: 0x1a2a1a, roughness: 0.9, metalness: 0.1 });
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+const gridHelper = new THREE.GridHelper(MAP_SIZE, 30, 0x223322, 0x1a2a1a);
+gridHelper.position.y = 0.02;
+gridHelper.material.opacity = 0.15;
+gridHelper.material.transparent = true;
+scene.add(gridHelper);
+
+// Edge boundary stones
+const stoneMat = new THREE.MeshStandardMaterial({ color: 0x3a3a4a, roughness: 0.8 });
+const wallGeo = new THREE.BoxGeometry(1.2, 1.5, 1.2);
+const half = MAP_SIZE / 2;
+for (let i = -half; i <= half; i += 3) {
+  for (const [x, z] of [[i, -half], [i, half], [-half, i], [half, i]]) {
+    const stone = new THREE.Mesh(wallGeo, stoneMat);
+    stone.position.set(x, 0.75, z);
+    stone.scale.y = 0.6 + Math.random() * 0.8;
+    stone.castShadow = true;
+    stone.receiveShadow = true;
+    scene.add(stone);
+  }
 }
 
-// ── Game State ────────────────────────────────────────────────
-let W, H;
+// Decorative rocks
+const rockGeo = new THREE.DodecahedronGeometry(0.6, 0);
+const rockMat = new THREE.MeshStandardMaterial({ color: 0x4a4a5a, roughness: 0.9 });
+for (let i = 0; i < 40; i++) {
+  const rock = new THREE.Mesh(rockGeo, rockMat);
+  rock.position.set((Math.random()-0.5)*(MAP_SIZE-6), 0.3, (Math.random()-0.5)*(MAP_SIZE-6));
+  rock.scale.set(0.5+Math.random(), 0.3+Math.random()*0.5, 0.5+Math.random());
+  rock.rotation.y = Math.random()*Math.PI;
+  rock.castShadow = true;
+  scene.add(rock);
+}
+
+// Glowing crystals
+const crystalGeo = new THREE.ConeGeometry(0.3, 1.5, 5);
+const crystalColors = [0x6644ff, 0x44aaff, 0xff44aa, 0x44ff66];
+for (let i = 0; i < 12; i++) {
+  const color = crystalColors[i % crystalColors.length];
+  const cMat = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.6, roughness: 0.2, metalness: 0.8 });
+  const crystal = new THREE.Mesh(crystalGeo, cMat);
+  crystal.position.set((Math.random()-0.5)*(MAP_SIZE-10), 0.75, (Math.random()-0.5)*(MAP_SIZE-10));
+  crystal.rotation.z = (Math.random()-0.5)*0.3;
+  crystal.castShadow = true;
+  scene.add(crystal);
+  const glow = new THREE.PointLight(color, 0.8, 6);
+  glow.position.copy(crystal.position); glow.position.y = 1.5;
+  scene.add(glow);
+}
+
+// ── Elements & Combos ────────────────────────────────────────
+const ELEMENTS = {
+  water:     { emoji:'💧', color:0x3182ce, hexStr:'#3182ce', key:'q', opposite:'lightning' },
+  fire:      { emoji:'🔥', color:0xe53e3e, hexStr:'#e53e3e', key:'w', opposite:'cold' },
+  earth:     { emoji:'🪨', color:0x8B6914, hexStr:'#8B6914', key:'e', opposite:'lightning' },
+  lightning: { emoji:'⚡', color:0xd69e2e, hexStr:'#d69e2e', key:'r', opposite:'earth' },
+  cold:      { emoji:'❄️', color:0x90cdf4, hexStr:'#90cdf4', key:'a', opposite:'fire' },
+  life:      { emoji:'💚', color:0x38a169, hexStr:'#38a169', key:'s', opposite:'arcane' },
+  shield:    { emoji:'🛡️', color:0xa0aec0, hexStr:'#a0aec0', key:'d', opposite:null },
+  arcane:    { emoji:'🔮', color:0x805ad5, hexStr:'#805ad5', key:'f', opposite:'life' },
+};
+
+const COMBOS = {
+  'water+cold':      { name:'Лёд',    color:0xbee3f8, dmg:1.5, effect:'freeze' },
+  'fire+water':      { name:'Пар',    color:0xe2e8f0, dmg:1.2, effect:'blind' },
+  'fire+earth':      { name:'Лава',   color:0xf56500, dmg:2.0, effect:'burn' },
+  'lightning+water':  { name:'Шторм', color:0x4299e1, dmg:2.5, effect:'chain' },
+  'lightning+fire':   { name:'Плазма',color:0xfbb6ce, dmg:3.0, effect:'explode' },
+  'cold+arcane':      { name:'Мороз', color:0xb794f4, dmg:2.0, effect:'shatter' },
+  'life+fire':        { name:'Феникс',color:0xf6ad55, dmg:1.8, effect:'heal_dmg' },
+  'earth+shield':     { name:'Стена', color:0xa0916a, dmg:0.5, effect:'wall' },
+  'arcane+lightning':  { name:'Нова', color:0x9f7aea, dmg:3.5, effect:'nova' },
+  'life+water':       { name:'Лечение',color:0x68d391, dmg:0, effect:'heal' },
+  'fire+cold':        { name:'Взрыв', color:0xfc8181, dmg:2.2, effect:'explode' },
+  'shield+life':      { name:'Барьер',color:0x90e0a0, dmg:0, effect:'barrier' },
+  'arcane+fire':      { name:'Хаос',  color:0xd53f8c, dmg:2.8, effect:'chaos' },
+  'earth+cold':       { name:'Осколки',color:0x718096, dmg:1.6, effect:'shards' },
+  'shield+arcane':    { name:'Зеркало',color:0xc4b5fd, dmg:0, effect:'reflect' },
+};
+
+function getCombo(a, b) { return COMBOS[a+'+'+b] || COMBOS[b+'+'+a] || null; }
+
+// ── Game State ───────────────────────────────────────────────
 let gameRunning = false;
-let gameTime = 0;
-let score = 0;
-let wave = 1;
-let waveTimer = 0;
-const WAVE_DURATION = 25000;
+let score = 0, wave = 1, waveTimer = 0;
+const WAVE_DURATION = 25;
+let spawnTimer = 0;
+const clock = new THREE.Clock();
 
 const player = {
-  x:0, y:0, hp:100, maxHp:100, mana:100, maxMana:100,
-  radius:18, speed:3.5, angle:0, invulnTimer:0,
+  x:0, z:0, hp:100, maxHp:100, mana:100, maxMana:100,
+  speed:12, angle:0, invuln:0,
   shieldActive:false, shieldTimer:0, barrierHp:0,
-  effects:[], velX:0, velY:0
+  mesh:null, shieldMesh:null
 };
 
 let elementQueue = [];
 const MAX_QUEUE = 5;
 let enemies = [];
 let projectiles = [];
-let particles = [];
-let spellEffects = [];
-let pickups = [];
-
+let particles3D = [];
+let spellEffects3D = [];
+let pickups3D = [];
 const keys = {};
-let mouseX = 0, mouseY = 0;
-let aimAngle = 0;
+let mouseNDC = new THREE.Vector2();
+let aimPoint = new THREE.Vector3();
+const raycaster = new THREE.Raycaster();
+const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
-// ── Resize ────────────────────────────────────────────────────
-function resize() {
-  const dpr = window.devicePixelRatio || 1;
-  W = canvas.clientWidth;
-  H = canvas.clientHeight;
-  canvas.width = W * dpr;
-  canvas.height = H * dpr;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+// ── Player Mesh ──────────────────────────────────────────────
+function createPlayerMesh() {
+  const g = new THREE.Group();
+  const bodyGeo = new THREE.CylinderGeometry(0.4, 0.6, 1.6, 8);
+  const bodyMat = new THREE.MeshStandardMaterial({ color:0x6d28d9, roughness:0.5, metalness:0.3 });
+  const body = new THREE.Mesh(bodyGeo, bodyMat); body.position.y = 0.8; body.castShadow = true; g.add(body);
+
+  const headGeo = new THREE.SphereGeometry(0.4, 8, 8);
+  const headMat = new THREE.MeshStandardMaterial({ color:0xfcd5b4, roughness:0.6 });
+  const head = new THREE.Mesh(headGeo, headMat); head.position.y = 1.9; head.castShadow = true; g.add(head);
+
+  const hatGeo = new THREE.ConeGeometry(0.45, 0.9, 6);
+  const hatMat = new THREE.MeshStandardMaterial({ color:0x4c1d95, roughness:0.5 });
+  const hat = new THREE.Mesh(hatGeo, hatMat); hat.position.y = 2.55; hat.castShadow = true; g.add(hat);
+  const brimGeo = new THREE.CylinderGeometry(0.55, 0.55, 0.08, 8);
+  const brim = new THREE.Mesh(brimGeo, hatMat); brim.position.y = 2.15; g.add(brim);
+
+  const staffGeo = new THREE.CylinderGeometry(0.05, 0.06, 2.2, 6);
+  const staffMat = new THREE.MeshStandardMaterial({ color:0x8B6914, roughness:0.7 });
+  const staff = new THREE.Mesh(staffGeo, staffMat); staff.position.set(0.5, 1.1, 0); staff.rotation.z = -0.2; staff.castShadow = true; g.add(staff);
+
+  const orbGeo = new THREE.SphereGeometry(0.15, 8, 8);
+  const orbMat = new THREE.MeshStandardMaterial({ color:0xa78bfa, emissive:0xa78bfa, emissiveIntensity:1.0, roughness:0.1, metalness:0.5 });
+  const orb = new THREE.Mesh(orbGeo, orbMat); orb.position.set(0.58, 2.25, 0); g.add(orb);
+  g.userData.orbMat = orbMat;
+
+  const shieldGeo = new THREE.SphereGeometry(1.5, 16, 16);
+  const shieldMat = new THREE.MeshStandardMaterial({ color:0xa0aec0, transparent:true, opacity:0.2, roughness:0.1, metalness:0.8, side:THREE.DoubleSide });
+  const shieldMesh = new THREE.Mesh(shieldGeo, shieldMat); shieldMesh.position.y = 1; shieldMesh.visible = false;
+  g.add(shieldMesh);
+  player.shieldMesh = shieldMesh;
+
+  scene.add(g);
+  return g;
 }
-window.addEventListener('resize', resize);
-resize();
 
-// ── Input ─────────────────────────────────────────────────────
+// ── Enemy Creation ───────────────────────────────────────────
+const ENEMY_TYPES = {
+  goblin:  { hp:30, speed:5, radius:0.7, color:0x48bb78, dmg:8,  score:10, height:1.2 },
+  skeleton:{ hp:50, speed:4, radius:0.8, color:0xe2e8f0, dmg:12, score:20, height:1.5 },
+  mage:    { hp:40, speed:3, radius:0.75,color:0x9f7aea, dmg:15, score:30, height:1.4, shoots:true },
+  demon:   { hp:120,speed:5, radius:1.0, color:0xe53e3e, dmg:20, score:50, height:1.8 },
+  boss:    { hp:400,speed:3, radius:1.8, color:0xd69e2e, dmg:30, score:200,height:2.8 },
+};
+
+function createEnemyMesh(type, data) {
+  const g = new THREE.Group();
+  const h = data.height, r = data.radius;
+
+  if (type === 'boss') {
+    const bGeo = new THREE.SphereGeometry(r, 8, 8); bGeo.scale(1, 1.3, 0.9);
+    const bMat = new THREE.MeshStandardMaterial({ color:data.color, roughness:0.4, metalness:0.5, emissive:data.color, emissiveIntensity:0.2 });
+    const body = new THREE.Mesh(bGeo, bMat); body.position.y = h*0.5; body.castShadow = true; g.add(body);
+    const hornGeo = new THREE.ConeGeometry(0.15, 0.8, 5);
+    const hornMat = new THREE.MeshStandardMaterial({ color:0x333333 });
+    for (const s of [-1,1]) { const horn = new THREE.Mesh(hornGeo, hornMat); horn.position.set(s*0.5, h*0.8, -0.2); horn.rotation.z = s*0.4; g.add(horn); }
+    const eyeGeo = new THREE.SphereGeometry(0.15, 6, 6);
+    const eyeMat = new THREE.MeshStandardMaterial({ color:0xff0000, emissive:0xff0000, emissiveIntensity:2 });
+    for (const s of [-1,1]) { const eye = new THREE.Mesh(eyeGeo, eyeMat); eye.position.set(s*0.4, h*0.6, r*0.7); g.add(eye); }
+  } else {
+    const mat = new THREE.MeshStandardMaterial({ color:data.color, roughness:0.6, metalness:0.2 });
+    const bodyGeo = new THREE.CylinderGeometry(r*0.5, r*0.7, h*0.6, 7);
+    const body = new THREE.Mesh(bodyGeo, mat); body.position.y = h*0.3; body.castShadow = true; g.add(body);
+    const headGeo = new THREE.SphereGeometry(r*0.5, 7, 7);
+    const head = new THREE.Mesh(headGeo, mat); head.position.y = h*0.7; head.castShadow = true; g.add(head);
+
+    if (type === 'mage') {
+      const stGeo = new THREE.CylinderGeometry(0.04,0.04,1.5,4);
+      const stMat = new THREE.MeshStandardMaterial({ color:0x4a2080 });
+      const st = new THREE.Mesh(stGeo, stMat); st.position.set(0.4,h*0.5,0); g.add(st);
+    }
+    if (type === 'demon') {
+      const wGeo = new THREE.PlaneGeometry(1.2, 0.8);
+      const wMat = new THREE.MeshStandardMaterial({ color:0x880000, side:THREE.DoubleSide, transparent:true, opacity:0.7 });
+      for (const s of [-1,1]) { const w = new THREE.Mesh(wGeo, wMat); w.position.set(s*0.8,h*0.5,-0.2); w.rotation.y = s*0.6; g.add(w); }
+    }
+  }
+
+  // HP bar
+  const hpBgGeo = new THREE.PlaneGeometry(r*2.5, 0.15);
+  const hpBgMat = new THREE.MeshBasicMaterial({ color:0x222222, side:THREE.DoubleSide });
+  const hpBg = new THREE.Mesh(hpBgGeo, hpBgMat); hpBg.position.y = h+0.4; hpBg.rotation.x = -0.3; g.add(hpBg);
+  const hpGeo = new THREE.PlaneGeometry(r*2.5, 0.12);
+  const hpMat = new THREE.MeshBasicMaterial({ color:0xe53e3e, side:THREE.DoubleSide });
+  const hpBar = new THREE.Mesh(hpGeo, hpMat); hpBar.position.y = h+0.4; hpBar.position.z = 0.01; hpBar.rotation.x = -0.3;
+  g.add(hpBar);
+  g.userData.hpBar = hpBar;
+  g.userData.hpBarWidth = r*2.5;
+
+  scene.add(g);
+  return g;
+}
+
+// ── Particles 3D ─────────────────────────────────────────────
+function spawnParticles3D(x, y, z, count, color, speed) {
+  for (let i = 0; i < count; i++) {
+    const geo = new THREE.SphereGeometry(0.06+Math.random()*0.1, 4, 4);
+    const mat = new THREE.MeshBasicMaterial({ color, transparent:true });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(x, y, z);
+    scene.add(mesh);
+    const a1 = Math.random()*Math.PI*2, a2 = Math.random()*Math.PI-Math.PI/2;
+    const s = Math.random()*speed;
+    particles3D.push({ mesh, vx:Math.cos(a1)*Math.cos(a2)*s, vy:Math.sin(a2)*s+Math.random()*speed*0.5, vz:Math.sin(a1)*Math.cos(a2)*s, life:0.5+Math.random()*0.8, maxLife:0.5+Math.random()*0.8 });
+  }
+}
+
+// ── Spell Effects 3D ─────────────────────────────────────────
+function createSpellEffect3D(type, x, z, opts={}) {
+  if (type==='explosion'||type==='nova') {
+    const geo = new THREE.SphereGeometry(1,16,16);
+    const mat = new THREE.MeshBasicMaterial({ color:opts.color||0xff6600, transparent:true, opacity:0.6, side:THREE.DoubleSide });
+    const mesh = new THREE.Mesh(geo, mat); mesh.position.set(x,0.5,z); mesh.scale.set(0.1,0.1,0.1); scene.add(mesh);
+    const rGeo = new THREE.RingGeometry(0.5,1,24);
+    const rMat = new THREE.MeshBasicMaterial({ color:opts.color||0xff6600, transparent:true, opacity:0.8, side:THREE.DoubleSide });
+    const ring = new THREE.Mesh(rGeo, rMat); ring.position.set(x,0.2,z); ring.rotation.x = -Math.PI/2; ring.scale.set(0.1,0.1,0.1); scene.add(ring);
+    spellEffects3D.push({ type, meshes:[mesh,ring], x, z, radius:0, maxRadius:opts.maxRadius||5, damage:opts.damage||0, life:1.0, freeze:opts.freeze||false, color:opts.color });
+    spawnParticles3D(x,1,z,20,opts.color||0xff6600,5);
+  }
+  if (type==='beam') {
+    const len = opts.length||20;
+    const geo = new THREE.CylinderGeometry(0.15,0.08,len,6); geo.rotateZ(Math.PI/2);
+    const mat = new THREE.MeshBasicMaterial({ color:opts.color||0xffaa00, transparent:true, opacity:0.9 });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(x,1.2,z);
+    mesh.rotation.y = -(opts.angle||0);
+    mesh.position.x += Math.cos(opts.angle||0)*len/2;
+    mesh.position.z -= Math.sin(opts.angle||0)*len/2;
+    scene.add(mesh);
+    const gGeo = new THREE.CylinderGeometry(0.4,0.2,len,6); gGeo.rotateZ(Math.PI/2);
+    const gMat = new THREE.MeshBasicMaterial({ color:opts.color||0xffaa00, transparent:true, opacity:0.15 });
+    const glow = new THREE.Mesh(gGeo, gMat); glow.position.copy(mesh.position); glow.rotation.copy(mesh.rotation); scene.add(glow);
+    spellEffects3D.push({ type:'beam', meshes:[mesh,glow], x, z, angle:opts.angle||0, length:len, damage:opts.damage||0, life:0.4, chain:opts.chain||false, color:opts.color });
+    for (let t=0;t<len;t+=2) spawnParticles3D(x+Math.cos(opts.angle||0)*t, 1.2, z-Math.sin(opts.angle||0)*t, 3, opts.color||0xffaa00, 2);
+  }
+  if (type==='heal_ring') {
+    const rGeo = new THREE.TorusGeometry(1,0.1,8,24);
+    const rMat = new THREE.MeshBasicMaterial({ color:0x68d391, transparent:true, opacity:0.8 });
+    const ring = new THREE.Mesh(rGeo, rMat); ring.position.set(x,0.5,z); ring.rotation.x = Math.PI/2; ring.scale.set(0.1,0.1,0.1); scene.add(ring);
+    spellEffects3D.push({ type:'heal_ring', meshes:[ring], x, z, maxRadius:4, life:1.0 });
+    spawnParticles3D(x,1,z,15,0x68d391,3);
+  }
+}
+
+// ── Projectile 3D ────────────────────────────────────────────
+function createProjectile3D(x, z, vx, vz, opts={}) {
+  const r = opts.radius||0.2;
+  const geo = new THREE.SphereGeometry(r,8,8);
+  const mat = new THREE.MeshStandardMaterial({ color:opts.color||0xffaa00, emissive:opts.color||0xffaa00, emissiveIntensity:1.5, roughness:0.1 });
+  const mesh = new THREE.Mesh(geo, mat); mesh.position.set(x,1.2,z); scene.add(mesh);
+  const light = new THREE.PointLight(opts.color||0xffaa00,1,5); light.position.copy(mesh.position); scene.add(light);
+  projectiles.push({ mesh, light, vx, vz, damage:opts.damage||10, color:opts.color||0xffaa00, life:3.0, effect:opts.effect||null, pierce:opts.pierce||0, enemy:opts.enemy||false, elements:opts.elements||[], radius:r });
+}
+
+// ── Pickup 3D ────────────────────────────────────────────────
+function createPickup3D(x, z, type) {
+  const color = type==='hp'?0xe53e3e:0x3182ce;
+  const geo = new THREE.OctahedronGeometry(0.3,0);
+  const mat = new THREE.MeshStandardMaterial({ color, emissive:color, emissiveIntensity:0.8, roughness:0.2, metalness:0.5 });
+  const mesh = new THREE.Mesh(geo, mat); mesh.position.set(x,1,z); scene.add(mesh);
+  const light = new THREE.PointLight(color,0.5,4); light.position.copy(mesh.position); scene.add(light);
+  pickups3D.push({ mesh, light, type, life:15 });
+}
+
+// ── Input ────────────────────────────────────────────────────
 document.addEventListener('keydown', e => {
   if (!gameRunning) return;
   const k = e.key.toLowerCase();
   keys[k] = true;
-
-  // Element keys
   for (const [name, el] of Object.entries(ELEMENTS)) {
     if (k === el.key) {
       addElement(name);
       const btn = document.querySelector(`.elem-key[data-elem="${name}"]`);
-      if (btn) { btn.classList.add('pressed'); setTimeout(() => btn.classList.remove('pressed'), 150); }
+      if (btn) { btn.classList.add('pressed'); setTimeout(()=>btn.classList.remove('pressed'),150); }
       e.preventDefault();
     }
   }
-
-  if (k === ' ' || k === 'space') { castSpell('beam'); e.preventDefault(); }
-  if (k === 'c') { castSpell('self'); e.preventDefault(); }
-  if (k === 'x') { elementQueue = []; updateQueueUI(); e.preventDefault(); }
+  if (k===' ') { castSpell('beam'); e.preventDefault(); }
+  if (k==='c') { castSpell('self'); e.preventDefault(); }
+  if (k==='x') { elementQueue=[]; updateQueueUI(); e.preventDefault(); }
 });
+document.addEventListener('keyup', e => { keys[e.key.toLowerCase()]=false; });
 
-document.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
-
-canvas.addEventListener('mousemove', e => {
-  const r = canvas.getBoundingClientRect();
-  mouseX = e.clientX - r.left;
-  mouseY = e.clientY - r.top;
-  aimAngle = Math.atan2(mouseY - player.y, mouseX - player.x);
+renderer.domElement.addEventListener('mousemove', e => {
+  const r = renderer.domElement.getBoundingClientRect();
+  mouseNDC.x = ((e.clientX-r.left)/r.width)*2-1;
+  mouseNDC.y = -((e.clientY-r.top)/r.height)*2+1;
 });
-
-canvas.addEventListener('mousedown', e => {
+renderer.domElement.addEventListener('mousedown', e => {
   if (!gameRunning) return;
   e.preventDefault();
-  if (e.shiftKey || e.button === 2) castSpell('area');
-  else castSpell('beam');
+  if (e.shiftKey||e.button===2) castSpell('area'); else castSpell('beam');
 });
-
-canvas.addEventListener('contextmenu', e => {
+renderer.domElement.addEventListener('contextmenu', e => {
   e.preventDefault();
   if (gameRunning) castSpell('self');
 });
 
-// Mobile d-pad
+// Mobile
 document.querySelectorAll('.dpad-btn').forEach(btn => {
   const dir = btn.dataset.dir;
-  const handler = (pressed) => {
-    if (dir==='up') keys['arrowup'] = pressed;
-    if (dir==='down') keys['arrowdown'] = pressed;
-    if (dir==='left') keys['arrowleft'] = pressed;
-    if (dir==='right') keys['arrowright'] = pressed;
-  };
-  btn.addEventListener('touchstart', e => { e.preventDefault(); handler(true); });
-  btn.addEventListener('touchend', e => { e.preventDefault(); handler(false); });
+  const set = v => { if(dir==='up') keys['arrowup']=v; if(dir==='down') keys['arrowdown']=v; if(dir==='left') keys['arrowleft']=v; if(dir==='right') keys['arrowright']=v; };
+  btn.addEventListener('touchstart', e => { e.preventDefault(); set(true); });
+  btn.addEventListener('touchend', e => { e.preventDefault(); set(false); });
 });
+document.querySelectorAll('.elem-key').forEach(btn => { btn.addEventListener('click', ()=>{ if(gameRunning) addElement(btn.dataset.elem); }); });
+document.getElementById('cast-beam').addEventListener('click', ()=>{ if(gameRunning) castSpell('beam'); });
+document.getElementById('cast-area').addEventListener('click', ()=>{ if(gameRunning) castSpell('area'); });
+document.getElementById('cast-self').addEventListener('click', ()=>{ if(gameRunning) castSpell('self'); });
 
-// Mobile element buttons
-document.querySelectorAll('.elem-key').forEach(btn => {
-  btn.addEventListener('click', () => { if (gameRunning) addElement(btn.dataset.elem); });
-});
-
-document.getElementById('cast-beam').addEventListener('click', () => { if (gameRunning) castSpell('beam'); });
-document.getElementById('cast-area').addEventListener('click', () => { if (gameRunning) castSpell('area'); });
-document.getElementById('cast-self').addEventListener('click', () => { if (gameRunning) castSpell('self'); });
-
-// ── Element Queue ─────────────────────────────────────────────
+// ── Element Queue ────────────────────────────────────────────
 function addElement(name) {
-  // Opposite elements cancel
   if (elementQueue.length > 0) {
     const opp = ELEMENTS[name].opposite;
     const idx = elementQueue.indexOf(opp);
-    if (idx !== -1) {
-      elementQueue.splice(idx, 1);
-      spawnParticles(player.x, player.y, 6, '#fff', 3);
-      updateQueueUI();
-      return;
-    }
+    if (idx !== -1) { elementQueue.splice(idx,1); spawnParticles3D(player.x,1.5,player.z,6,0xffffff,2); updateQueueUI(); return; }
   }
   if (elementQueue.length >= MAX_QUEUE) return;
-  // Don't add duplicate of same element more than 2 times
-  const count = elementQueue.filter(e => e === name).length;
-  if (count >= 2) return;
+  if (elementQueue.filter(e=>e===name).length >= 2) return;
   elementQueue.push(name);
   updateQueueUI();
+  if (player.mesh) { const m = player.mesh.userData.orbMat; m.color.set(ELEMENTS[name].color); m.emissive.set(ELEMENTS[name].color); }
 }
 
 function updateQueueUI() {
-  for (let i = 0; i < MAX_QUEUE; i++) {
-    const slot = document.getElementById('eq' + i);
-    if (i < elementQueue.length) {
+  for (let i=0;i<MAX_QUEUE;i++) {
+    const slot = document.getElementById('eq'+i);
+    if (i<elementQueue.length) {
       const el = ELEMENTS[elementQueue[i]];
-      slot.textContent = el.emoji;
-      slot.style.background = el.color + '30';
-      slot.style.borderColor = el.color;
-      slot.classList.add('filled');
-    } else {
-      slot.textContent = '';
-      slot.style.background = 'rgba(255,255,255,0.05)';
-      slot.style.borderColor = 'rgba(255,255,255,0.2)';
-      slot.classList.remove('filled');
-    }
+      slot.textContent = el.emoji; slot.style.background = el.hexStr+'30'; slot.style.borderColor = el.hexStr; slot.classList.add('filled');
+    } else { slot.textContent=''; slot.style.background='rgba(255,255,255,0.05)'; slot.style.borderColor='rgba(255,255,255,0.2)'; slot.classList.remove('filled'); }
   }
 }
 
-// ── Spell Casting ─────────────────────────────────────────────
+// ── Spell Casting ────────────────────────────────────────────
 function resolveSpell() {
-  if (elementQueue.length === 0) return null;
-  const elems = [...elementQueue];
-  elementQueue = [];
-  updateQueueUI();
+  if (!elementQueue.length) return null;
+  const elems = [...elementQueue]; elementQueue = []; updateQueueUI();
+  let best = null;
+  for (let i=0;i<elems.length-1;i++) for (let j=i+1;j<elems.length;j++) { const c = getCombo(elems[i],elems[j]); if (c&&(!best||c.dmg>best.dmg)) best={...c}; }
+  if (best) { const baseDmg = best.dmg*10*(1+(elems.length-2)*0.3); return { combo:true, ...best, damage:baseDmg, elements:elems, size:elems.length }; }
+  const primary = elems[0]; const el = ELEMENTS[primary];
+  return { combo:false, name:primary, color:el.color, damage:8*elems.length, effect:primary, elements:elems, size:elems.length };
+}
 
-  // Check for combos (2-element pairs take priority)
-  let bestCombo = null;
-  for (let i = 0; i < elems.length - 1; i++) {
-    for (let j = i + 1; j < elems.length; j++) {
-      const c = getCombo(elems[i], elems[j]);
-      if (c && (!bestCombo || c.dmg > bestCombo.dmg)) {
-        bestCombo = { ...c, usedI: i, usedJ: j };
-      }
-    }
-  }
-
-  if (bestCombo) {
-    const baseDmg = bestCombo.dmg * 10 * (1 + (elems.length - 2) * 0.3);
-    return { combo: true, ...bestCombo, damage: baseDmg, elements: elems, size: elems.length };
-  }
-
-  // Single-element spell
-  const primary = elems[0];
-  const el = ELEMENTS[primary];
-  return {
-    combo: false, name: primary, color: el.color, emoji: el.emoji,
-    damage: 8 * elems.length, effect: primary, elements: elems, size: elems.length
-  };
+function getAimAngle() {
+  raycaster.setFromCamera(mouseNDC, camera);
+  const hit = new THREE.Vector3();
+  raycaster.ray.intersectPlane(groundPlane, hit);
+  if (hit) aimPoint.copy(hit);
+  return Math.atan2(-(aimPoint.z-player.z), aimPoint.x-player.x);
 }
 
 function castSpell(mode) {
   const spell = resolveSpell();
   if (!spell) return;
   if (player.mana < 10) return;
-  player.mana = Math.max(0, player.mana - 8 - spell.size * 4);
+  player.mana = Math.max(0, player.mana-8-spell.size*4);
+  const angle = getAimAngle();
 
-  const angle = aimAngle;
-
-  if (mode === 'self') {
-    // Self-cast
-    if (spell.effect === 'heal' || spell.elements.includes('life')) {
-      player.hp = Math.min(player.maxHp, player.hp + 15 + spell.size * 5);
-      spawnParticles(player.x, player.y, 20, '#68d391', 5);
-      spellEffects.push({ type:'heal_ring', x:player.x, y:player.y, radius:0, maxRadius:60, color:'#68d391', life:30 });
-    }
-    if (spell.effect === 'barrier' || spell.elements.includes('shield')) {
-      player.shieldActive = true;
-      player.shieldTimer = 180 + spell.size * 60;
-      player.barrierHp = 30 + spell.size * 10;
-      spawnParticles(player.x, player.y, 15, '#a0aec0', 4);
-    }
-    if (spell.elements.includes('fire')) {
-      // Fire nova around self
-      spellEffects.push({ type:'nova', x:player.x, y:player.y, radius:0, maxRadius:100+spell.size*20, damage:spell.damage*0.7, color:spell.color, life:20 });
-      spawnParticles(player.x, player.y, 25, spell.color, 6);
-    }
-    if (spell.elements.includes('cold')) {
-      // Freeze nearby
-      spellEffects.push({ type:'nova', x:player.x, y:player.y, radius:0, maxRadius:80+spell.size*15, damage:spell.damage*0.5, color:'#90cdf4', life:25, freeze:true });
-      spawnParticles(player.x, player.y, 20, '#90cdf4', 5);
-    }
+  if (mode==='self') {
+    if (spell.effect==='heal'||spell.elements.includes('life')) { player.hp = Math.min(player.maxHp, player.hp+15+spell.size*5); createSpellEffect3D('heal_ring', player.x, player.z); }
+    if (spell.effect==='barrier'||spell.elements.includes('shield')) { player.shieldActive=true; player.shieldTimer=6+spell.size*2; player.barrierHp=30+spell.size*10; if(player.shieldMesh) player.shieldMesh.visible=true; spawnParticles3D(player.x,1,player.z,15,0xa0aec0,3); }
+    if (spell.elements.includes('fire')) createSpellEffect3D('nova',player.x,player.z,{color:spell.color,maxRadius:6+spell.size,damage:spell.damage*0.7});
+    if (spell.elements.includes('cold')) createSpellEffect3D('nova',player.x,player.z,{color:0x90cdf4,maxRadius:5+spell.size,damage:spell.damage*0.5,freeze:true});
     return;
   }
-
-  if (mode === 'area') {
-    // Area spell at mouse position
-    const dist = Math.min(300, Math.hypot(mouseX - player.x, mouseY - player.y));
-    const tx = player.x + Math.cos(angle) * dist;
-    const ty = player.y + Math.sin(angle) * dist;
-    const r = 50 + spell.size * 15;
-    spellEffects.push({ type:'explosion', x:tx, y:ty, radius:0, maxRadius:r, damage:spell.damage*1.2, color:spell.color, life:25, freeze: spell.effect==='freeze'||spell.elements.includes('cold') });
-    spawnParticles(tx, ty, 30, spell.color, 7);
-    for (let i = 0; i < 8; i++) {
-      const a = (Math.PI * 2 / 8) * i;
-      particles.push({ x:tx, y:ty, vx:Math.cos(a)*4, vy:Math.sin(a)*4, life:20, color:spell.color, radius:3 });
-    }
+  if (mode==='area') {
+    const dist = Math.min(18, Math.hypot(aimPoint.x-player.x, aimPoint.z-player.z));
+    const tx = player.x+Math.cos(angle)*dist, tz = player.z-Math.sin(angle)*dist;
+    createSpellEffect3D('explosion',tx,tz,{color:spell.color,maxRadius:4+spell.size,damage:spell.damage*1.2,freeze:spell.elements.includes('cold')});
     return;
   }
-
-  // Beam / projectile
-  if (spell.effect === 'chain' || spell.elements.includes('lightning')) {
-    // Lightning chain beam
-    spellEffects.push({
-      type:'beam', x:player.x, y:player.y, angle:angle,
-      length:350+spell.size*30, width:4+spell.size*2, damage:spell.damage,
-      color:spell.color, life:12, chain:true
-    });
-    spawnParticles(player.x + Math.cos(angle)*30, player.y + Math.sin(angle)*30, 10, spell.color, 4);
+  if (spell.elements.includes('lightning')) {
+    createSpellEffect3D('beam',player.x,player.z,{angle,length:18+spell.size*2,damage:spell.damage,color:spell.color,chain:true});
   } else {
-    // Projectile
-    const speed = 6 + spell.size * 0.5;
-    projectiles.push({
-      x: player.x + Math.cos(angle) * 25,
-      y: player.y + Math.sin(angle) * 25,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      radius: 6 + spell.size * 2,
-      damage: spell.damage,
-      color: spell.color,
-      life: 80,
-      effect: spell.effect,
-      pierce: spell.elements.includes('arcane') ? 2 : 0,
-      trail: spell.color,
-      elements: spell.elements,
-      emoji: spell.emoji
-    });
-    spawnParticles(player.x + Math.cos(angle)*25, player.y + Math.sin(angle)*25, 8, spell.color, 3);
+    const speed = 18+spell.size;
+    createProjectile3D(player.x+Math.cos(angle)*1.5, player.z-Math.sin(angle)*1.5, Math.cos(angle)*speed, -Math.sin(angle)*speed, {radius:0.15+spell.size*0.05, damage:spell.damage, color:spell.color, effect:spell.effect, pierce:spell.elements.includes('arcane')?2:0, elements:spell.elements});
   }
 }
 
-// ── Enemies ───────────────────────────────────────────────────
-const ENEMY_TYPES = {
-  goblin:  { hp:30, speed:1.8, radius:14, color:'#48bb78', dmg:8,  score:10, emoji:'👹' },
-  skeleton:{ hp:50, speed:1.3, radius:16, color:'#e2e8f0', dmg:12, score:20, emoji:'💀' },
-  mage:    { hp:40, speed:1.0, radius:15, color:'#9f7aea', dmg:15, score:30, emoji:'🧙', shoots:true },
-  demon:   { hp:120,speed:1.5, radius:22, color:'#e53e3e', dmg:20, score:50, emoji:'👿' },
-  boss:    { hp:400,speed:0.8, radius:32, color:'#d69e2e', dmg:30, score:200,emoji:'🐉' },
-};
-
+// ── Enemy Spawning ───────────────────────────────────────────
 function spawnEnemy() {
-  const types = wave < 3 ? ['goblin','goblin','skeleton']
-    : wave < 5 ? ['goblin','skeleton','skeleton','mage']
-    : wave < 8 ? ['skeleton','mage','mage','demon']
-    : ['mage','demon','demon','demon'];
-
-  const typeName = types[Math.floor(Math.random() * types.length)];
-  const type = ENEMY_TYPES[typeName];
-
-  // Spawn at edge
-  const side = Math.floor(Math.random() * 4);
-  let x, y;
-  if (side === 0) { x = Math.random() * W; y = -30; }
-  else if (side === 1) { x = W + 30; y = Math.random() * H; }
-  else if (side === 2) { x = Math.random() * W; y = H + 30; }
-  else { x = -30; y = Math.random() * H; }
-
-  const hpMult = 1 + (wave - 1) * 0.15;
-  enemies.push({
-    x, y, ...type,
-    hp: Math.floor(type.hp * hpMult),
-    maxHp: Math.floor(type.hp * hpMult),
-    typeName,
-    frozen: 0,
-    shootTimer: type.shoots ? 120 + Math.random() * 60 : 0,
-    hitFlash: 0,
-    knockX: 0, knockY: 0
-  });
+  const types = wave<3?['goblin','goblin','skeleton']:wave<5?['goblin','skeleton','skeleton','mage']:wave<8?['skeleton','mage','mage','demon']:['mage','demon','demon','demon'];
+  const typeName = types[Math.floor(Math.random()*types.length)];
+  const data = ENEMY_TYPES[typeName];
+  const hpMult = 1+(wave-1)*0.15;
+  const side = Math.floor(Math.random()*4);
+  let x, z; const edge = MAP_SIZE/2-2;
+  if(side===0){x=(Math.random()-0.5)*MAP_SIZE*0.8;z=-edge;}
+  else if(side===1){x=edge;z=(Math.random()-0.5)*MAP_SIZE*0.8;}
+  else if(side===2){x=(Math.random()-0.5)*MAP_SIZE*0.8;z=edge;}
+  else{x=-edge;z=(Math.random()-0.5)*MAP_SIZE*0.8;}
+  const mesh = createEnemyMesh(typeName, data);
+  mesh.position.set(x,0,z);
+  enemies.push({ mesh, typeName, ...data, x, z, hp:Math.floor(data.hp*hpMult), maxHp:Math.floor(data.hp*hpMult), frozen:0, shootTimer:data.shoots?3+Math.random():0, hitFlash:0, knockX:0, knockZ:0 });
 }
 
 function spawnBoss() {
-  const type = ENEMY_TYPES.boss;
-  const hpMult = 1 + (wave - 1) * 0.2;
-  enemies.push({
-    x: W/2, y: -50, ...type,
-    hp: Math.floor(type.hp * hpMult),
-    maxHp: Math.floor(type.hp * hpMult),
-    typeName: 'boss',
-    frozen: 0, shootTimer: 80, hitFlash: 0,
-    knockX: 0, knockY: 0, shoots: true
-  });
+  const data = ENEMY_TYPES.boss; const hpMult = 1+(wave-1)*0.2;
+  const mesh = createEnemyMesh('boss', data); mesh.position.set(0,0,-(MAP_SIZE/2-3));
+  enemies.push({ mesh, typeName:'boss', ...data, x:0, z:-(MAP_SIZE/2-3), hp:Math.floor(data.hp*hpMult), maxHp:Math.floor(data.hp*hpMult), frozen:0, shootTimer:2, hitFlash:0, knockX:0, knockZ:0, shoots:true });
 }
 
-// ── Particles ─────────────────────────────────────────────────
-function spawnParticles(x, y, count, color, speed) {
-  for (let i = 0; i < count; i++) {
-    const a = Math.random() * Math.PI * 2;
-    const s = Math.random() * speed;
-    particles.push({
-      x, y,
-      vx: Math.cos(a) * s,
-      vy: Math.sin(a) * s,
-      life: 15 + Math.random() * 20,
-      color,
-      radius: 1 + Math.random() * 3
-    });
-  }
-}
-
-// ── Update ────────────────────────────────────────────────────
-let spawnTimer = 0;
-let lastTime = 0;
-
+// ── Update ───────────────────────────────────────────────────
 function update(dt) {
-  gameTime += dt;
+  if (!gameRunning || dt > 0.1) return;
 
-  // ── Player movement
-  let dx = 0, dy = 0;
-  if (keys['w'] || keys['ц'] || keys['arrowup']) dy -= 1;
-  if (keys['s'] || keys['ы'] || keys['arrowdown']) dy += 1;
-  // Avoid conflict: 'a' is element key cold, so use arrow or й for left
-  if (keys['arrowleft']) dx -= 1;
-  if (keys['arrowright']) dx += 1;
-  if (dx || dy) {
-    const len = Math.hypot(dx, dy);
-    player.x += (dx / len) * player.speed;
-    player.y += (dy / len) * player.speed;
-    player.angle = Math.atan2(dy, dx);
-  }
-  player.x = Math.max(player.radius, Math.min(W - player.radius, player.x));
-  player.y = Math.max(player.radius, Math.min(H - player.radius, player.y));
+  // Movement
+  let dx=0, dz=0;
+  if(keys['arrowup']||keys['ц']||keys['i']) dz -= 1;
+  if(keys['arrowdown']||keys['ы']||keys['k']) dz += 1;
+  if(keys['arrowleft']||keys['ф']||keys['j']) dx -= 1;
+  if(keys['arrowright']||keys['в']||keys['l']) dx += 1;
+  if(dx||dz) { const len=Math.hypot(dx,dz); player.x+=(dx/len)*player.speed*dt; player.z+=(dz/len)*player.speed*dt; }
+  const bound = MAP_SIZE/2-2;
+  player.x = Math.max(-bound,Math.min(bound,player.x));
+  player.z = Math.max(-bound,Math.min(bound,player.z));
 
-  // Mana regen
-  player.mana = Math.min(player.maxMana, player.mana + 0.15);
-  if (player.invulnTimer > 0) player.invulnTimer--;
-  if (player.shieldTimer > 0) { player.shieldTimer--; if (player.shieldTimer <= 0) player.shieldActive = false; }
+  if(player.mesh) { player.mesh.position.set(player.x,0,player.z); const aim=getAimAngle(); player.mesh.rotation.y=aim-Math.PI/2; }
+  camera.position.set(player.x, 32, player.z+22);
+  camera.lookAt(player.x, 0, player.z);
+  playerLight.position.set(player.x,3,player.z);
+  if(elementQueue.length>0) playerLight.color.set(ELEMENTS[elementQueue[elementQueue.length-1]].color); else playerLight.color.set(0x8866ff);
 
-  // Aim angle from mouse
-  aimAngle = Math.atan2(mouseY - player.y, mouseX - player.x);
+  player.mana = Math.min(player.maxMana, player.mana+5*dt);
+  if(player.invuln>0) player.invuln-=dt;
+  if(player.shieldTimer>0) { player.shieldTimer-=dt; if(player.shieldTimer<=0){player.shieldActive=false; if(player.shieldMesh)player.shieldMesh.visible=false;} }
+  if(player.shieldMesh&&player.shieldMesh.visible) player.shieldMesh.material.opacity = 0.15+Math.sin(clock.elapsedTime*4)*0.05;
+  if(player.mesh) player.mesh.visible = player.invuln<=0||Math.floor(clock.elapsedTime*10)%2===0;
 
-  // ── Wave system
-  waveTimer += dt;
-  if (waveTimer >= WAVE_DURATION) {
-    wave++;
-    waveTimer = 0;
-    document.getElementById('wave-display').textContent = 'Волна ' + wave;
-    if (wave % 3 === 0) spawnBoss();
-    // Drop pickup
-    pickups.push({ x: Math.random() * (W-100)+50, y: Math.random() * (H-100)+50, type: Math.random()>0.5?'hp':'mana', life:600 });
-  }
+  // Wave
+  waveTimer+=dt;
+  if(waveTimer>=WAVE_DURATION) { wave++; waveTimer=0; document.getElementById('wave-display').textContent='Волна '+wave; if(wave%3===0) spawnBoss(); createPickup3D((Math.random()-0.5)*20,(Math.random()-0.5)*20,Math.random()>0.5?'hp':'mana'); }
 
-  // ── Spawn enemies
-  const spawnRate = Math.max(500, 2000 - wave * 150);
-  spawnTimer += dt;
-  if (spawnTimer >= spawnRate) {
-    spawnTimer = 0;
-    const count = 1 + Math.floor(wave / 3);
-    for (let i = 0; i < count; i++) spawnEnemy();
-  }
+  // Spawn
+  const spawnRate = Math.max(0.8, 3-wave*0.2);
+  spawnTimer+=dt;
+  if(spawnTimer>=spawnRate) { spawnTimer=0; const cnt=1+Math.floor(wave/3); for(let i=0;i<cnt;i++) spawnEnemy(); }
 
-  // ── Update enemies
-  for (let i = enemies.length - 1; i >= 0; i--) {
-    const e = enemies[i];
-    if (e.frozen > 0) { e.frozen--; continue; }
+  // Enemies
+  for(let i=enemies.length-1;i>=0;i--) {
+    const e=enemies[i];
+    if(e.frozen>0){e.frozen-=dt;continue;}
+    const ang=Math.atan2(player.z-e.z, player.x-e.x);
+    e.x+=Math.cos(ang)*e.speed*dt+e.knockX*dt; e.z+=Math.sin(ang)*e.speed*dt+e.knockZ*dt;
+    e.knockX*=0.92; e.knockZ*=0.92;
+    if(e.hitFlash>0) e.hitFlash-=dt;
+    e.mesh.position.set(e.x,0,e.z); e.mesh.rotation.y=-ang+Math.PI/2;
+    if(e.mesh.userData.hpBar) { const ratio=Math.max(0,e.hp/e.maxHp); e.mesh.userData.hpBar.scale.x=ratio; e.mesh.userData.hpBar.position.x=-e.mesh.userData.hpBarWidth*(1-ratio)/2; }
 
-    // Move toward player
-    const ang = Math.atan2(player.y - e.y, player.x - e.x);
-    const spd = e.speed * (e.typeName === 'boss' ? 1 : 1);
-    e.x += Math.cos(ang) * spd + (e.knockX || 0);
-    e.y += Math.sin(ang) * spd + (e.knockY || 0);
-    e.knockX *= 0.85; e.knockY *= 0.85;
-    if (e.hitFlash > 0) e.hitFlash--;
+    if(e.shoots) { e.shootTimer-=dt; if(e.shootTimer<=0){e.shootTimer=e.typeName==='boss'?1.5:3+Math.random(); const a=Math.atan2(player.z-e.z,player.x-e.x); createProjectile3D(e.x,e.z,Math.cos(a)*12,Math.sin(a)*12,{radius:0.15,damage:e.dmg*0.6,color:0xff4444,enemy:true});} }
 
-    // Shoot
-    if (e.shoots) {
-      e.shootTimer--;
-      if (e.shootTimer <= 0) {
-        e.shootTimer = e.typeName === 'boss' ? 50 : 100 + Math.random() * 50;
-        const pAngle = Math.atan2(player.y - e.y, player.x - e.x);
-        projectiles.push({
-          x: e.x, y: e.y,
-          vx: Math.cos(pAngle) * 4,
-          vy: Math.sin(pAngle) * 4,
-          radius: 5, damage: e.dmg * 0.6, color: '#ff6b6b',
-          life: 80, enemy: true, trail: '#ff6b6b'
-        });
-      }
+    const dist=Math.hypot(e.x-player.x,e.z-player.z);
+    if(dist<e.radius+0.6&&player.invuln<=0) {
+      let dmg=e.dmg;
+      if(player.shieldActive){player.barrierHp-=dmg;if(player.barrierHp<=0){player.shieldActive=false;player.shieldTimer=0;if(player.shieldMesh)player.shieldMesh.visible=false;}dmg=0;}
+      player.hp-=dmg; player.invuln=0.5; spawnParticles3D(player.x,1,player.z,10,0xe53e3e,3); e.knockX=-Math.cos(ang)*30; e.knockZ=-Math.sin(ang)*30;
     }
 
-    // Collide with player
-    const dist = Math.hypot(e.x - player.x, e.y - player.y);
-    if (dist < e.radius + player.radius) {
-      if (player.invulnTimer <= 0) {
-        let dmg = e.dmg;
-        if (player.shieldActive) {
-          player.barrierHp -= dmg;
-          if (player.barrierHp <= 0) { player.shieldActive = false; player.shieldTimer = 0; }
-          dmg = 0;
-        }
-        player.hp -= dmg;
-        player.invulnTimer = 30;
-        spawnParticles(player.x, player.y, 10, '#e53e3e', 4);
-        // Knockback enemy
-        e.knockX = -Math.cos(ang) * 8;
-        e.knockY = -Math.sin(ang) * 8;
-      }
-    }
-
-    // Remove dead
-    if (e.hp <= 0) {
-      score += e.score;
-      document.getElementById('score-display').textContent = score;
-      spawnParticles(e.x, e.y, 15, e.color, 5);
-      enemies.splice(i, 1);
-      // Chance to drop pickup
-      if (Math.random() < 0.15) {
-        pickups.push({ x:e.x, y:e.y, type:Math.random()>0.5?'hp':'mana', life:400 });
-      }
-    }
-  }
-
-  // ── Update projectiles
-  for (let i = projectiles.length - 1; i >= 0; i--) {
-    const p = projectiles[i];
-    p.x += p.vx; p.y += p.vy;
-    p.life--;
-
-    // Trail
-    if (p.trail && gameTime % 2 < 1) {
-      particles.push({ x:p.x, y:p.y, vx:(Math.random()-0.5)*0.5, vy:(Math.random()-0.5)*0.5, life:10, color:p.trail, radius:p.radius*0.5 });
-    }
-
-    if (p.x < -50 || p.x > W+50 || p.y < -50 || p.y > H+50 || p.life <= 0) {
-      projectiles.splice(i, 1); continue;
-    }
-
-    if (p.enemy) {
-      // Enemy projectile hits player
-      const dist = Math.hypot(p.x - player.x, p.y - player.y);
-      if (dist < p.radius + player.radius) {
-        if (player.invulnTimer <= 0) {
-          let dmg = p.damage;
-          if (player.shieldActive) { player.barrierHp -= dmg; if (player.barrierHp<=0) { player.shieldActive=false; player.shieldTimer=0; } dmg=0; }
-          player.hp -= dmg;
-          player.invulnTimer = 20;
-          spawnParticles(player.x, player.y, 8, '#e53e3e', 3);
-        }
-        projectiles.splice(i, 1); continue;
-      }
-    } else {
-      // Player projectile hits enemies
-      for (let j = enemies.length - 1; j >= 0; j--) {
-        const e = enemies[j];
-        const dist = Math.hypot(p.x - e.x, p.y - e.y);
-        if (dist < p.radius + e.radius) {
-          e.hp -= p.damage;
-          e.hitFlash = 6;
-          const ka = Math.atan2(e.y - player.y, e.x - player.x);
-          e.knockX += Math.cos(ka) * 5;
-          e.knockY += Math.sin(ka) * 5;
-          spawnParticles(p.x, p.y, 8, p.color, 3);
-          if (p.effect === 'freeze' || (p.elements && p.elements.includes('cold'))) e.frozen = 60;
-          if (p.pierce > 0) { p.pierce--; p.damage *= 0.7; } else { projectiles.splice(i, 1); break; }
-        }
-      }
-    }
-  }
-
-  // ── Update spell effects
-  for (let i = spellEffects.length - 1; i >= 0; i--) {
-    const s = spellEffects[i];
-    s.life--;
-    if (s.life <= 0) { spellEffects.splice(i, 1); continue; }
-
-    if (s.type === 'explosion' || s.type === 'nova') {
-      s.radius += (s.maxRadius - s.radius) * 0.15;
-      // Damage enemies in radius
-      for (const e of enemies) {
-        const d = Math.hypot(e.x - s.x, e.y - s.y);
-        if (d < s.radius && s.damage > 0) {
-          e.hp -= s.damage * 0.08;
-          e.hitFlash = 4;
-          if (s.freeze) e.frozen = Math.max(e.frozen, 45);
-        }
-      }
-    }
-    if (s.type === 'heal_ring') {
-      s.radius += (s.maxRadius - s.radius) * 0.2;
-    }
-    if (s.type === 'beam') {
-      // Beam damage
-      const cos = Math.cos(s.angle), sin = Math.sin(s.angle);
-      for (const e of enemies) {
-        // Point-to-line distance
-        const dx = e.x - s.x, dy = e.y - s.y;
-        const proj = dx * cos + dy * sin;
-        if (proj < 0 || proj > s.length) continue;
-        const perp = Math.abs(-dx * sin + dy * cos);
-        if (perp < s.width + e.radius) {
-          e.hp -= s.damage * 0.15;
-          e.hitFlash = 4;
-          if (s.chain) {
-            // Chain to nearby enemies
-            for (const e2 of enemies) {
-              if (e2 === e) continue;
-              if (Math.hypot(e2.x - e.x, e2.y - e.y) < 80) {
-                e2.hp -= s.damage * 0.05;
-                e2.hitFlash = 3;
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // ── Pickups
-  for (let i = pickups.length - 1; i >= 0; i--) {
-    const p = pickups[i];
-    p.life--;
-    if (p.life <= 0) { pickups.splice(i, 1); continue; }
-    const d = Math.hypot(p.x - player.x, p.y - player.y);
-    if (d < 30) {
-      if (p.type === 'hp') { player.hp = Math.min(player.maxHp, player.hp + 25); spawnParticles(p.x,p.y,10,'#68d391',3); }
-      else { player.mana = Math.min(player.maxMana, player.mana + 30); spawnParticles(p.x,p.y,10,'#63b3ed',3); }
-      pickups.splice(i, 1);
-    }
-  }
-
-  // ── Particles
-  for (let i = particles.length - 1; i >= 0; i--) {
-    const p = particles[i];
-    p.x += p.vx; p.y += p.vy;
-    p.vx *= 0.96; p.vy *= 0.96;
-    p.life--;
-    if (p.life <= 0) particles.splice(i, 1);
-  }
-
-  // ── HUD
-  document.getElementById('hp-bar').style.width = Math.max(0, player.hp / player.maxHp * 100) + '%';
-  document.getElementById('mana-bar').style.width = Math.max(0, player.mana / player.maxMana * 100) + '%';
-
-  // ── Death
-  if (player.hp <= 0) {
-    gameRunning = false;
-    document.getElementById('final-score').textContent = 'Очки: ' + score + ' | Волна: ' + wave;
-    document.getElementById('death-screen').style.display = 'flex';
-  }
-}
-
-// ── Render ─────────────────────────────────────────────────────
-function draw() {
-  ctx.clearRect(0, 0, W, H);
-
-  // Background grid
-  ctx.strokeStyle = 'rgba(255,255,255,0.03)';
-  ctx.lineWidth = 1;
-  const gridSize = 50;
-  const offX = (-gameTime * 0.01) % gridSize;
-  for (let x = offX; x < W; x += gridSize) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
-  for (let y = offX; y < H; y += gridSize) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
-
-  // Pickups
-  for (const p of pickups) {
-    const alpha = p.life < 60 ? p.life / 60 : 1;
-    ctx.globalAlpha = alpha;
-    ctx.font = '20px serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(p.type === 'hp' ? '❤️' : '💎', p.x, p.y + 6);
-    ctx.globalAlpha = 1;
-  }
-
-  // Spell effects
-  for (const s of spellEffects) {
-    const alpha = s.life / 30;
-    if (s.type === 'explosion' || s.type === 'nova') {
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
-      ctx.fillStyle = s.color + Math.floor(alpha * 40).toString(16).padStart(2,'0');
-      ctx.fill();
-      ctx.strokeStyle = s.color + Math.floor(alpha * 180).toString(16).padStart(2,'0');
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
-    if (s.type === 'heal_ring') {
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
-      ctx.strokeStyle = s.color + Math.floor(alpha * 180).toString(16).padStart(2,'0');
-      ctx.lineWidth = 3;
-      ctx.stroke();
-    }
-    if (s.type === 'beam') {
-      const cos = Math.cos(s.angle), sin = Math.sin(s.angle);
-      ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(s.x, s.y);
-      ctx.lineTo(s.x + cos * s.length, s.y + sin * s.length);
-      ctx.strokeStyle = s.color;
-      ctx.lineWidth = s.width;
-      ctx.shadowColor = s.color;
-      ctx.shadowBlur = 15;
-      ctx.globalAlpha = alpha;
-      ctx.stroke();
-      // Inner bright line
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = s.width * 0.4;
-      ctx.stroke();
-      ctx.restore();
-      ctx.globalAlpha = 1;
+    if(e.hp<=0) {
+      score+=e.score; document.getElementById('score-display').textContent=score;
+      spawnParticles3D(e.x,e.height*0.5,e.z,20,e.color,4);
+      scene.remove(e.mesh); e.mesh.traverse(c=>{if(c.geometry)c.geometry.dispose();if(c.material)c.material.dispose();});
+      enemies.splice(i,1);
+      if(Math.random()<0.15) createPickup3D(e.x,e.z,Math.random()>0.5?'hp':'mana');
     }
   }
 
   // Projectiles
-  for (const p of projectiles) {
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-    ctx.fillStyle = p.color;
-    ctx.shadowColor = p.color;
-    ctx.shadowBlur = 12;
-    ctx.fill();
-    ctx.shadowBlur = 0;
-    // Inner glow
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.radius * 0.5, 0, Math.PI * 2);
-    ctx.fillStyle = '#fff';
-    ctx.globalAlpha = 0.6;
-    ctx.fill();
-    ctx.globalAlpha = 1;
-  }
-
-  // Enemies
-  for (const e of enemies) {
-    // Shadow
-    ctx.beginPath();
-    ctx.ellipse(e.x, e.y + e.radius, e.radius * 0.8, e.radius * 0.3, 0, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
-    ctx.fill();
-
-    // Frozen tint
-    if (e.frozen > 0) {
-      ctx.beginPath();
-      ctx.arc(e.x, e.y, e.radius + 4, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(144,205,244,0.3)';
-      ctx.fill();
-    }
-
-    // Body
-    ctx.beginPath();
-    ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
-    ctx.fillStyle = e.hitFlash > 0 ? '#fff' : e.color;
-    ctx.fill();
-
-    // Emoji
-    ctx.font = (e.radius * 1.2) + 'px serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(e.emoji, e.x, e.y);
-
-    // HP bar
-    if (e.hp < e.maxHp) {
-      const bw = e.radius * 2;
-      const bh = 4;
-      const bx = e.x - bw / 2;
-      const by = e.y - e.radius - 10;
-      ctx.fillStyle = 'rgba(0,0,0,0.5)';
-      ctx.fillRect(bx, by, bw, bh);
-      ctx.fillStyle = '#e53e3e';
-      ctx.fillRect(bx, by, bw * (e.hp / e.maxHp), bh);
+  for(let i=projectiles.length-1;i>=0;i--) {
+    const p=projectiles[i];
+    p.mesh.position.x+=p.vx*dt; p.mesh.position.z+=p.vz*dt; p.light.position.copy(p.mesh.position); p.life-=dt;
+    if(Math.random()<0.3) spawnParticles3D(p.mesh.position.x,1.2,p.mesh.position.z,1,p.color,1);
+    const px=p.mesh.position.x, pz=p.mesh.position.z;
+    if(Math.abs(px)>bound+5||Math.abs(pz)>bound+5||p.life<=0){scene.remove(p.mesh);scene.remove(p.light);p.mesh.geometry.dispose();p.mesh.material.dispose();projectiles.splice(i,1);continue;}
+    if(p.enemy) {
+      if(Math.hypot(px-player.x,pz-player.z)<p.radius+0.6) {
+        if(player.invuln<=0){let dmg=p.damage;if(player.shieldActive){player.barrierHp-=dmg;if(player.barrierHp<=0){player.shieldActive=false;player.shieldTimer=0;if(player.shieldMesh)player.shieldMesh.visible=false;}dmg=0;} player.hp-=dmg;player.invuln=0.3;spawnParticles3D(player.x,1,player.z,8,0xe53e3e,3);}
+        scene.remove(p.mesh);scene.remove(p.light);p.mesh.geometry.dispose();p.mesh.material.dispose();projectiles.splice(i,1);continue;
+      }
+    } else {
+      for(let j=enemies.length-1;j>=0;j--) {
+        const e=enemies[j]; const d=Math.hypot(px-e.x,pz-e.z);
+        if(d<p.radius+e.radius) {
+          e.hp-=p.damage; e.hitFlash=0.15; const ka=Math.atan2(e.z-player.z,e.x-player.x); e.knockX+=Math.cos(ka)*15; e.knockZ+=Math.sin(ka)*15;
+          spawnParticles3D(px,1,pz,6,p.color,2);
+          if(p.effect==='freeze'||(p.elements&&p.elements.includes('cold'))) e.frozen=2;
+          if(p.pierce>0){p.pierce--;p.damage*=0.7;} else {scene.remove(p.mesh);scene.remove(p.light);p.mesh.geometry.dispose();p.mesh.material.dispose();projectiles.splice(i,1);break;}
+        }
+      }
     }
   }
 
-  // Player
-  ctx.save();
-  // Shadow
-  ctx.beginPath();
-  ctx.ellipse(player.x, player.y + player.radius, player.radius * 0.9, player.radius * 0.3, 0, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(0,0,0,0.3)';
-  ctx.fill();
-
-  // Shield
-  if (player.shieldActive) {
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, player.radius + 10, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(160,174,192,0.6)';
-    ctx.lineWidth = 3;
-    ctx.stroke();
-    ctx.fillStyle = 'rgba(160,174,192,0.1)';
-    ctx.fill();
+  // Spell effects
+  for(let i=spellEffects3D.length-1;i>=0;i--) {
+    const s=spellEffects3D[i]; s.life-=dt;
+    if(s.life<=0){for(const m of s.meshes){scene.remove(m);m.geometry?.dispose();m.material?.dispose();} spellEffects3D.splice(i,1);continue;}
+    const alpha=Math.max(0,s.life);
+    if(s.type==='explosion'||s.type==='nova') {
+      const progress=1-s.life; const r=s.maxRadius*Math.min(1,progress*3); s.radius=r;
+      for(const m of s.meshes){m.scale.set(r,r*0.5,r);if(m.material)m.material.opacity=alpha*0.4;}
+      for(const e of enemies){const d=Math.hypot(e.x-s.x,e.z-s.z);if(d<r&&s.damage>0){e.hp-=s.damage*dt*2;e.hitFlash=0.1;if(s.freeze)e.frozen=Math.max(e.frozen,1.5);}}
+    }
+    if(s.type==='heal_ring'){const progress=1-s.life;const r=(s.maxRadius||4)*Math.min(1,progress*3);for(const m of s.meshes){m.scale.set(r,r,r);if(m.material)m.material.opacity=alpha*0.6;}}
+    if(s.type==='beam') {
+      for(const m of s.meshes){if(m.material)m.material.opacity=alpha*0.9;}
+      const cos=Math.cos(s.angle),sin=-Math.sin(s.angle);
+      for(const e of enemies){const dx2=e.x-s.x,dz2=e.z-s.z;const proj=dx2*cos+dz2*sin;if(proj<0||proj>s.length)continue;const perp=Math.abs(-dx2*sin+dz2*cos);if(perp<1+e.radius){e.hp-=s.damage*dt*3;e.hitFlash=0.1;if(s.chain){for(const e2 of enemies){if(e2===e)continue;if(Math.hypot(e2.x-e.x,e2.z-e.z)<5){e2.hp-=s.damage*dt;e2.hitFlash=0.05;}}}}}
+    }
   }
 
-  // Body
-  const flash = player.invulnTimer > 0 && player.invulnTimer % 4 < 2;
-  if (!flash) {
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
-    const grad = ctx.createRadialGradient(player.x-4, player.y-4, 2, player.x, player.y, player.radius);
-    grad.addColorStop(0, '#a78bfa');
-    grad.addColorStop(1, '#6d28d9');
-    ctx.fillStyle = grad;
-    ctx.fill();
-
-    // Wizard emoji
-    ctx.font = '22px serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('🧙', player.x, player.y);
+  // Pickups
+  for(let i=pickups3D.length-1;i>=0;i--) {
+    const p=pickups3D[i]; p.life-=dt; p.mesh.rotation.y+=dt*2; p.mesh.position.y=1+Math.sin(clock.elapsedTime*3)*0.3;
+    if(p.life<=0){scene.remove(p.mesh);scene.remove(p.light);p.mesh.geometry.dispose();p.mesh.material.dispose();pickups3D.splice(i,1);continue;}
+    if(Math.hypot(p.mesh.position.x-player.x,p.mesh.position.z-player.z)<2){
+      if(p.type==='hp'){player.hp=Math.min(player.maxHp,player.hp+25);spawnParticles3D(p.mesh.position.x,1,p.mesh.position.z,10,0x68d391,3);}
+      else{player.mana=Math.min(player.maxMana,player.mana+30);spawnParticles3D(p.mesh.position.x,1,p.mesh.position.z,10,0x63b3ed,3);}
+      scene.remove(p.mesh);scene.remove(p.light);p.mesh.geometry.dispose();p.mesh.material.dispose();pickups3D.splice(i,1);
+    }
   }
-
-  // Aim indicator
-  ctx.beginPath();
-  ctx.arc(player.x + Math.cos(aimAngle) * 30, player.y + Math.sin(aimAngle) * 30, 4, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(255,255,255,0.4)';
-  ctx.fill();
-
-  ctx.restore();
 
   // Particles
-  for (const p of particles) {
-    const alpha = p.life / 30;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-    ctx.fillStyle = p.color;
-    ctx.globalAlpha = Math.min(1, alpha);
-    ctx.fill();
+  for(let i=particles3D.length-1;i>=0;i--) {
+    const p=particles3D[i]; p.mesh.position.x+=p.vx*dt; p.mesh.position.y+=p.vy*dt; p.mesh.position.z+=p.vz*dt; p.vy-=6*dt; p.life-=dt;
+    const a=Math.max(0,p.life/p.maxLife); p.mesh.material.opacity=a; p.mesh.scale.setScalar(a);
+    if(p.life<=0){scene.remove(p.mesh);p.mesh.geometry.dispose();p.mesh.material.dispose();particles3D.splice(i,1);}
   }
-  ctx.globalAlpha = 1;
+
+  // HUD
+  document.getElementById('hp-bar').style.width=Math.max(0,player.hp/player.maxHp*100)+'%';
+  document.getElementById('mana-bar').style.width=Math.max(0,player.mana/player.maxMana*100)+'%';
+  if(player.hp<=0){gameRunning=false;document.getElementById('final-score').textContent='Очки: '+score+' | Волна: '+wave;document.getElementById('death-screen').style.display='flex';}
 }
 
-// ── Game Loop ─────────────────────────────────────────────────
-function gameLoop(timestamp) {
-  if (!gameRunning) return;
-  const dt = lastTime ? timestamp - lastTime : 16;
-  lastTime = timestamp;
-  update(dt);
-  draw();
-  requestAnimationFrame(gameLoop);
+// ── Game Loop ────────────────────────────────────────────────
+function gameLoop() { requestAnimationFrame(gameLoop); const dt=clock.getDelta(); if(gameRunning) update(dt); renderer.render(scene,camera); }
+
+// ── Cleanup ──────────────────────────────────────────────────
+function clearGameObjects() {
+  for(const e of enemies){scene.remove(e.mesh);e.mesh.traverse(c=>{if(c.geometry)c.geometry.dispose();if(c.material)c.material.dispose();});}
+  enemies=[];
+  for(const p of projectiles){scene.remove(p.mesh);scene.remove(p.light);p.mesh.geometry?.dispose();p.mesh.material?.dispose();}
+  projectiles=[];
+  for(const p of particles3D){scene.remove(p.mesh);p.mesh.geometry?.dispose();p.mesh.material?.dispose();}
+  particles3D=[];
+  for(const s of spellEffects3D){for(const m of s.meshes){scene.remove(m);m.geometry?.dispose();m.material?.dispose();}}
+  spellEffects3D=[];
+  for(const p of pickups3D){scene.remove(p.mesh);scene.remove(p.light);p.mesh.geometry?.dispose();p.mesh.material?.dispose();}
+  pickups3D=[];
+  if(player.mesh){scene.remove(player.mesh);player.mesh.traverse(c=>{if(c.geometry)c.geometry.dispose();if(c.material)c.material.dispose();});}
 }
 
-// ── Start / Restart ───────────────────────────────────────────
+// ── Start / Restart ──────────────────────────────────────────
 function startGame() {
-  player.x = W / 2;
-  player.y = H / 2;
-  player.hp = player.maxHp;
-  player.mana = player.maxMana;
-  player.invulnTimer = 60;
-  player.shieldActive = false;
-  player.shieldTimer = 0;
-  player.barrierHp = 0;
-  score = 0; wave = 1; waveTimer = 0;
-  gameTime = 0; spawnTimer = 0; lastTime = 0;
-  enemies = []; projectiles = []; particles = [];
-  spellEffects = []; pickups = [];
-  elementQueue = [];
-  updateQueueUI();
-  document.getElementById('score-display').textContent = '0';
-  document.getElementById('wave-display').textContent = 'Волна 1';
-  document.getElementById('death-screen').style.display = 'none';
-  document.getElementById('start-screen').style.display = 'none';
-  gameRunning = true;
-  requestAnimationFrame(gameLoop);
+  clearGameObjects();
+  player.x=0;player.z=0;player.hp=player.maxHp;player.mana=player.maxMana;player.invuln=2;player.shieldActive=false;player.shieldTimer=0;player.barrierHp=0;
+  score=0;wave=1;waveTimer=0;spawnTimer=0;elementQueue=[];updateQueueUI();
+  player.mesh=createPlayerMesh();
+  document.getElementById('score-display').textContent='0';
+  document.getElementById('wave-display').textContent='Волна 1';
+  document.getElementById('death-screen').style.display='none';
+  document.getElementById('start-screen').style.display='none';
+  clock.getDelta(); gameRunning=true;
 }
 
 document.getElementById('start-btn').addEventListener('click', startGame);
 document.getElementById('restart-btn').addEventListener('click', startGame);
-
-// Pre-select canvas for focus
-canvas.tabIndex = 1;
-canvas.addEventListener('click', () => canvas.focus());
+renderer.domElement.tabIndex=1; renderer.domElement.style.outline='none';
+gameLoop();
 </script>
 </body>
 </html>
