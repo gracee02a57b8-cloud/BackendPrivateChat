@@ -181,7 +181,9 @@ function UsersView() {
             <span>{f.name}</span>
             <span
               onClick={(e) => { e.stopPropagation(); handleDeleteFolder(f.id); }}
-              className="ml-0.5 hidden cursor-pointer rounded-full p-0.5 text-[10px] opacity-50 transition-all hover:bg-white/20 hover:opacity-100 group-hover:inline-flex"
+              className="ml-0.5 hidden cursor-pointer rounded-full p-1.5 text-xs opacity-50 transition-all hover:bg-white/20 hover:opacity-100 group-hover:inline-flex"
+              role="button"
+              tabIndex={0}
             >
               <RiCloseLine />
             </span>
@@ -198,13 +200,13 @@ function UsersView() {
               autoFocus
               className="w-24 rounded-full border border-LightShade/[0.12] bg-transparent px-3 py-1 text-xs outline-none transition-all focus:border-bgAccent/40 focus:ring-1 focus:ring-bgAccent/20"
             />
-            <button type="submit" className="flex h-6 w-6 items-center justify-center rounded-full bg-bgAccent/20 text-xs text-bgAccent transition hover:bg-bgAccent/30 dark:text-bgAccent-dark">✓</button>
-            <button type="button" onClick={() => setShowFolderInput(false)} className="flex h-6 w-6 items-center justify-center rounded-full bg-LightShade/10 text-xs opacity-60 transition hover:opacity-100">✕</button>
+            <button type="submit" className="flex h-9 w-9 items-center justify-center rounded-full bg-bgAccent/20 text-sm text-bgAccent transition hover:bg-bgAccent/30 dark:text-bgAccent-dark">✓</button>
+            <button type="button" onClick={() => setShowFolderInput(false)} className="flex h-9 w-9 items-center justify-center rounded-full bg-LightShade/10 text-sm opacity-60 transition hover:opacity-100">✕</button>
           </form>
         ) : (
           <button
             onClick={() => setShowFolderInput(true)}
-            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-LightShade/50 transition-all hover:text-bgAccent hover:opacity-100 dark:hover:text-bgAccent-dark"
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-LightShade/50 transition-all hover:text-bgAccent hover:opacity-100 dark:hover:text-bgAccent-dark"
           >
             <PlusCircleIcon className="h-5 w-5" />
           </button>

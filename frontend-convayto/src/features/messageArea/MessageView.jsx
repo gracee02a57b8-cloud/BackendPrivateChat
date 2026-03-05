@@ -307,10 +307,10 @@ function MessageView() {
           </div>
           <button
             onClick={() => handleUnpin(lastPinned)}
-            className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full transition hover:bg-LightShade/20"
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full transition hover:bg-LightShade/20"
             title="Открепить"
           >
-            <RiCloseFill className="text-sm opacity-60" />
+            <RiCloseFill className="text-base opacity-60" />
           </button>
         </div>
       )}
@@ -333,11 +333,11 @@ function MessageView() {
 
       {selectionMode ? (
         <div className="border-t border-LightShade/20 bg-bgPrimary px-4 py-3 dark:bg-bgPrimary-dark">
-          <div className="mx-auto flex max-w-3xl items-center justify-between">
+          <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-2">
             <span className="text-sm font-medium">
               Выбрано: {selectedMessages.length}
             </span>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={handleForwardSelected}
                 disabled={selectedMessages.length === 0}
@@ -386,7 +386,7 @@ function MessageView() {
               </h3>
               <button
                 onClick={() => setReadersModal(null)}
-                className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-LightShade/20"
+                className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-LightShade/20"
               >
                 <RiCloseLine className="text-lg" />
               </button>

@@ -404,7 +404,7 @@ function MessageInputBar({ replyTo, setReplyTo }) {
           </span>
           <button
             onClick={cancelVoiceRecording}
-            className="flex h-10 w-10 items-center justify-center rounded-full text-xl text-textPrimary/60 transition hover:bg-LightShade/20 active:scale-95 dark:text-textPrimary-dark/60"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-xl text-textPrimary/60 transition hover:bg-LightShade/20 active:scale-95 dark:text-textPrimary-dark/60"
             title="Отменить запись"
             data-testid="cancel-voice-recording"
           >
@@ -412,7 +412,7 @@ function MessageInputBar({ replyTo, setReplyTo }) {
           </button>
           <button
             onClick={stopVoiceRecording}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500 text-white transition hover:bg-red-600 active:scale-95"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-red-500 text-white transition hover:bg-red-600 active:scale-95"
             title="Остановить и отправить"
             data-testid="stop-voice-recording"
           >
@@ -440,17 +440,17 @@ function MessageInputBar({ replyTo, setReplyTo }) {
           <button
             type="button"
             onClick={() => setReplyTo?.(null)}
-            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-lg transition hover:bg-LightShade/20"
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-lg transition hover:bg-LightShade/20"
           >
             <RiCloseLine />
           </button>
         </div>
       )}
-      <form onSubmit={handleSendNewMessage} className="mx-auto grid max-w-3xl grid-cols-[auto_auto_1fr_auto_auto_auto] items-center gap-1 overflow-hidden rounded-full border border-transparent bg-bgPrimary shadow-lg dark:border-LightShade/20 dark:bg-LightShade/20">
+      <form onSubmit={handleSendNewMessage} className="mx-auto flex max-w-3xl items-center gap-0.5 overflow-hidden rounded-full border border-transparent bg-bgPrimary shadow-lg dark:border-LightShade/20 dark:bg-LightShade/20">
         {/* File attachment */}
         <label
           htmlFor="fileAttach"
-          className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-xl text-textPrimary/60 transition hover:bg-LightShade/20 active:scale-95 dark:text-textPrimary-dark/60 ml-1"
+          className="flex h-11 w-11 flex-shrink-0 cursor-pointer items-center justify-center rounded-full text-xl text-textPrimary/60 transition hover:bg-LightShade/20 active:scale-95 dark:text-textPrimary-dark/60 ml-1"
           title="Прикрепить файл"
         >
           {isUploading ? <Loader size="small" /> : <RiAttachmentLine />}
@@ -469,7 +469,7 @@ function MessageInputBar({ replyTo, setReplyTo }) {
           type="button"
           onClick={() => setShowPollModal(true)}
           disabled={isPendingConvInfo || isUploading}
-          className="flex h-10 w-10 items-center justify-center rounded-full text-xl text-textPrimary/60 transition hover:bg-LightShade/20 active:scale-95 disabled:opacity-40 dark:text-textPrimary-dark/60"
+          className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-xl text-textPrimary/60 transition hover:bg-LightShade/20 active:scale-95 disabled:opacity-40 dark:text-textPrimary-dark/60"
           title="Создать опрос"
         >
           <RiBarChartBoxLine />
@@ -478,7 +478,7 @@ function MessageInputBar({ replyTo, setReplyTo }) {
         <label htmlFor="inputMessage" className="sr-only" />
         <input
           disabled={isPendingConvInfo}
-          className="h-12 w-full bg-transparent pr-2 outline-none"
+          className="h-12 min-w-0 flex-1 bg-transparent pr-2 outline-none"
           ref={inputRef}
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
@@ -493,7 +493,7 @@ function MessageInputBar({ replyTo, setReplyTo }) {
           type="button"
           onClick={startVoiceRecording}
           disabled={isPendingConvInfo || isUploading}
-          className="flex h-10 w-10 items-center justify-center rounded-full text-xl text-textPrimary/60 transition hover:bg-LightShade/20 active:scale-95 disabled:opacity-40 dark:text-textPrimary-dark/60"
+          className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-xl text-textPrimary/60 transition hover:bg-LightShade/20 active:scale-95 disabled:opacity-40 dark:text-textPrimary-dark/60"
           title="Голосовое сообщение"
         >
           <RiMicLine />
@@ -504,7 +504,7 @@ function MessageInputBar({ replyTo, setReplyTo }) {
           type="button"
           onClick={startVideoRecording}
           disabled={isPendingConvInfo || isUploading}
-          className="flex h-10 w-10 items-center justify-center rounded-full text-xl text-textPrimary/60 transition hover:bg-LightShade/20 active:scale-95 disabled:opacity-40 dark:text-textPrimary-dark/60"
+          className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-xl text-textPrimary/60 transition hover:bg-LightShade/20 active:scale-95 disabled:opacity-40 dark:text-textPrimary-dark/60"
           title="Видеокружок"
         >
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -516,7 +516,7 @@ function MessageInputBar({ replyTo, setReplyTo }) {
 
         {/* Send button */}
         <button
-          className="m-1 flex h-10 w-10 items-center justify-center rounded-full bg-bgAccent text-2xl text-textPrimary-dark hover:bg-bgAccentDim active:scale-95 disabled:opacity-70 dark:bg-bgAccent-dark dark:hover:bg-bgAccentDim-dark"
+          className="m-1 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-bgAccent text-2xl text-textPrimary-dark hover:bg-bgAccentDim active:scale-95 disabled:opacity-70 dark:bg-bgAccent-dark dark:hover:bg-bgAccentDim-dark"
           disabled={isSending || isPendingConvInfo || isUploading}
           onClick={handleSendNewMessage}
           type="submit"

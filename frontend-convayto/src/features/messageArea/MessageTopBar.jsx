@@ -136,11 +136,11 @@ function MessageTopBar() {
 
         {/* Call buttons — right side */}
         {!isPending && friend && roomId && (
-          <div className="ml-auto flex items-center gap-1">
+          <div className="ml-auto flex flex-shrink-0 items-center gap-0.5 sm:gap-1">
             {/* Search button */}
             <button
               onClick={toggleSearch}
-              className={`flex h-10 w-10 items-center justify-center rounded-full text-xl transition hover:bg-LightShade/20 active:scale-95 ${searchOpen ? 'text-bgAccent dark:text-bgAccent-dark' : 'text-textPrimary/70 dark:text-textPrimary-dark/70'}`}
+              className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-xl transition hover:bg-LightShade/20 active:scale-95 ${searchOpen ? 'text-bgAccent dark:text-bgAccent-dark' : 'text-textPrimary/70 dark:text-textPrimary-dark/70'}`}
               title="Поиск сообщений"
             >
               <RiSearchLine />
@@ -151,7 +151,7 @@ function MessageTopBar() {
                 <button
                   onClick={handleAudioCall}
                   disabled={callState !== CALL_STATE.IDLE}
-                  className="flex h-10 w-10 items-center justify-center rounded-full text-xl text-textPrimary/70 transition hover:bg-LightShade/20 active:scale-95 disabled:opacity-40 dark:text-textPrimary-dark/70"
+                  className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-xl text-textPrimary/70 transition hover:bg-LightShade/20 active:scale-95 disabled:opacity-40 dark:text-textPrimary-dark/70"
                   title="Аудиозвонок"
                 >
                   <RiPhoneLine />
@@ -159,7 +159,7 @@ function MessageTopBar() {
                 <button
                   onClick={handleVideoCall}
                   disabled={callState !== CALL_STATE.IDLE}
-                  className="flex h-10 w-10 items-center justify-center rounded-full text-xl text-textPrimary/70 transition hover:bg-LightShade/20 active:scale-95 disabled:opacity-40 dark:text-textPrimary-dark/70"
+                  className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-xl text-textPrimary/70 transition hover:bg-LightShade/20 active:scale-95 disabled:opacity-40 dark:text-textPrimary-dark/70"
                   title="Видеозвонок"
                 >
                   <RiVideoChatLine />
@@ -173,7 +173,7 @@ function MessageTopBar() {
                 <button
                   onClick={handleGroupAudioConference}
                   disabled={confState !== CONF_STATE.IDLE}
-                  className="flex h-10 w-10 items-center justify-center rounded-full text-xl text-textPrimary/70 transition hover:bg-LightShade/20 active:scale-95 disabled:opacity-40 dark:text-textPrimary-dark/70"
+                  className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-xl text-textPrimary/70 transition hover:bg-LightShade/20 active:scale-95 disabled:opacity-40 dark:text-textPrimary-dark/70"
                   title="Групповой аудиозвонок"
                 >
                   <RiPhoneLine />
@@ -181,7 +181,7 @@ function MessageTopBar() {
                 <button
                   onClick={handleConference}
                   disabled={confState !== CONF_STATE.IDLE}
-                  className="flex h-10 w-10 items-center justify-center rounded-full text-xl text-textPrimary/70 transition hover:bg-LightShade/20 active:scale-95 disabled:opacity-40 dark:text-textPrimary-dark/70"
+                  className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-xl text-textPrimary/70 transition hover:bg-LightShade/20 active:scale-95 disabled:opacity-40 dark:text-textPrimary-dark/70"
                   title="Видеоконференция"
                 >
                   <RiVideoChatLine />
@@ -189,7 +189,7 @@ function MessageTopBar() {
                 <button
                   onClick={handleConference}
                   disabled={confState !== CONF_STATE.IDLE}
-                  className="flex h-10 w-10 items-center justify-center rounded-full text-xl text-textPrimary/70 transition hover:bg-LightShade/20 active:scale-95 disabled:opacity-40 dark:text-textPrimary-dark/70"
+                  className="hidden h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-xl text-textPrimary/70 transition hover:bg-LightShade/20 active:scale-95 disabled:opacity-40 dark:text-textPrimary-dark/70 sm:flex"
                   title="Конференция"
                 >
                   <RiTeamLine />
@@ -221,13 +221,13 @@ function MessageTopBar() {
               {searchIdx + 1}/{searchResults.length}
             </span>
           )}
-          <button onClick={() => handleSearchNav(-1)} className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-LightShade/20">
+          <button onClick={() => handleSearchNav(-1)} className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full hover:bg-LightShade/20">
             <RiArrowUpSLine />
           </button>
-          <button onClick={() => handleSearchNav(1)} className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-LightShade/20">
+          <button onClick={() => handleSearchNav(1)} className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full hover:bg-LightShade/20">
             <RiArrowDownSLine />
           </button>
-          <button onClick={toggleSearch} className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-LightShade/20">
+          <button onClick={toggleSearch} className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full hover:bg-LightShade/20">
             <RiCloseLine />
           </button>
         </div>

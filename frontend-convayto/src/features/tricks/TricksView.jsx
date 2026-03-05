@@ -4,11 +4,13 @@ import IconButton from "../../components/IconButton";
 import { RiFlaskLine, RiGamepadLine } from "react-icons/ri";
 import PacmanGame from "./PacmanGame";
 import RunnerGame from "./RunnerGame";
+import ManaWorldGame from "./ManaWorldGame";
 
 function TricksView() {
   const { closeTricksView } = useUi();
   const [pacmanOpen, setPacmanOpen] = useState(false);
   const [runnerOpen, setRunnerOpen] = useState(false);
+  const [manaOpen, setManaOpen] = useState(false);
 
   return (
     <div className="fadeIn grid h-screen-safe grid-rows-[auto_1fr] bg-bgPrimary dark:bg-bgPrimary-dark">
@@ -52,10 +54,26 @@ function TricksView() {
           </div>
           <RiGamepadLine className="ml-auto text-xl opacity-40" />
         </button>
+
+        <button
+          onClick={() => setManaOpen(true)}
+          className="flex w-full items-center gap-3 rounded-xl bg-LightShade/10 px-4 py-3 text-left transition-colors hover:bg-LightShade/20 active:scale-[0.98]"
+          data-testid="tricks-mana-btn"
+        >
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-400/20 text-xl">
+            🧙
+          </span>
+          <div>
+            <p className="font-semibold text-textPrimary dark:text-textPrimary-dark">Mana World</p>
+            <p className="text-xs opacity-50">Магическая арена с комбо-заклинаниями</p>
+          </div>
+          <RiGamepadLine className="ml-auto text-xl opacity-40" />
+        </button>
       </div>
 
       {pacmanOpen && <PacmanGame onClose={() => setPacmanOpen(false)} />}
       {runnerOpen && <RunnerGame onClose={() => setRunnerOpen(false)} />}
+      {manaOpen && <ManaWorldGame onClose={() => setManaOpen(false)} />}
     </div>
   );
 }

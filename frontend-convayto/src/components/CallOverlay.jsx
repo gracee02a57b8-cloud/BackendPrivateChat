@@ -267,8 +267,8 @@ function CallOverlay() {
         </div>
 
         {/* Info */}
-        <div className="flex flex-col text-white">
-          <span className="text-xs font-semibold truncate max-w-[80px]">
+        <div className="flex flex-col text-white min-w-0">
+          <span className="text-xs font-semibold truncate max-w-[100px]">
             {remoteUser}
           </span>
           <span className={`text-xs ${isRinging ? 'text-green-400 animate-pulse' : isReconnecting ? 'text-yellow-400 animate-pulse' : 'text-green-400'}`}>
@@ -282,14 +282,14 @@ function CallOverlay() {
             <>
               <button
                 onClick={rejectCall}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-sm text-white transition active:scale-90"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-red-500 text-sm text-white transition active:scale-90"
                 title="Отклонить"
               >
                 <HiPhoneXMark />
               </button>
               <button
                 onClick={acceptCall}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 text-sm text-white transition active:scale-90"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-green-500 text-sm text-white transition active:scale-90"
                 title="Принять"
               >
                 <RiPhoneFill />
@@ -299,7 +299,7 @@ function CallOverlay() {
             <>
               <button
                 onClick={toggleAudio}
-                className={`flex h-8 w-8 items-center justify-center rounded-full text-sm text-white transition active:scale-90 ${
+                className={`flex h-9 w-9 items-center justify-center rounded-full text-sm text-white transition active:scale-90 ${
                   isAudioMuted ? "bg-red-500" : "bg-white/20"
                 }`}
               >
@@ -308,7 +308,7 @@ function CallOverlay() {
 
               <button
                 onClick={toggleVideo}
-                className={`flex h-8 w-8 items-center justify-center rounded-full text-sm text-white transition active:scale-90 ${
+                className={`flex h-9 w-9 items-center justify-center rounded-full text-sm text-white transition active:scale-90 ${
                   isVideoOff || !isVideo ? "bg-red-500/70" : "bg-white/20"
                 }`}
                 title={isVideo ? (isVideoOff ? "Включить камеру" : "Выключить камеру") : "Включить камеру"}
@@ -318,7 +318,7 @@ function CallOverlay() {
 
               <button
                 onClick={endCall}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-sm text-white transition active:scale-90"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-red-500 text-sm text-white transition active:scale-90"
                 title="Завершить"
               >
                 <HiPhoneXMark />
@@ -328,7 +328,7 @@ function CallOverlay() {
 
           <button
             onClick={toggleMinimize}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-sm text-white transition active:scale-90"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-sm text-white transition active:scale-90"
             title="Развернуть"
           >
             <RiFullscreenLine />

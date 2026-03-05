@@ -214,7 +214,7 @@ function VideoCirclePlayer({ fileUrl, duration }) {
         transition: "transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease",
       }}
     >
-      <div className="relative cursor-pointer group" style={{ width: size, height: size }} onClick={toggle}>
+      <div className="relative cursor-pointer group" style={{ width: size, height: size, maxWidth: '70vw', maxHeight: '70vw' }} onClick={toggle}>
         {/* Progress ring */}
         <svg className="absolute inset-0 -rotate-90" width={size} height={size}>
           <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="currentColor" strokeWidth={sw} className="opacity-[0.07]" />
@@ -282,7 +282,7 @@ function FileAttachment({ fileUrl, fileName, fileType, fileSize }) {
   if (isImage && fileUrl) {
     return (
       <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="block">
-        <img src={fileUrl} alt={fileName} className="max-w-[280px] max-h-[320px] rounded-lg object-cover" loading="lazy" />
+        <img src={fileUrl} alt={fileName} className="max-w-[280px] max-h-[320px] w-auto rounded-lg object-cover" style={{ maxWidth: 'min(280px, 70vw)' }} loading="lazy" />
       </a>
     );
   }
@@ -345,7 +345,7 @@ function ReactionBar({ reactions, onReaction, myUsername }) {
           <button
             key={r.emoji}
             onClick={() => onReaction?.(r.emoji)}
-            className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs transition active:scale-95 ${
+            className={`flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs transition active:scale-95 ${
               isMine
                 ? "bg-bgAccent/30 ring-1 ring-bgAccent/50 dark:bg-bgAccent-dark/30 dark:ring-bgAccent-dark/50"
                 : "bg-LightShade/15 hover:bg-LightShade/25"
@@ -667,7 +667,8 @@ function MessageItem({
           <img
             src={message.fileUrl}
             alt={message.fileName}
-            className="max-w-[280px] max-h-[320px] object-cover block"
+            className="max-w-[280px] max-h-[320px] w-auto object-cover block"
+            style={{ maxWidth: 'min(280px, 70vw)' }}
             loading="lazy"
           />
           <div className="absolute bottom-0 right-0 flex items-center gap-1 rounded-tl-lg bg-black/50 px-2 py-0.5">

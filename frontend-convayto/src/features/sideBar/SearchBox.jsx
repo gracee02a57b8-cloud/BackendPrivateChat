@@ -42,7 +42,7 @@ function SearchBox() {
       {searchQuery && (
         <button
           onClick={handleClear}
-          className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-lg opacity-40 transition-all hover:bg-LightShade/20 hover:opacity-80"
+          className="absolute right-1 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full text-lg opacity-40 transition-all hover:bg-LightShade/20 hover:opacity-80"
           aria-label="Очистить поиск"
         >
           <RiCloseLine />
