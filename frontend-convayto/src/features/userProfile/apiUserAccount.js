@@ -11,6 +11,9 @@ export async function updateCurrentUser({
   bio,
   avatar,
   previousAvatar,
+  lastName,
+  tag,
+  phone,
 }) {
   // 1. Загрузка аватарки (если передан файл)
   if (avatar) {
@@ -35,6 +38,9 @@ export async function updateCurrentUser({
   if (fullname !== undefined) body.firstName = fullname;
   if (username !== undefined) body.username = username;
   if (bio !== undefined) body.bio = bio;
+  if (lastName !== undefined) body.lastName = lastName;
+  if (tag !== undefined) body.tag = tag;
+  if (phone !== undefined) body.phone = phone;
 
   if (Object.keys(body).length > 0) {
     const result = await apiFetch("/api/profile", {

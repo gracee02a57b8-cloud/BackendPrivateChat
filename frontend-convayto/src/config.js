@@ -26,9 +26,15 @@ export const MINIMUM_SEARCH_LENGTH = 2;
 export const MAX_PREFETCHED_CONVERSATIONS = 10;
 export const MAX_MESSAGES_PER_PAGE = 25;
 
+export const MAX_LASTNAME_LENGTH = 50;
+export const MAX_PHONE_LENGTH = 30;
+export const MAX_TAG_LENGTH = 30;
+
 // Regex patterns for validation
 export const USERNAME_REGEX = /^.+$/;
-export const NAME_REGEX = /^(?!.*\s{2})[a-zA-Z0-9 ]+$/;
+export const NAME_REGEX = /^(?!.*\s{2})[a-zA-Z0-9а-яА-ЯёЁ ]+$/;
+export const PHONE_REGEX = /^[\d\s\-\+\(\)]*$/;
+export const TAG_REGEX = /^[a-zA-Z0-9_@]*$/;
 export const EMAIL_REGEX =
   /^[^\W_]+\w*(?:[.-]\w*)*[^\W_]+@[^\W_]+(?:[.-]?\w*[^\W_]+)*(?:\.[^\W_]{2,})$/;
 

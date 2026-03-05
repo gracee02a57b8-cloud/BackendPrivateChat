@@ -109,6 +109,21 @@ public class ProfileController {
             }
             user.setProfileColor(color);
         }
+        if (body.containsKey("tag")) {
+            String tag = body.get("tag");
+            if (tag != null && tag.length() > 30) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Тег не более 30 символов"));
+            }
+            // Check uniqueness if tag changed
+            if (tag != null && !tag.isBlank() && !tag.equals(user.getTag())) {
+                if (userRepository.existsByTag(tag.startsWith("@") ? tag : "@" + tag)) {
+                    return ResponseEntity.badRequest().body(Map.of("error", "Тег уже занят"));
+                }
+                user.setTag(tag.startsWith("@") ? tag : "@" + tag);
+            } else if (tag != null && tag.isBlank()) {
+                user.setTag(null);
+            }
+        }
 
         userRepository.save(user);
         log.info("Profile updated for user '{}'", username);

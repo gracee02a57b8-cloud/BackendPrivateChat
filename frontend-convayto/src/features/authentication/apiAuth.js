@@ -1,5 +1,6 @@
 import { apiFetch } from "../../services/apiHelper";
 import { connectWebSocket, disconnectWebSocket } from "../../services/wsService";
+import { initPushNotifications, unsubscribePush } from "../../services/pushService";
 
 ///////////////////////////////////
 // BarsikChat Backend Auth API
@@ -251,9 +252,12 @@ export async function getCurrentUser() {
           user_metadata: {
             username: profile.username || username,
             fullname,
+            firstName: profile.firstName || "",
+            lastName: profile.lastName || "",
             avatar_url: avatarUrl,
             tag: profile.tag || localStorage.getItem("tag") || "",
             bio: profile.bio || "",
+            phone: profile.phone || "",
           },
         },
       },

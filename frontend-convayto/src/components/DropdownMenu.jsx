@@ -1,6 +1,7 @@
+import { useState } from "react";
 import {
   RiMoonClearLine,
-  RiBugLine,
+  RiContactsBookLine,
   RiSettings2Line,
   RiLogoutCircleLine,
 } from "react-icons/ri";
@@ -10,6 +11,8 @@ import { useUser } from "../features/authentication/useUser";
 import Loader from "./Loader";
 import ToggleableContent from "./ToggleableContent";
 import Menu from "./Menu";
+import ContactsModal from "./ContactsModal";
+import SettingsModal from "./SettingsModal";
 
 export default function DropdownMenu() {
   const { user } = useUser();
@@ -23,8 +26,21 @@ export default function DropdownMenu() {
     toggleMenu,
   } = useUi();
   const { signout, isPending } = useSignout();
+  const [contactsOpen, setContactsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  function openContacts() {
+    toggleMenu();
+    setContactsOpen(true);
+  }
+
+  function openSettings() {
+    toggleMenu();
+    setSettingsOpen(true);
+  }
 
   return (
+    <>
     <ToggleableContent
       isOpen={isMenuOpen}
       toggle={toggleMenu}
@@ -38,21 +54,24 @@ export default function DropdownMenu() {
 
         <Menu.List>
           <Menu.ButtonItem onClick={openAccountView}>
+            <RiUserLine />
+            <div>Профиль</div>
+          </Menu.ButtonItem>
+
+          <Menu.ButtonItem onClick={openContacts}>
+            <RiContactsBookLine />
+            <div>Контакты</div>
+          </Menu.ButtonItem>
+
+          <Menu.ButtonItem onClick={openSettings}>
             <RiSettings2Line />
-            <div>Мой аккаунт</div>
+            <div>Настройки</div>
           </Menu.ButtonItem>
 
           <Menu.TogglerItem isChecked={isDarkMode} toggler={toggleDarkMode}>
             <RiMoonClearLine />
             <div>Тёмная тема</div>
           </Menu.TogglerItem>
-
-          <Menu.LinkItem
-            href="#"
-          >
-            <RiBugLine />
-            <div>Сообщить об ошибке</div>
-          </Menu.LinkItem>
 
           <Menu.ButtonItem onClick={signout}>
             {isPending ? <Loader /> : <RiLogoutCircleLine />}
@@ -62,5 +81,9 @@ export default function DropdownMenu() {
         <Menu.Footer />
       </Menu>
     </ToggleableContent>
+
+    <ContactsModal isOpen={contactsOpen} onClose={() => setContactsOpen(false)} />
+    <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
+    </>
   );
 }

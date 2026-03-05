@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import UserList from "./UserList";
 import GroupList from "./GroupList";
-import ContactList from "./ContactList";
-import { RiUserLine, RiGroupLine, RiContactsBookLine, RiAddLine, RiCloseLine } from "react-icons/ri";
+import { RiUserLine, RiGroupLine, RiAddLine, RiCloseLine } from "react-icons/ri";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../../services/apiHelper";
 import toast from "react-hot-toast";
@@ -57,7 +56,6 @@ function PlusCircleIcon({ className = "" }) {
 const TABS = [
   { key: "private", label: "Личные", icon: RiUserLine },
   { key: "groups", label: "Группы", icon: RiGroupLine },
-  { key: "contacts", label: "Контакты", icon: RiContactsBookLine },
 ];
 
 function UsersView() {
@@ -217,7 +215,6 @@ function UsersView() {
       <div tabIndex={-1} className="premium-scroll flex-1 overflow-auto px-2 pb-2">
         {activeTab === "private" && <UserList filter="private" folderId={activeFolder} />}
         {activeTab === "groups" && <GroupList />}
-        {activeTab === "contacts" && <ContactList />}
       </div>
     </div>
   );

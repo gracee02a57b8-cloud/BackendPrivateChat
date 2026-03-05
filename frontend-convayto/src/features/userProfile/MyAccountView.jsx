@@ -6,11 +6,16 @@ import IconButton from "../../components/IconButton";
 import InfoField from "./InfoField";
 import {
   MAX_NAME_LENGTH,
+  MAX_LASTNAME_LENGTH,
+  MAX_PHONE_LENGTH,
+  MAX_TAG_LENGTH,
   MIN_USERNAME_LENGTH,
   MAX_USERNAME_LENGTH,
   MAX_BIO_LENGTH,
   NAME_REGEX,
   USERNAME_REGEX,
+  PHONE_REGEX,
+  TAG_REGEX,
 } from "../../config";
 import useCheckUsernameAvailability from "../authentication/useCheckUsernameAvailability";
 import { useSignout } from "../authentication/useSignout";
@@ -22,10 +27,13 @@ function MyAccountView() {
     useCheckUsernameAvailability();
   const { signout, isPending: isSigningOut } = useSignout();
   const { user } = useUser();
-  const fullname = user?.user_metadata?.fullname || "";
+  const fullname = user?.user_metadata?.fullname || user?.user_metadata?.firstName || "";
+  const lastName = user?.user_metadata?.lastName || "";
   const username = user?.user_metadata?.username || "";
   const bio = user?.user_metadata?.bio || "";
   const avatar_url = user?.user_metadata?.avatar_url || "";
+  const tag = user?.user_metadata?.tag || "";
+  const phone = user?.user_metadata?.phone || "";
 
   const { closeAccountView } = useUi();
 
@@ -48,6 +56,33 @@ function MyAccountView() {
           maxLength={MAX_NAME_LENGTH}
           regex={NAME_REGEX}
           patternMessage="Только буквы, цифры и одиночные пробелы."
+        />
+
+        <InfoField
+          label="Фамилия"
+          oldValue={lastName}
+          updateKey="lastName"
+          maxLength={MAX_LASTNAME_LENGTH}
+          regex={NAME_REGEX}
+          patternMessage="Только буквы, цифры и одиночные пробелы."
+        />
+
+        <InfoField
+          label="Тег"
+          oldValue={tag}
+          updateKey="tag"
+          maxLength={MAX_TAG_LENGTH}
+          regex={TAG_REGEX}
+          patternMessage="Только латинские буквы, цифры и _"
+        />
+
+        <InfoField
+          label="Телефон"
+          oldValue={phone}
+          updateKey="phone"
+          maxLength={MAX_PHONE_LENGTH}
+          regex={PHONE_REGEX}
+          patternMessage="Только цифры, +, -, (, ), пробелы."
         />
 
         <InfoField

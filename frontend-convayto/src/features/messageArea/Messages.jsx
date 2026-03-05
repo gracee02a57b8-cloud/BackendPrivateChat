@@ -104,10 +104,10 @@ function Messages({
     );
 
   return (
-    <div className="grid grid-cols-1 items-end overflow-y-auto">
+    <div className="flex flex-1 flex-col overflow-y-auto">
       <div
         tabIndex={-1}
-        className="mx-auto flex w-full max-w-3xl flex-col px-4"
+        className="mt-auto mx-auto flex w-full max-w-3xl flex-col px-4"
       >
         {pages && !pages.some((p) => p?.length > 0) && (
           <ShortTextMessage>Нет сообщений</ShortTextMessage>
