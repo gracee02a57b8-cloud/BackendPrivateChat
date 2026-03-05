@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from "react";
+import { createPortal } from "react-dom";
 
 // ─── Constants ───
 const CELL = 20;
@@ -401,7 +402,7 @@ export default function PacmanGame({ onClose }) {
     setPaused(false);
   }
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm"
       onClick={(e) => e.target === e.currentTarget && onClose()}
@@ -480,6 +481,7 @@ export default function PacmanGame({ onClose }) {
           Стрелки / WASD / свайп для управления
         </p>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
