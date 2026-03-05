@@ -2,10 +2,57 @@ import { useState, useEffect, useRef } from "react";
 import UserList from "./UserList";
 import GroupList from "./GroupList";
 import ContactList from "./ContactList";
-import { RiUserLine, RiGroupLine, RiContactsBookLine, RiBookmarkLine, RiFolderLine, RiAddLine, RiCloseLine } from "react-icons/ri";
+import { RiUserLine, RiGroupLine, RiContactsBookLine, RiAddLine, RiCloseLine } from "react-icons/ri";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../../services/apiHelper";
 import toast from "react-hot-toast";
+
+/* ── Premium SVG Icons with gradients ── */
+function StarBookmarkIcon({ className = "" }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="starGrad" x1="3" y1="2" x2="17" y2="18" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#FBBF24" />
+          <stop offset="1" stopColor="#F59E0B" />
+        </linearGradient>
+      </defs>
+      <path d="M10 2l2.09 4.26L17 7.27l-3.5 3.41.83 4.82L10 13.4l-4.33 2.1.83-4.82L3 7.27l4.91-1.01L10 2z" fill="url(#starGrad)" />
+    </svg>
+  );
+}
+
+function FolderIcon({ emoji, active }) {
+  if (emoji && emoji !== "📁") return <span className="text-sm leading-none">{emoji}</span>;
+  return (
+    <svg className="h-[14px] w-[14px]" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id={active ? "folderGradA" : "folderGradI"} x1="2" y1="4" x2="18" y2="17" gradientUnits="userSpaceOnUse">
+          <stop stopColor={active ? "#E0E7FF" : "#818CF8"} />
+          <stop offset="1" stopColor={active ? "#C7D2FE" : "#6366F1"} />
+        </linearGradient>
+      </defs>
+      <path d="M2 5a2 2 0 012-2h3.586a1 1 0 01.707.293L9.707 4.707A1 1 0 0010.414 5H16a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V5z"
+        fill={`url(#${active ? "folderGradA" : "folderGradI"})`} />
+      <path d="M2 8h16v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8z" fill={active ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.1)"} />
+    </svg>
+  );
+}
+
+function PlusCircleIcon({ className = "" }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="plusGrad" x1="3" y1="3" x2="17" y2="17" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#8B5CF6" stopOpacity="0.5" />
+          <stop offset="1" stopColor="#6366F1" stopOpacity="0.5" />
+        </linearGradient>
+      </defs>
+      <circle cx="10" cy="10" r="8" stroke="url(#plusGrad)" strokeWidth="1.5" strokeDasharray="3 2" fill="none" />
+      <path d="M10 6.5v7M6.5 10h7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 const TABS = [
   { key: "private", label: "Личные", icon: RiUserLine },
@@ -58,7 +105,7 @@ function UsersView() {
       const f = await apiFetch("/api/folders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, emoji: "📁" }),
+        body: JSON.stringify({ name, emoji: "" }),
       });
       setFolders((prev) => [...prev, f]);
       setFolderName("");
@@ -116,9 +163,9 @@ function UsersView() {
         {/* Saved messages */}
         <button
           onClick={handleSavedMessages}
-          className="folder-chip flex flex-shrink-0 items-center gap-1.5 rounded-full border border-bgAccent/20 bg-bgAccent/[0.07] px-3 py-1.5 text-xs font-medium text-bgAccent transition-all hover:border-bgAccent/30 hover:bg-bgAccent/[0.12] dark:text-bgAccent-dark dark:border-bgAccent-dark/20 dark:bg-bgAccent-dark/[0.07] dark:hover:bg-bgAccent-dark/[0.12]"
+          className="folder-chip flex flex-shrink-0 items-center gap-1.5 rounded-full border border-amber-400/20 bg-amber-400/[0.07] px-3 py-1.5 text-xs font-medium text-amber-500 transition-all hover:border-amber-400/30 hover:bg-amber-400/[0.12] dark:text-amber-400 dark:border-amber-400/20 dark:bg-amber-400/[0.07] dark:hover:bg-amber-400/[0.12]"
         >
-          <RiBookmarkLine className="text-sm" /> Избранное
+          <StarBookmarkIcon className="h-[14px] w-[14px]" /> Избранное
         </button>
 
         {/* Folder chips */}
@@ -132,7 +179,7 @@ function UsersView() {
                 : "border-LightShade/[0.08] bg-LightShade/[0.04] hover:border-LightShade/[0.15] hover:bg-LightShade/[0.08]"
             }`}
           >
-            <span className="text-sm">{f.emoji || "📁"}</span>
+            <FolderIcon emoji={f.emoji} active={activeFolder === f.id} />
             <span>{f.name}</span>
             <span
               onClick={(e) => { e.stopPropagation(); handleDeleteFolder(f.id); }}
@@ -159,9 +206,9 @@ function UsersView() {
         ) : (
           <button
             onClick={() => setShowFolderInput(true)}
-            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border border-dashed border-LightShade/[0.12] text-sm opacity-40 transition-all hover:border-bgAccent/30 hover:text-bgAccent hover:opacity-80 dark:hover:text-bgAccent-dark"
+            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-LightShade/50 transition-all hover:text-bgAccent hover:opacity-100 dark:hover:text-bgAccent-dark"
           >
-            <RiAddLine />
+            <PlusCircleIcon className="h-5 w-5" />
           </button>
         )}
       </div>
