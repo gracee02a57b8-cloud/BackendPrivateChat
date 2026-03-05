@@ -69,6 +69,23 @@ function TricksView() {
           </div>
           <RiGamepadLine className="ml-auto text-xl opacity-40" />
         </button>
+
+        <a
+          href="/games/magicka/index.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex w-full items-center gap-3 rounded-xl bg-LightShade/10 px-4 py-3 text-left transition-colors hover:bg-LightShade/20 active:scale-[0.98]"
+          data-testid="tricks-magicka-btn"
+        >
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-500/20 text-xl">
+            ⚡
+          </span>
+          <div>
+            <p className="font-semibold text-textPrimary dark:text-textPrimary-dark">Magicka</p>
+            <p className="text-xs opacity-50">Комбинируй элементы, уничтожай врагов</p>
+          </div>
+          <RiGamepadLine className="ml-auto text-xl opacity-40" />
+        </a>
       </div>
 
       {pacmanOpen && <PacmanGame onClose={() => setPacmanOpen(false)} />}
