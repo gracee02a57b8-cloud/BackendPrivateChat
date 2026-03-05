@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   RiMoonClearLine,
   RiContactsBookLine,
@@ -13,10 +12,8 @@ import { useUser } from "../features/authentication/useUser";
 import Loader from "./Loader";
 import ToggleableContent from "./ToggleableContent";
 import Menu from "./Menu";
-import ContactsModal from "./ContactsModal";
-import SettingsModal from "./SettingsModal";
 
-export default function DropdownMenu() {
+export default function DropdownMenu({ onOpenContacts, onOpenSettings }) {
   const { user } = useUser();
   const fullname = user?.user_metadata?.fullname || user?.id || "";
   const email = user?.email || "";
@@ -29,21 +26,8 @@ export default function DropdownMenu() {
     toggleMenu,
   } = useUi();
   const { signout, isPending } = useSignout();
-  const [contactsOpen, setContactsOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-
-  function openContacts() {
-    toggleMenu();
-    setContactsOpen(true);
-  }
-
-  function openSettings() {
-    toggleMenu();
-    setSettingsOpen(true);
-  }
 
   return (
-    <>
     <ToggleableContent
       isOpen={isMenuOpen}
       toggle={toggleMenu}
@@ -61,12 +45,12 @@ export default function DropdownMenu() {
             <div>Мой профиль</div>
           </Menu.ButtonItem>
 
-          <Menu.ButtonItem onClick={openContacts}>
+          <Menu.ButtonItem onClick={onOpenContacts}>
             <RiContactsBookLine />
             <div>Контакты</div>
           </Menu.ButtonItem>
 
-          <Menu.ButtonItem onClick={openSettings}>
+          <Menu.ButtonItem onClick={onOpenSettings}>
             <RiSettings2Line />
             <div>Настройки</div>
           </Menu.ButtonItem>
@@ -84,9 +68,5 @@ export default function DropdownMenu() {
         <Menu.Footer onClick={openTricksView} />
       </Menu>
     </ToggleableContent>
-
-    <ContactsModal isOpen={contactsOpen} onClose={() => setContactsOpen(false)} />
-    <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
-    </>
   );
 }

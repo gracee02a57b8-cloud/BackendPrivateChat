@@ -408,12 +408,17 @@ describe("ContactsModal", () => {
 // 4. DropdownMenu tests
 // ================================================================
 describe("DropdownMenu", () => {
+  let onOpenContacts;
+  let onOpenSettings;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    onOpenContacts = vi.fn();
+    onOpenSettings = vi.fn();
   });
 
   it("renders menu items: profile, contacts, settings, dark theme, exit", () => {
-    render(<DropdownMenu />);
+    render(<DropdownMenu onOpenContacts={onOpenContacts} onOpenSettings={onOpenSettings} />);
     expect(screen.getByText("Мой профиль")).toBeInTheDocument();
     expect(screen.getByText("Контакты")).toBeInTheDocument();
     expect(screen.getByText("Настройки")).toBeInTheDocument();
@@ -422,26 +427,24 @@ describe("DropdownMenu", () => {
   });
 
   it("does NOT render 'Сообщить об ошибке' (bug report removed)", () => {
-    render(<DropdownMenu />);
+    render(<DropdownMenu onOpenContacts={onOpenContacts} onOpenSettings={onOpenSettings} />);
     expect(screen.queryByText("Сообщить об ошибке")).not.toBeInTheDocument();
   });
 
-  it("opens contacts modal when Контакты is clicked", () => {
-    render(<DropdownMenu />);
+  it("calls onOpenContacts when Контакты is clicked", () => {
+    render(<DropdownMenu onOpenContacts={onOpenContacts} onOpenSettings={onOpenSettings} />);
     fireEvent.click(screen.getByText("Контакты"));
-    // After click, ContactsModal should open with "Контакты" header in modal
-    // (the menu button also says "Контакты" but the modal overlay is visible)
-    expect(screen.getByText("Добавить контакт")).toBeInTheDocument();
+    expect(onOpenContacts).toHaveBeenCalled();
   });
 
-  it("opens settings modal when Настройки is clicked", () => {
-    render(<DropdownMenu />);
+  it("calls onOpenSettings when Настройки is clicked", () => {
+    render(<DropdownMenu onOpenContacts={onOpenContacts} onOpenSettings={onOpenSettings} />);
     fireEvent.click(screen.getByText("Настройки"));
-    expect(screen.getByText("Звук уведомлений")).toBeInTheDocument();
+    expect(onOpenSettings).toHaveBeenCalled();
   });
 
   it("renders Фокусы button in footer", () => {
-    render(<DropdownMenu />);
+    render(<DropdownMenu onOpenContacts={onOpenContacts} onOpenSettings={onOpenSettings} />);
     expect(screen.getByText("Фокусы")).toBeInTheDocument();
     expect(screen.getByTestId("tricks-button")).toBeInTheDocument();
   });
