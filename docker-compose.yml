@@ -33,6 +33,7 @@ services:
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@barsik.chat}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
     volumes:
       - uploads_data:/app/uploads
     # Port NOT exposed externally — only reachable via nginx on barsik-net
